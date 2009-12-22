@@ -1,3 +1,2 @@
-import sys
-from afrift_gui import MainFrame
+from afrift.afrift_gui import MainFrame
 MainFrame()
