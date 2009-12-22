@@ -8,9 +8,8 @@ import os
 import sys
 from ConfigParser import SafeConfigParser
 from findr_files import findr
-iconame = os.path.join(os.getcwd(),"find.ico")
-h = os.path.split(sys.argv[0])
-iconame = os.path.join(h[0],"find.ico")
+HERE = os.path.split(__file__)[0]
+iconame = os.path.join(HERE,"find.ico")
 
 class Results(wx.Dialog):
     def __init__(
