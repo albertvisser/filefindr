@@ -5,93 +5,53 @@ if os.name == 'ce':
 else:
     DESKTOP = True
     import ppygui.api as gui
-from configparser import SafeConfigParser
 from .findr_files import findr
+from afrift_base import iconame, ABase
 
-class MainFrame(gui.CeFrame):
-    def __init__(self,**args):
+class MainFrame(gui.CeFrame, ABase):
+    "hoofdscherm van de applicatie"
+
+    def __init__(self, **args):
         gui.CeFrame.__init__(self,
             title="Albert's find-replace in files tool - for Total Commander",
             )
         self.sipp = gui.SIPPref(self)
         # self.fnames bevat 1 of meer namen van de te verwerken bestanden
-        self.fnames = []
+        ABase.__init__(self)
         if 'files' in args:
             self.fnames = args['files']
-        self.apptype = ''
         if 'apptype' in args:
             self.apptype = args['apptype']
-        self.curdir = os.getcwd()
         if 'dir' in args:
             self.curdir = args['dir']
         self.go()
 
     def go(self):
-        for i in range(len(self.fnames)):
-            x = self.fnames[i]
-            if x[-1] == "\\":
-                self.fnames[i] = x[:-1]
-        self.readini()
-        self.zoekstr = ''
-        self.vervstr = ''
-        self.typestr = ''
-        self.dirnaam = ''
-        self.vervleeg = False
-        self.case = self.matchCase
-        self.word = self.matchWords
-        self.subdirs = self.searchSubdirs
-        self.backup = True
-        self.toonScherm()
+        """opzetten scherm(variabelen)
 
-    def readini(self):
-        self.hier = os.getcwd()
-        self.inifile = self.hier + "/afriftftc.ini"
-        # inlezen mru-gegevens
-        self.mruZoek = []
-        self.mruVerv = []
-        self.mruTypes = []
-        self.mruDirs = []
-        self.matchCase = False
-        self.matchWords = False
-        self.searchSubdirs = False
-        s = SafeConfigParser()
-        s.read(self.inifile)
-        if s.has_section("zoek"):
-            for i in range(len(s.options("zoek"))):
-                ky = ("woord%i"  % (i+1))
-                self.mruZoek.append(s.get("zoek",ky))
-        if s.has_section("vervang"):
-            for i in range(len(s.options("vervang"))):
-                ky = ("woord%i"  % (i+1))
-                self.mruVerv.append(s.get("vervang",ky))
-        if s.has_section("filetypes"):
-            for i in range(len(s.options("filetypes"))):
-                ky = ("spec%i"  % (i+1))
-                self.mruTypes.append(s.get("filetypes",ky))
-        if s.has_section("dirs"):
-            for i in range(len(s.options("dirs"))):
-                ky = ("pad%i"  % (i+1))
-                self.mruDirs.append(s.get("dirs",ky))
-        if s.has_section("options"):
-            if s.has_option("options","matchCase"):
-                if s.getboolean("options","matchCase"):
-                    self.matchCase = True
-            if s.has_option("options","matchWords"):
-                if s.getboolean("options","matchWords"):
-                    self.matchWords = True
-            if s.has_option("options","searchSubdirs"):
-                if s.getboolean("options","searchSubdirs"):
-                    self.searchSubdirs = True
+        de _-variabelen worden gekopieerd om het vervolg voorlopig niet te veel te hoeven
+        aanpassen"""
+        ABase.go(self)
+        ## self.zoekstr = self._zoekstr
+        ## self.vervstr = self._vervstr
+        ## self.typestr = self._typestr
+        ## self.dirnaam = self._dirnaam
+        ## self.case = self._case
+        ## self.vervleeg = self._vervleeg
+        ## self.word = self._word
+        ## self.subdirs = self._subdirs
+        ## self.backup = self._backup
+        self.toonScherm()
 
     def toonScherm(self):
 
         self.lblZoek = gui.Label(self,title="Zoek naar:",)
-        self.cmbZoek = gui.Combo(self,choices = self.mruZoek)
-        self.cmbZoek.set_text(self.zoekstr)
+        self.cmbZoek = gui.Combo(self,choices = self._mruItems["zoek"])
+        ## self.cmbZoek.set_text(self.zoekstr)
 
         self.lblVerv = gui.Label(self,title="Vervang door:")
-        self.cmbVerv = gui.Combo(self,choices = self.mruVerv)
-        self.cmbVerv.set_text(self.vervstr)
+        self.cmbVerv = gui.Combo(self,choices = self._mruItems["verv"])
+        ## self.cmbVerv.set_text(self.vervstr)
 
         self.cbVervang = gui.Button(self,text="lege vervangtekst = weghalen",
             style="check")
@@ -102,7 +62,7 @@ class MainFrame(gui.CeFrame):
 
         if self.apptype =="":
             self.lblDir = gui.Label(self,"In directory:")
-            self.cmbDir = gui.Combo(self,choices = self.mruDirs)
+            self.cmbDir = gui.Combo(self,choices = self._mruItems["dirs"])
             self.btnDir = gui.Button(self,title="Zoek",action=self.zoekdir)
             t = ""
         else:
@@ -112,7 +72,7 @@ class MainFrame(gui.CeFrame):
             style="check")
 
         self.lblTypes = gui.Label(self,title="alleen files van type:")
-        self.cmbTypes = gui.Combo(self,choices=self.mruTypes)
+        self.cmbTypes = gui.Combo(self,choices=self._mruItems["types"])
 
         if self.apptype == "multi":
             self.lblFiles = gui.Label(self,title="In de volgende files/directories:")
@@ -188,17 +148,14 @@ class MainFrame(gui.CeFrame):
         self.sizer = v0
 
     def einde(self,event=None):
+        """applicatie afsluiten"""
         self.close()
 
     def doit(self,event=None):
-        s = ""
+        """Zoekactie uitvoeren en resultaatscherm tonen"""
         self.toonpad = False
         self.showpath = False
 
-        if self.apptype != "":
-            ft = "AFRIFT for TC fout"
-        else:
-            ft = "AFRIFT fout"
         item = self.cmbZoek.get_text()
         if item == "":
             gui.Message.ok(ft,"Kan niet zoeken zonder zoekargument",icon='error')
@@ -330,10 +287,7 @@ class MainFrame(gui.CeFrame):
         self.w.sizer = v0
         #~ w.mainloop()
 
-    def w_kopie(self,event):
-        self.kopie()
-
-    def kopie(self):
+    def kopie(self,event=None):
         self.showpath = self.cbPad
         f = self.zoekstr.get() + ".txt"
         fn = gui.FileDlg.save(

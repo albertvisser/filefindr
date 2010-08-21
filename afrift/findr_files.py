@@ -1,11 +1,17 @@
 # -*- coding: UTF-8 -*-
-import sys,os
+"""Uitvoeren van de find/replace actie
+
+de uitvoering wordt gestuurd door in een dictionary verzamelde parameters"""
+
+#import sys
+import os
 import re
 import shutil
-from mystuff import splitjoin
+#from mystuff import splitjoin
 
 class findr(object):
-    def __init__(self,**parms):
+    "interpreteren van de parameters en aansturen van de zoek/vervang routine"
+    def __init__(self, **parms):
         self.p = {
             'zoek':'',
             'vervang':'',
@@ -22,10 +28,9 @@ class findr(object):
             if x in self.p:
                 self.p[x] = parms[x]
             else:
-                raise TypeError, 'Onbekende optie ' + x
+                raise TypeError('Onbekende optie ' + x)
         self.ok = True
         self.rpt = [] # verslag van wat er gebeurd is
-        flist = ["G"," opgegeven"]
         if self.p['filelist'] == [] and self.p['pad'] == "":
             self.rpt.append("Fout: geen lijst bestanden en geen directory opgegeven")
         elif self.p['filelist'] != [] and self.p['pad'] != "":
@@ -36,7 +41,7 @@ class findr(object):
             self.ok = False
             h = "Zoekactie niet mogelijk:"
         else:
-            self.p['wijzig'] = True if self.p['vervang'] else False
+            self.p['wijzig'] = True if self.p['vervang'] is not None else False
             self.extlistUpper = []
             for x in self.p['extlist']:
                 self.extlistUpper.append(x.upper())
@@ -44,7 +49,7 @@ class findr(object):
             if self.p['case']:
                 self.re = re.compile(unicode(self.p['zoek']))
             else:
-                self.re = re.compile(unicode(self.p['zoek']),re.IGNORECASE)
+                self.re = re.compile(unicode(self.p['zoek']), re.IGNORECASE)
             if self.p['pad']:
                 self.subdirs(self.p['pad'])
                 #~ h = ("in %s" % (self.p['pad']))
@@ -52,19 +57,19 @@ class findr(object):
                 #~ self.rpt.insert(0,h)
                 h = ("Gezocht naar '%s'" % self.p['zoek'])
                 if self.p['wijzig']:
-                    h = ("%s en dit vervangen door '%s'" % (h,self.p['vervang']))
+                    h = ("%s en dit vervangen door '%s'" % (h, self.p['vervang']))
                 if len(self.p['extlist']) > 0:
                     s = self.p['extlist'][0]
                     if len(self.p['extlist']) > 2:
                         for x in self.p['extlist'][1:-1]:
-                            s = ("%s, %s" % (s,x))
+                            s = ("%s, %s" % (s, x))
                     if len(self.p['extlist']) > 1:
-                        s = ("%s en %s" % (s,self.p['extlist'][-1]))
-                    h = ("%s in bestanden van type %s" % (h,s))
+                        s = ("%s en %s" % (s, self.p['extlist'][-1]))
+                    h = ("%s in bestanden van type %s" % (h, s))
             else:
                 h = ("Gezocht naar '%s'" % self.p['zoek'])
                 if self.p['wijzig']:
-                    h = ("%s en dit vervangen door '%s' in:" % (h,self.p['vervang']))
+                    h = ("%s en dit vervangen door '%s' in:" % (h, self.p['vervang']))
                 for entry in self.p['filelist']:
                     if not os.path.isdir(entry):
                         d = os.path.splitext(entry)
@@ -73,12 +78,13 @@ class findr(object):
                     else:
                         self.subdirs(entry)
                     #~ self.zoek(entry)
-        self.rpt.insert(0,h)
+        self.rpt.insert(0, h)
         ## self.rpt.append("")
 
-    def subdirs(self,pad):
-        for file in os.listdir(pad):
-            entry = os.path.join(pad,file)
+    def subdirs(self, pad):
+        "recursieve routine voor zoek/vervang in subdirectories"
+        for fname in os.listdir(pad):
+            entry = os.path.join(pad, fname)
             if not os.path.isdir(entry):
                 h = os.path.splitext(entry)
                 ## print h[1].upper(), self.extlistUpper
@@ -88,12 +94,12 @@ class findr(object):
                 if self.p['subdirs']:
                     self.subdirs(entry)
 
-    def zoek(self,best):
+    def zoek(self, best):
+        "het daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
         ## print "----"
         ## print(best)
-        z = self.p['zoek']
-        f = file(best,"r")
-        regels = f.readlines()
+        with open(best,"r") as f_in:
+            regels = f_in.readlines()
         pos = 0
         lines = []
         for x in regels:
@@ -102,37 +108,34 @@ class findr(object):
             pos += len(x)
         lines.append(pos)
         data = "".join(regels)
-        f.close()
-        nw = []
-        i = 0
         found = False
         from_line = 0
         last_in_line = 0
         for vind in self.re.finditer(data):
             found = True
             ## print(vind.span())
-            for lineno,linestart in enumerate(lines[from_line:]):
+            for lineno, linestart in enumerate(lines[from_line:]):
                 ## print(from_line,lineno,linestart)
                 if vind.start() < linestart:
                     if not self.p['wijzig']:
                         in_line = lineno + from_line
                         if in_line != last_in_line:
-                            self.rpt.append("%s r. %i: %s" % (best,in_line,
-                                regels[in_line - 1][:-1]))
+                            self.rpt.append("{0} r. {1}: {2}".format(
+                                best, in_line, regels[in_line - 1][:-1]))
                         last_in_line = in_line
                     from_line = lineno
                     break
         if found and self.p['wijzig']:
-            aant, ndata = self.re.subn(unicode(self.p["vervang"]),data)
-            self.rpt.append("%s: %s times" % (best,aant))
+            aant, ndata = self.re.subn(unicode(self.p["vervang"]), data)
+            self.rpt.append("%s: %s times" % (best, aant))
             if self.p['backup']:
                 bestnw = best + ".bak"
-                shutil.copyfile(best,bestnw)
-            f = file(best,"w")
-            f.write(ndata)
-            f.close()
+                shutil.copyfile(best, bestnw)
+            with open(best,"w") as f_out:
+                f_out.write(ndata)
 
 def test():
+    "test routine"
     h = findr(
         zoek="bestand\nwaarin",
         #vervang="voor",
@@ -150,7 +153,7 @@ def test():
         f.write("%s\n" % x)
     f.close()
     for x in open("whatidid.rpt"):
-        print x
+        print(x)
 
 
 if __name__ == '__main__':

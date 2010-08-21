@@ -1,16 +1,15 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: latin1 -*-
 """AFRIFT Tkinter versie"""
 
 import os
 import sys
-if sys.version.startswith("3"):
-    from tkinter import *
-else:
-    from Tkinter import *
-import tkMessageBox
-import tkFileDialog
-import Pmw
+from tkinter import *
+from tkinter.ttk import *
+from tkinter.scrolledtext import ScrolledText
+import tkinter.messagebox as tkMessageBox
+import tkinter.filedialog as tkFileDialog
+## import Pmw
 from findr_files import findr
 from afrift_base import iconame, ABase
 
@@ -39,9 +38,14 @@ class Results(Toplevel):
             b = 10
         elif self.apptype == "multi":
             b = 40
-        f2a = Pmw.PanedWidget(f2,orient='horizontal',)
-        p2l = f2a.add("In file")
-        p2r = f2a.add("Data")
+        f2a = PanedWindow(f2)
+        f2a.pack()
+        p2l = Frame(f2a)
+        p2l.pack()
+        f2a.add(p2l) # "In file")
+        p2r = Frame(f2a)
+        pr2.pack()
+        f2a.add(p2r) # "Data")
         self.results = Listbox(p2l, setgrid=YES,width=b,
             takefocus=False,
             yscrollcommand=self.scrollY.set,
@@ -185,34 +189,34 @@ class Application(ABase):
         self.master.pack()
         self.fZoek = Frame(self.master)
         self.fZoek.pack(fill=BOTH,expand=True)
-        self.vraagZoek = Pmw.ComboBox(self.fZoek,
-            scrolledlist_items = self._mruItems["zoek"],
-            arrowbutton_takefocus = False,
-            entry_width = 40,
-            entry_textvariable = self.zoekstr,
-            listbox_bg="#ffffff",
-            labelpos = "wn",
-            label_text = "Zoek naar:",
-            label_width=17,
-            label_anchor=W,
-            label_justify=LEFT)
+        Label(self.fZoek, text = "Zoek naar:", width=17).pack(side=LEFT)
+        self.vraagZoek = Combobox(self.fZoek,
+            values = self._mruItems["zoek"],
+            width = 40,
+            textvariable = self.zoekstr,
+            ## listbox_bg="#ffffff",
+            ## labelpos = "wn",
+            ## label_anchor=W,
+            ## label_justify=LEFT
+            )
         self.vraagZoek.pack(side=LEFT,padx=5,pady=5)
-        self.vraagZoek.bind("<Next>",self.Zoek_dropdown)
+        ## self.vraagZoek.bind("<Next>",self.Zoek_dropdown)
         self.fVerv = Frame(self.master)
         self.fVerv.pack(fill=BOTH,expand=True)
-        self.vraagVerv = Pmw.ComboBox(self.fVerv,
-            scrolledlist_items = self._mruItems["verv"],
-            arrowbutton_takefocus = False,
-            entry_width = 40,
-            entry_textvariable = self.vervstr,
-            listbox_bg="#ffffff",
-            labelpos = "wn",
-            label_text = "Vervang door:",
-            label_width=17,
-            label_anchor=W,
-            label_justify=LEFT)
+        Label(self.fVerv, text = "Vervang door:", width=17).pack(side=LEFT)
+        self.vraagVerv = Combobox(self.fVerv,
+            values = self._mruItems["verv"],
+            width = 40,
+            textvariable = self.vervstr,
+            ## listbox_bg="#ffffff",
+            ## labelpos = "wn",
+            ## label_text = "Vervang door:",
+            ## label_width=17,
+            ## label_anchor=W,
+            ## label_justify=LEFT
+            )
         self.vraagVerv.pack(side=LEFT,padx=5,pady=5)
-        self.vraagVerv.bind("<Next>",self.Verv_dropdown)
+        ## self.vraagVerv.bind("<Next>",self.Verv_dropdown)
         self.fOpt0 = Frame(self.master)
         self.fOpt0.pack(fill=BOTH,expand=True)
         Label(self.fOpt0,text="",width=17).pack(side=LEFT)
@@ -239,17 +243,19 @@ class Application(ABase):
         if self.apptype =="":
             self.fDir = Frame(self.master)
             self.fDir.pack(fill=BOTH,expand=True)
-            self.vraagDir = Pmw.ComboBox(self.fDir,
-                scrolledlist_items = self._mruItems["dirs"],
-                arrowbutton_takefocus = False,
-                entry_width = 40,
-                entry_textvariable = self.dirnaam,
-                listbox_bg="#ffffff",
-                labelpos = "wn",
-                label_text = "In directory:",
-                label_width=17,
-                label_anchor=W,
-                label_justify=LEFT)
+            Label(self.fDir, text = "In directory:", width=17).pack(side = LEFT)
+            self.vraagDir = Combobox(self.fDir,
+                values = self._mruItems["subdirs"],
+                ## arrowbutton_takefocus = False,
+                width = 40,
+                textvariable = self.dirnaam,
+                ## listbox_bg="#ffffff",
+                ## labelpos = "wn",
+                ## label_text = "In directory:",
+                ## label_width=17,
+                ## label_anchor=W,
+                ## label_justify=LEFT
+                )
             self.vraagDir.pack(side=LEFT,padx=5,pady=5)
             self.Zoek = Button(self.fDir,text="Zoek",command=self.zoekdir)
             self.Zoek.pack(side=LEFT,padx=5)
@@ -267,34 +273,38 @@ class Application(ABase):
         self.vraagSubs.pack(side=LEFT)
         self.fTypes = Frame(self.master)
         self.fTypes.pack(fill=BOTH,expand=True)
-        self.vraagTypes = Pmw.ComboBox(self.fTypes,
-            scrolledlist_items = self._mruItems["types"],
-            arrowbutton_takefocus = False,
-            entry_width = 40,
-            entry_textvariable = self.typestr,
-            listbox_bg="#ffffff",
-            labelpos = "wn",
-            label_text = "alleen files van type:",
-            label_width=17,
-            label_anchor=W,
-            label_justify=LEFT)
+        Label(self.fTypes,text = "alleen files van type:",width=17).pack(side=LEFT)
+        self.vraagTypes = Combobox(self.fTypes,
+            values = self._mruItems["types"],
+            width = 40,
+            textvariable = self.typestr,
+            ## listbox_bg="#ffffff",
+            ## labelpos = "wn",
+            ## label_text = "alleen files van type:",
+            ## label_width=17,
+            ## label_anchor=W,
+            ## label_justify=LEFT
+            )
         self.vraagTypes.pack(side=LEFT,padx=5,pady=5)
         self.fExe = Frame(self.master)
         self.fExe.pack(fill=BOTH,expand=True)
         if self.apptype == "multi":
             sl = Frame(self.fExe)
             sl.pack(fill=BOTH,expand=True)
-            self.lb = Pmw.ScrolledListBox(sl,
-                    items=self.fnames,
-                    labelpos='nw',
-                    label_text='In de volgende files/directories:',
-                    label_justify=LEFT,
-                    listbox_height=12,
-                    listbox_takefocus=False
+            Label(sl, text='In de volgende files/directories:').pack(side = LEFT)
+            self.lb = ScrolledText(sl,
+                    ## items=self.fnames,
+                    ## labelpos='nw',
+                    ## label_text='In de volgende files/directories:',
+                    ## label_justify=LEFT,
+                    height=12,
+                    takefocus=False
             )
+            for name in self.names:
+                self.lb.insert(END, name)
             self.lb.pack(fill=X,expand=True)
-            self.lb.bind("<Prior>",self.Zoek_pgup)
-            self.lb.bind("<Next>",self.Zoek_pgdn)
+            ## self.lb.bind("<Prior>",self.Zoek_pgup)
+            ## self.lb.bind("<Next>",self.Zoek_pgdn)
             lt = Frame(self.fExe)
             lt.pack(fill=BOTH,expand=True)
             #~ Label(lt,text='N.B.: geselecteerde directories worden (nog) niet meegenomen',anchor=W).pack()
@@ -312,27 +322,27 @@ class Application(ABase):
         self.DoIt.pack(side=LEFT,padx=5,pady=5)
         #~ self.DoIt.bind("<Return>",self.doe)
         self.master.bind_all("<Return>",self.doe)
-        self.vraagZoek.component('entry').focus_set()
+        self.vraagZoek.focus_set()
         self.Cancel = Button(sf,text="Einde",command=self.master.quit)
         self.Cancel.pack(side=LEFT,padx=5,pady=5)
         #~ self.Cancel.bind("<Return>",self.einde)
         self.master.bind_all("<Escape>",self.einde)
 
-    def Zoek_dropdown(self,event):
-        "event handler voor openen zoek-combobox dropdown"
-        self.vraagZoek.invoke()
+    ## def Zoek_dropdown(self,event):
+        ## "event handler voor openen zoek-Combobox dropdown"
+        ## self.vraagZoek.invoke()
 
-    def Zoek_pgup(self,event):
-        "event handler voor terugbladeren in zoek-combobox dropdown"
-        self.vraagZoek.yview(SCROLL,-1,PAGES)
+    ## def Zoek_pgup(self,event):
+        ## "event handler voor terugbladeren in zoek-Combobox dropdown"
+        ## self.vraagZoek.yview(SCROLL,-1,PAGES)
 
-    def Zoek_pgdn(self,event):
-        "event handler voor doorbladeren in zoek-combobox dropdown"
-        self.vraagZoek.yview(SCROLL,1,PAGES)
+    ## def Zoek_pgdn(self,event):
+        ## "event handler voor doorbladeren in zoek-Combobox dropdown"
+        ## self.vraagZoek.yview(SCROLL,1,PAGES)
 
-    def Verv_dropdown(self,event):
-        "event handler voor openen vervang-combobox dropdown"
-        self.vraagVerv.invoke()
+    ## def Verv_dropdown(self,event):
+        ## "event handler voor openen vervang-Combobox dropdown"
+        ## self.vraagVerv.invoke()
 
     def einde(self,event):
         """applicatie afsluiten"""
@@ -417,9 +427,8 @@ class Appl_multi(Application):
 
 def test():
     root = Tk()
-    Pmw.initialise(root)
-    h = Appl_single(root,['afrift_tkgui.py','afrift_tkgui.py'])
-    ## h = Appl_multi(root,['afrift_tkgui.py','CMDAE.tmp'])
+    h = Appl_single(root,['afrift_tk3gui.py','afrift_tk3gui.py'])
+    ## h = Appl_multi(root,['afrift_tk3gui.py','CMDAE.tmp'])
     ## h = Application(root,("hallo","findr_files.py"))
     root.mainloop()
 
