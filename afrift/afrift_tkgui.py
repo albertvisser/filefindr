@@ -17,27 +17,29 @@ from afrift_base import iconame, ABase
 class Results(Toplevel):
     "Resultatenscherm"
 
-    def __init__(self,iconame,zr,h):
-        Toplevel.__init__()
-        self.title(self.zr)
+    def __init__(self,parent):
+        self.parent = parent
+        Toplevel.__init__(self)
+        self.title(self.parent.resulttitel)
         ## self.wm_iconbitmap(iconame)
+        rpt = self.parent.zoekvervang.rpt
 
         self.toonpad = IntVar()
         self.showpath = False
 
         f1 = Frame(self)
         f1.pack(fill=X)
-        txt = "%s (%i items)" % (h.rpt[0],len(h.rpt)-1)
+        txt = "%s (%i items)" % (rpt[0],len(rpt)-1)
         Label(f1,text=txt,anchor=W).pack(side=LEFT,fill=X,expand=YES,padx=5)
         f2 = Frame(self)
         f2.pack(fill=BOTH,expand=YES)
         self.scrollY = Scrollbar(f2, orient=VERTICAL)
         self.scrollX = Scrollbar(f2, orient=HORIZONTAL)
-        if self.apptype == "":
+        if self.parent.apptype == "":
             b = 50
-        elif self.apptype == "single":
+        elif self.parent.apptype == "single":
             b = 10
-        elif self.apptype == "multi":
+        elif self.parent.apptype == "multi":
             b = 40
         f2a = Pmw.PanedWidget(f2,orient='horizontal',)
         p2l = f2a.add("In file")
@@ -54,13 +56,13 @@ class Results(Toplevel):
             )
         n = 0
         self.z = " "
-        for x in h.rpt:
+        for x in rpt:
             if n == 0:
                 self.z = x
             else:
                 i = x.find(": ")
                 r = x[:i]
-                if self.apptype == "single":
+                if self.parent.apptype == "single":
                     j = r.find("r.")
                     if n == 1:
                         self.z = self.z + " in " + r[:j]
@@ -76,12 +78,12 @@ class Results(Toplevel):
         self.results_data.pack(side=LEFT, fill=BOTH, expand=1)
         f2a.pack(side=LEFT, fill=BOTH, expand=1) # fill=BOTH,expand=YES)
         f2a.setnaturalsize()
-        f3 = Frame(self.w,height=12)
+        f3 = Frame(self,height=12)
         f3.pack()
-        klaar = Button(f3,text="Klaar",command=self.w_einde)
+        klaar = Button(f3,text="Klaar",command=self.einde)
         klaar.pack(side=LEFT,padx=5,pady=5)
-        klaar.bind("<Return>",self.w_einde)
-        kopie = Button(f3,text="Copy to File",command=self.w_kopie)
+        klaar.bind("<Return>",self.einde)
+        kopie = Button(f3,text="Copy to File",command=self.kopie)
         kopie.pack(side=LEFT,padx=5,pady=5)
         kopie.bind("<Return>",self.kopie)
         self.toonpad.set(int(self.showpath))
@@ -91,9 +93,9 @@ class Results(Toplevel):
             variable=self.toonpad
             )
         self.vraagPad.pack(side=LEFT)
-        self.w.bind_all("<Prior>",self.w_pgup)
-        self.w.bind_all("<Next>",self.w_pgdn)
-        self.w.bind_all("<Escape>",self.w_einde)
+        self.bind_all("<Prior>",self.w_pgup)
+        self.bind_all("<Next>",self.w_pgdn)
+        self.bind_all("<Escape>",self.einde)
 
     def w_pgup(self,event):
         self.results.yview(SCROLL,-1,PAGES)
@@ -111,14 +113,14 @@ class Results(Toplevel):
         apply(self.results.xview, args)
         apply(self.results_data.xview, args)
 
-    def w_einde(self, event=None):
+    def einde(self, event=None):
         self.destroy()
-        self.master.bind_all("<Escape>",self.einde)
-        self.master.unbind_all("<Prior>")
-        self.master.unbind_all("<Next>")
-        self.master.lift()
+        self.parent.master.bind_all("<Escape>",self.parent.einde)
+        self.parent.master.unbind_all("<Prior>")
+        self.parent.master.unbind_all("<Next>")
+        self.parent.master.lift()
 
-    def w_kopie(self, event=None):
+    def kopie(self, event=None):
         self.showpath = bool(self.toonpad.get())
         f = self.zoekstr.get().replace('"','@').replace("'",'@') + ".txt"
         fn = tkFileDialog.asksaveasfilename(title="Resultaat naar bestand kopieren",
@@ -143,22 +145,12 @@ class Results(Toplevel):
         self.w.grab_set()
         self.w.wait_window()
 
-class Application(ABase):
+class MainFrame(ABase):
     """Hoofdscherm van de applicatie"""
 
-    def __init__(self,master,h):
-        # self.fnames bevat 1 of meer namen van de te verwerken bestanden
-        self.master = master
-        self.master.title("Albert's find-replace in files tool")
-        ## self.master.wm_iconbitmap("@"+iconame)
-        ABase.__init__(self)
-        self.go()
+    def __init__(self, parent=None, apptype="", data=""):
+        ABase.__init__(self, parent, apptype, data)
 
-    def go(self):
-        """opzetten scherm(variabelen)
-
-        de _-variabelen worden gekopieerd naar Tkinter classes"""
-        ABase.go(self)
         self.zoekstr = StringVar()
         self.zoekstr.set('')
         self.vervstr = StringVar()
@@ -177,11 +169,10 @@ class Application(ABase):
         self.subdirs.set(self.p["subdirs"])
         self.backup = IntVar()
         self.backup.set(self._backup)
-        self.toonScherm(self.master)
 
-    def toonScherm(self,master):
-        """scherm opbouwen en tonen"""
-        self.master = Frame(master)
+        self.parent.title(self.title)
+        ## self.parent.wm_iconbitmap("@"+iconame)
+        self.master = Frame(self.parent)
         self.master.pack()
         self.fZoek = Frame(self.master)
         self.fZoek.pack(fill=BOTH,expand=True)
@@ -345,7 +336,7 @@ class Application(ABase):
 
         if not mld:
             self.checkverv(self.vervstr.get(),self.vervleeg.get())
-            self.checkattr(bool(self.case.get(), bool(self.word.get())))
+            self.checkattr(bool(self.case.get()), bool(self.word.get()))
             item = self.typestr.get()
             if item:
                 self.checktype(item)
@@ -362,12 +353,12 @@ class Application(ABase):
             return
 
         self.schrijfini()
-        zoekvervang = findr(**p)
+        self.zoekvervang = findr(**self.p)
 
-        if len(zoekvervang.rpt) == 2:
+        if len(self.zoekvervang.rpt) == 2:
             tkMessageBox.showinfo(self.resulttitel,"Niks gevonden")
         else:
-            self.w = Results(iconame, self.resulttitel, zoekvervang)
+            self.w = Results(self)
             self.w.focus_set()
             self.w.grab_set()
             self.w.wait_window()
@@ -387,40 +378,13 @@ class Application(ABase):
     #~ def quit():
         #~ self.master.quit
 
-class Appl_single(Application):
-    "Versie voor aansturing met 1 specifiek bestand om in te zoeken"
-
-    def __init__(self,master,h):
-        """
-        h[0] is dit programma zelf
-        h[1] is de naam van het te verwerken bestand
-        """
-        self.master = master
-        self.master.title("Albert's find-replace in files tool - for Total Commander, single file version")
-        ## self.master.wm_iconbitmap(iconame)
-        ABase.__init__(self,"single",h[1])
-        self.go()
-
-class Appl_multi(Application):
-    "Versie voor aansturing mmet lijst bestanden en/of directories om in te zoeken"
-
-    def __init__(self,master,h):
-        """
-        # h[0] is dit programma zelf
-        # h[1] is de naam van een bestand waarin de betreffende namen staan
-        """
-        self.master = master
-        self.master.title("Albert's find-replace in files tool - for Total Commander")
-        ## self.master.wm_iconbitmap(iconame)
-        ABase.__init__(self,"multi",h[1])
-        self.go()
-
 def test():
+    "test routine"
     root = Tk()
     Pmw.initialise(root)
-    h = Appl_single(root,['afrift_tkgui.py','afrift_tkgui.py'])
-    ## h = Appl_multi(root,['afrift_tkgui.py','CMDAE.tmp'])
-    ## h = Application(root,("hallo","findr_files.py"))
+    ## h = MainFrame(root)
+    h = MainFrame(root, 'single', '/home/visser/Python/filefindr/afrift/afrift_gui.py')
+    ## h = MainFrame(root, 'multi', 'CMDAE.tmp')
     root.mainloop()
 
 if __name__ == "__main__":

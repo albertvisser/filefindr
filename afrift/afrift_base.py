@@ -18,18 +18,24 @@ class ABase(object):
     deze class bevat methoden die onafhanelijk zijn van de gekozen
     GUI-toolkit"""
 
-    def __init__(self, apptype="", data=None):
+    def __init__(self, parent, apptype="", data=""):
         "attributen die altijd nodig zijn"
+        self.parent = parent
+        self.title = "Albert's find-replace in files tool"
+        self.fouttitel = self.title + "- fout"
+        self.resulttitel = self.title + " - Resultaten"
         self.apptype = apptype
         self.hier = ""
         self._mruItems = {}
-        if data is None:
+        if apptype == "":
             self.fnames = []
             self.hier = os.getcwd()
         elif self.apptype == "single": # data is file om te verwerken
+            self.title += " - single file version"
             self.fnames = [data,]
             self.hier = os.path.dirname(data)
         elif self.apptype == "multi": # data is file met namen om te verwerken
+            self.title += " - file list version"
             self.fnames = []
             with open(data) as f_in:
                 for line in f_in:
@@ -41,22 +47,12 @@ class ABase(object):
                         pass
                     else:
                         self.fnames.append(line)
-
+        else:
+            raise ValueError('application type should be empty, "single" or "multi"')
         self.s = ""
         self.p = {}
-        if self.apptype:
-            self.fouttitel = "AFRIFT for TC fout"
-            self.resulttitel = "Afrift for TC - Resultaten"
-        else:
-            self.fouttitel = "AFRIFT fout"
-            self.resulttitel = "Albert's Find/Replace In Files Tool - Resultaten"
         if len(self.fnames) > 0:
             self.p["filelist"] = self.fnames
-
-    def go(self):
-        """initialisatie van de variabelen die in het scherm gebruikt worden
-
-        aparte methode nodig omdat de Tkinter versie hier iets extra's moet doen"""
         for ix, name in enumerate(self.fnames):
             if name.endswith("\\") or name.endswith("/"):
                 self.fnames[ix] = name[:-1]

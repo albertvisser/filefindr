@@ -116,29 +116,19 @@ class Results(gui.QDialog):
                 else:
                     f_out.write("{0} {1}\n".format(r1.split(os.sep)[-1], r2))
 
-class Application(gui.QWidget, ABase):
+class MainFrame(gui.QWidget, ABase):
     """Hoofdscherm van de applicatie
     hmmm... sizen werkt wel met een QWidget maar niet met een QMainWindow?
 
     QWidget::setLayout: Attempting to set QLayout "" on MainWindow "",
-    which already has a layout    """
+    which already has a layout
 
-    def __init__(self, parent=None):
-        # self.fnames bevat 1 of meer namen van de te verwerken bestanden
-        self.parent = parent
-        self.title = "Albert's find-replace in files tool"
-        ABase.__init__(self)
-        self.go()
+    geeft nog steeds een segfault bij afsluiten"""
 
-    def go(self):
-        "opzetten scherm(variabelen)"
-        ABase.go(self)
-        self.toonScherm()
-
-    def toonScherm(self):
-        """scherm opbouwen en tonen"""
-        parent = self.parent
+    def __init__(self, parent=None, apptype="", fnaam=""):
+        ABase.__init__(self, parent, apptype, fnaam)
         gui.QWidget.__init__(self, parent)
+
         self.setWindowTitle(self.title)
         self.setWindowIcon(gui.QIcon(iconame))
 
@@ -299,47 +289,14 @@ class Application(gui.QWidget, ABase):
         if dlg:
             self.vraagDir.setEditText(dlg)
 
-class Appl_single(Application):
-    "Versie voor aansturing met 1 specifiek bestand om in te zoeken"
-    def __init__(self, parent, h):
-        """
-        h[0] is dit programma zelf
-        h[1] is de naam van het te verwerken bestand
-        """
-        self.parent = parent
-        self.title = "Albert's find-replace in files tool - single file version"
-        ABase.__init__(self, "single", h[1])
-        self.go()
-
-class Appl_multi(Application):
-    "Versie voor aansturing mmet lijst bestanden en/of directories om in te zoeken"
-    def __init__(self, parent, h):
-        """
-        # h[0] is dit programma zelf
-        # h[1] is de naam van een bestand waarin de betreffende namen staan
-        """
-        self.parent = parent
-        self.title = "Albert's find-replace in files tool - file list version"
-        ABase.__init__(self, "multi", h[1])
-        self.go()
-
-def MainFrame(apptype=None, data=None):
-    "class om applicatie mee te testen"
-    app = gui.QApplication(sys.argv)
-    if apptype == "Multi":
-        win = Appl_multi(None, data)
-    elif apptype == "Single":
-        win = Appl_single(None, data)
-    else:
-        win = Application(None)
-    win.show()
-    sys.exit(app.exec_())
-
 def test():
     "test routine"
-    MainFrame()
-    ## MainFrame(apptype="Multi",data=['afrift_wxgui.py','CMDAE.tmp'])
-    ## MainFrame(apptype="Single",data=['afrift_wxgui.py','CMDAE.tmp'])
+    app = gui.QApplication(sys.argv)
+    ## win = MainFrame()
+    win = MainFrame(apptype = "single", fnaam = '/home/visser/Python/filefindr/afrift/afrift_gui.py')
+    ## win = MainFrame(apptype="multi", fnaam = 'CMDAE.tmp')
+    win.show()
+    sys.exit(app.exec_())
 
 if __name__ == "__main__":
     test()

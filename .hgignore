@@ -4,5 +4,6 @@ syntax: glob
 *.bak
 *~
 *pyc
+*log
 afrift*.ini
 pylint*

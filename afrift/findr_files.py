@@ -3,7 +3,7 @@
 
 de uitvoering wordt gestuurd door in een dictionary verzamelde parameters"""
 
-#import sys
+import sys
 import os
 import re
 import shutil
@@ -47,9 +47,15 @@ class findr(object):
                 self.extlistUpper.append(x.upper())
             # moet hier nog iets mee doen m.h.o.o. woorddelen of niet
             if self.p['case']:
-                self.re = re.compile(unicode(self.p['zoek']))
+                if sys.version.startswith("3"):
+                    self.re = re.compile(str(self.p['zoek']))
+                else:
+                    self.re = re.compile(unicode(self.p['zoek']))
             else:
-                self.re = re.compile(unicode(self.p['zoek']), re.IGNORECASE)
+                if sys.version.startswith("3"):
+                    self.re = re.compile(str(self.p['zoek']), re.IGNORECASE)
+                else:
+                    self.re = re.compile(unicode(self.p['zoek']), re.IGNORECASE)
             if self.p['pad']:
                 self.subdirs(self.p['pad'])
                 #~ h = ("in %s" % (self.p['pad']))

@@ -116,27 +116,11 @@ class Results(wx.Dialog):
         ## "End screen"
         ## self.destroy()
 
-class Application(wx.Frame, ABase):
+class MainFrame(wx.Frame, ABase):
     """Hoofdscherm van de applicatie"""
 
-    def __init__(self, parent):
-        # self.fnames bevat 1 of meer namen van de te verwerken bestanden
-        self.parent = parent
-        self.title = "Albert's find-replace in files tool"
-        ABase.__init__(self)
-        self.go()
-
-    def go(self):
-        """opzetten scherm(variabelen)
-
-        de _-variabelen worden gekopieerd om het vervolg voorlopig niet te veel te hoeven
-        aanpassen"""
-        ABase.go(self)
-        self.toonScherm()
-
-    def toonScherm(self):
-        """scherm opbouwen en tonen"""
-        parent = self.parent
+    def __init__(self, parent=None, apptype="", fnaam=""):
+        ABase.__init__(self, parent, apptype, fnaam)
         wx.Frame.__init__(self, parent, wx.ID_ANY, self.title,
             style=wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE
             )
@@ -331,46 +315,13 @@ class Application(wx.Frame, ABase):
             self.vraagDir.SetValue(dlg.GetPath())
         dlg.Destroy()
 
-class Appl_single(Application):
-    "Versie voor aansturing met 1 specifiek bestand om in te zoeken"
-    def __init__(self, parent, h):
-        """
-        h[0] is dit programma zelf
-        h[1] is de naam van het te verwerken bestand
-        """
-        self.parent = parent
-        self.title = "Albert's find-replace in files tool - single file version"
-        ABase.__init__(self, "single", h[1])
-        self.go()
-
-class Appl_multi(Application):
-    "Versie voor aansturing mmet lijst bestanden en/of directories om in te zoeken"
-    def __init__(self, parent, h):
-        """
-        # h[0] is dit programma zelf
-        # h[1] is de naam van een bestand waarin de betreffende namen staan
-        """
-        self.parent = parent
-        self.title = "Albert's find-replace in files tool - file list version"
-        ABase.__init__(self, "multi", h[1])
-        self.go()
-
-def MainFrame(apptype=None, data=None):
-    "class om applicatie mee te testen"
-    app = wx.PySimpleApp(redirect=True, filename="afrift.log")
-    if apptype == "Multi":
-        Appl_multi(None, data)
-    elif apptype == "Single":
-        Appl_single(None, data)
-    else:
-        Application(None)
-    app.MainLoop()
-
 def test():
     "test routine"
-    MainFrame()
-    ## MainFrame(apptype="Multi",data=['afrift_wxgui.py','CMDAE.tmp'])
-    ## MainFrame(apptype="Single",data=['afrift_wxgui.py','CMDAE.tmp'])
+    app = wx.PySimpleApp(redirect=True, filename="afrift.log")
+    ## MainFrame()
+    MainFrame(apptype = "single", fnaam = '/home/visser/Python/filefindr/afrift/afrift_gui.py')
+    ## MainFrame(apptype = "multi", fnaam = 'CMDAE.tmp')
+    app.MainLoop()
 
 if __name__ == "__main__":
     test()
