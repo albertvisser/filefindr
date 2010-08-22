@@ -20,6 +20,8 @@ class ABase(object):
 
     def __init__(self, parent, apptype="", data=""):
         "attributen die altijd nodig zijn"
+        if data:
+            prognaam, fnaam = data
         self.parent = parent
         self.title = "Albert's find-replace in files tool"
         self.fouttitel = self.title + "- fout"
@@ -32,8 +34,8 @@ class ABase(object):
             self.hier = os.getcwd()
         elif self.apptype == "single": # data is file om te verwerken
             self.title += " - single file version"
-            self.fnames = [data,]
-            self.hier = os.path.dirname(data)
+            self.fnames = [fnaam,]
+            self.hier = os.path.dirname(fnaam)
         elif self.apptype == "multi": # data is file met namen om te verwerken
             self.title += " - file list version"
             self.fnames = []
