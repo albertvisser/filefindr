@@ -26,10 +26,6 @@ class Results(gui.QDialog):
 
         txt = gui.QLabel("{0} ({1} items)".format(self.parent.zoekvervang.rpt[0],
             len(self.parent.zoekvervang.rpt)-1), self)
-        ## #pnl = wx.Panel(self,-1)
-        ## self.lijst = wx.ListCtrl(self, -1, size = (breedte + 385, 160),
-            ## style=wx.LC_REPORT | wx.LC_VRULES,
-            ## )
         self.lijst = gui.QTableWidget(self)
         self.lijst.setColumnCount(2)
         self.lijst.setHorizontalHeaderLabels((titel, 'Data'))
@@ -213,7 +209,7 @@ class MainFrame(gui.QWidget, ABase):
             row += 1
             grid.addWidget(gui.QLabel("In de volgende files/directories:"), row, 0)
             row += 1
-            c9 = gui.QListWidget(self) # is eigenlijk Listbox
+            c9 = gui.QListWidget(self)
             ## c9.setMaximumWidth(TXTW)
             c9.insertItems(0, self.fnames)
             grid.addWidget(c9, row, 0)

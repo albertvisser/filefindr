@@ -101,7 +101,6 @@ class Results(wx.Dialog):
             style = wx.SAVE
             )
         if dlg.ShowModal() == wx.ID_OK:
-            print "hallo, ok"
             fn = dlg.GetPath()
             with open(fn, "w") as f_out:
                 f_out.write("{0}\n".format(self.results[0]))

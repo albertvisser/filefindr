@@ -22,7 +22,10 @@ class ABase(object):
         "attributen die altijd nodig zijn"
         if data:
             prognaam, fnaam = data
-        self.parent = parent
+        try:
+            self.parent = parent
+        except AttributeError: # ppygui doet dit zelf al
+            pass
         self.title = "Albert's find-replace in files tool"
         self.fouttitel = self.title + "- fout"
         self.resulttitel = self.title + " - Resultaten"
