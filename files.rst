@@ -12,18 +12,24 @@ afrift_tc.pyw
 afrift_tc_1.pyw
     starter for TC 1 file version
     imports afrift_gui.py
-afrift_gui.py
-    GUI code wxPython version
-    imports wx, ConfigParser, findr_files
-afrift_ppgui.py
-    GUI code PocketPyGUI version
-    imports ppygui, configparser, findr_files
 afrift_tkgui.py
     GUI code Tkinter/Pmw version
-    imports Tkinter, Pmw, ConfigParser, findr_files
+    imports Tkinter, Pmw, findr_files, afrift_base
+afrift_gui.py
+    GUI code wxPython version
+    imports wx, findr_files, afrift_base
+afrift_ppgui.py
+    GUI code PocketPyGUI version
+    imports ppygui, findr_files, afrift_base
+afrift_qtgui.py
+    GUI code PyQT version
+    imports PyQT4.QtGui, PyQT4.QtCore, findr_files, afrift_base
+afrift_tk3gui.py
+    GUI code Tkinter version for Python 3
+    imports tkinter, tkinter.ttk, findr_files, afrift_base
+afrift_base.py
+    (most) GUI-independent code
+    imports ConfigParser
 findr_files.py
     find/replace routine (class)
-    imports re, shutil, mystuff
-mystuff.py
-    general purpose routines and userdefined exceptions
-    to be placed in site-packages
+    imports re, shutil
