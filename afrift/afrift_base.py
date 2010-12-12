@@ -42,7 +42,7 @@ class ABase(object):
         elif self.apptype == "multi": # data is file met namen om te verwerken
             self.title += " - file list version"
             self.fnames = []
-            with open(data) as f_in:
+            with open(fnaam) as f_in:
                 for line in f_in:
                     line = line.strip()
                     if not self.hier:
