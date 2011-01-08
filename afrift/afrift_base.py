@@ -20,7 +20,7 @@ class ABase(object):
 
     def __init__(self, parent, apptype="", data=""):
         "attributen die altijd nodig zijn"
-        if data:
+        if len(data) > 1:
             prognaam, fnaam = data
         try:
             self.parent = parent
