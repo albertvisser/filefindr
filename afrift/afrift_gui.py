@@ -29,7 +29,7 @@ class Results(wx.Dialog):
         txt = wx.StaticText(self, -1, "{0} ({1} items)".format(
             self.parent.zoekvervang.rpt[0], len(self.parent.zoekvervang.rpt)-1))
         self.lijst = wx.ListCtrl(self, -1, size = (breedte + 385, 160),
-            style=wx.LC_REPORT | wx.LC_VRULES,
+            style = wx.LC_REPORT | wx.LC_VRULES,
             )
         self.lijst.InsertColumn(0, titel)
         self.lijst.SetColumnWidth(0, breedte)
@@ -37,10 +37,10 @@ class Results(wx.Dialog):
         self.lijst.SetColumnWidth(1, 380)
         self.populate_list()
 
-        b1 = wx.Button(self, wx.ID_CANCEL, "Klaar")
-        ## self.Bind(wx.EVT_BUTTON, self.einde,  b1)
-        b2 = wx.Button(self, -1, "Copy to File")
-        self.Bind(wx.EVT_BUTTON, self.kopie, b2)
+        b2 = wx.Button(self, wx.ID_CANCEL, "&Klaar")
+        ## self.Bind(wx.EVT_BUTTON, self.einde,  b2)
+        b1 = wx.Button(self, -1, "&Copy to File")
+        self.Bind(wx.EVT_BUTTON, self.kopie, b1)
         cb = wx.CheckBox(self, -1, label="toon directorypad in uitvoer")
         cb.SetValue(False)
         self.cb = cb
@@ -159,6 +159,7 @@ class MainFrame(wx.Frame, ABase):
         c5.SetValue(self.p["woord"])
         self.vraagWoord = c5
 
+        t = ""
         if self.apptype == "":
             t6 =  wx.StaticText(self.pnl, -1, "In directory:")
             c6 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1),
@@ -168,7 +169,10 @@ class MainFrame(wx.Frame, ABase):
             self.vraagDir = c6
             self.Zoek = wx.Button(self.pnl, -1, label="&Zoek")
             self.Bind(wx.EVT_BUTTON, self.zoekdir, self.Zoek)
-            t = ""
+        elif self.apptype == "single":
+            t6t = wx.StaticText(self.pnl, -1, "In file/directory:")
+            t6 =  wx.StaticText(self.pnl, -1, self.fnames[0])
+            t6b = wx.StaticText(self.pnl, -1, "", size = (120,-1))
         else:
             t = "van geselecteerde directories "
 
@@ -232,6 +236,11 @@ class MainFrame(wx.Frame, ABase):
             gbsizer.Add(t6, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
             gbsizer.Add(c6, (row, 1), flag=wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
             gbsizer.Add(self.Zoek, (row, 2), flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=4 )
+        elif self.apptype == "single":
+            row += 1
+            gbsizer.Add(t6t, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
+            gbsizer.Add(t6, (row, 1), flag=wx.EXPAND | wx.ALL, border=4)
+            gbsizer.Add(t6b, (row,2), flag=wx.EXPAND | wx.ALL, border=4)
         row += 1
         gbsizer.Add(c7, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
         row += 1
