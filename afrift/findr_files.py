@@ -61,45 +61,45 @@ class findr(object):
                     self.re = re.compile(str(zoek), re.IGNORECASE)
                 else:
                     self.re = re.compile(unicode(zoek), re.IGNORECASE)
+            specs = ["Gezocht naar '{0}'".format(self.p['zoek'])]
+            if self.p['wijzig']:
+                specs.append(" en dit vervangen door '{0}'".format(self.p['vervang']))
+            if self.p['extlist']:
+                if len(self.p['extlist']) > 1:
+                     s = " en ".join(", ".join(self.p['extlist'][:-1]),
+                                                self.p['extlist'][-1])
+                else:
+                     s = self.p['extlist'][0]
+                specs.append(" in bestanden van type {0}".format(s))
             if self.p['pad']:
+                specs.append(" in {0}".format(self.p['pad']))
                 self.subdirs(self.p['pad'])
-                #~ h = ("in %s" % (self.p['pad']))
-                #~ if self.p['subdirs']: h = ("%s en onderliggende directories:" % h)
-                #~ self.rpt.insert(0,h)
-                h = ("Gezocht naar '%s'" % self.p['zoek'])
-                if self.p['wijzig']:
-                    h = ("%s en dit vervangen door '%s'" % (h, self.p['vervang']))
-                if len(self.p['extlist']) > 0:
-                    s = self.p['extlist'][0]
-                    if len(self.p['extlist']) > 2:
-                        for x in self.p['extlist'][1:-1]:
-                            s = ("%s, %s" % (s, x))
-                    if len(self.p['extlist']) > 1:
-                        s = ("%s en %s" % (s, self.p['extlist'][-1]))
-                    h = ("%s in bestanden van type %s" % (h, s))
             else:
-                h = ("Gezocht naar '%s'" % self.p['zoek'])
-                if self.p['wijzig']:
-                    h = ("%s en dit vervangen door '%s' in:" % (h, self.p['vervang']))
+                if len(self.p['filelist']) == 1:
+                    specs.append(" in {0}".format(self.p['filelist'][0]))
+                else:
+                    specs.append(" in opgegeven bestanden/directories")
                 for entry in self.p['filelist']:
                     if not os.path.isdir(entry):
-                        d = os.path.splitext(entry)
-                        if len(self.p['extlist']) == 0 or d[1].upper() in self.extlistUpper:
+                        d, ext = os.path.splitext(entry)
+                        if len(self.p['extlist']) == 0 or ext.upper() in self.extlistUpper:
                             self.zoek(entry)
                     else:
                         self.subdirs(entry)
                     #~ self.zoek(entry)
-        self.rpt.insert(0, h)
+            if self.p['subdirs']:
+                specs.append(" en onderliggende directories")
+        self.rpt.insert(0, "".join(specs))
         ## self.rpt.append("")
 
     def subdirs(self, pad):
         "recursieve routine voor zoek/vervang in subdirectories"
         for fname in os.listdir(pad):
             entry = os.path.join(pad, fname)
+            print "zoeken in ", entry
             if not os.path.isdir(entry):
-                h = os.path.splitext(entry)
-                ## print h[1].upper(), self.extlistUpper
-                if len(self.p['extlist']) == 0 or h[1].upper() in self.extlistUpper:
+                h, ext = os.path.splitext(entry)
+                if len(self.p['extlist']) == 0 or ext.upper() in self.extlistUpper:
                     self.zoek(entry)
             else:
                 if self.p['subdirs']:
@@ -124,7 +124,7 @@ class findr(object):
         last_in_line = 0
         for vind in self.re.finditer(data):
             found = True
-            ## print(vind.span())
+            ## print(vind, vind.span(), sep = " ")
             for lineno, linestart in enumerate(lines[from_line:]):
                 ## print(from_line,lineno,linestart)
                 if vind.start() < linestart:
