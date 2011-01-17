@@ -79,8 +79,12 @@ class Results(gui.QDialog):
                     where = lineno
                 self.lijst.insertRow(ix - 1)
                 headers.append('')
-                self.lijst.setItem(ix - 1, 0, gui.QTableWidgetItem(where))
-                self.lijst.setItem(ix - 1, 1, gui.QTableWidgetItem(what))
+                item = gui.QTableWidgetItem(where)
+                item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
+                self.lijst.setItem(ix - 1, 0, item)
+                item = gui.QTableWidgetItem(what)
+                item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
+                self.lijst.setItem(ix - 1, 1, item)
                 self.results.append((where, what))
         self.lijst.setVerticalHeaderLabels(headers)
         self.results.insert(0, kop)
@@ -121,7 +125,8 @@ class MainFrame(gui.QWidget, ABase):
 
     geeft nog steeds een segfault bij afsluiten"""
 
-    def __init__(self, parent=None, apptype="", fnaam=""):
+    def __init__(self, parent = None, apptype = "", fnaam = ""):
+        app = gui.QApplication(sys.argv)
         ABase.__init__(self, parent, apptype, fnaam)
         gui.QWidget.__init__(self, parent)
 
@@ -184,6 +189,11 @@ class MainFrame(gui.QWidget, ABase):
             self.zoek = gui.QPushButton("&Zoek")
             self.connect(self.zoek, core.SIGNAL('clicked()'), self.zoekdir)
             grid.addWidget(self.zoek, row, 2)
+        elif self.apptype == "single":
+            row += 1
+            grid.addWidget(gui.QLabel("In file/directory:"), row, 0)
+            grid.addWidget(gui.QLabel(self.fnames[0]), row, 1)
+            grid.addWidget(gui.QLabel(""), row, 2) # size = (120,-1))
         elif self.apptype == "multi":
             t = "van geselecteerde directories "
 
@@ -242,6 +252,9 @@ class MainFrame(gui.QWidget, ABase):
         ## self.resize(250, 150)
         self.vraagZoek.setFocus()
 
+        self.show()
+        sys.exit(app.exec_())
+
     def keyPressEvent(self, event):
         """event handler voor toetsaanslagen"""
         if event.key() == core.Qt.Key_Escape:
@@ -287,12 +300,9 @@ class MainFrame(gui.QWidget, ABase):
 
 def test():
     "test routine"
-    app = gui.QApplication(sys.argv)
     ## win = MainFrame()
-    win = MainFrame(apptype = "single", fnaam = '/home/visser/Python/filefindr/afrift/afrift_gui.py')
+    MainFrame(apptype = "single", fnaam = '/home/visser/Python/filefindr/afrift/afrift_gui.py')
     ## win = MainFrame(apptype="multi", fnaam = 'CMDAE.tmp')
-    win.show()
-    sys.exit(app.exec_())
 
 if __name__ == "__main__":
     test()
