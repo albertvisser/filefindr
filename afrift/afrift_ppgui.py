@@ -100,19 +100,23 @@ class MainFrame(gui.CeFrame, ABase):
         self.cbWoord = gui.Button(self,text="hele woorden",
             style="check")
 
+        t = ""
         if self.apptype =="":
             self.lblDir = gui.Label(self,"In directory:")
             self.cmbDir = gui.Combo(self,choices = self._mruItems["dirs"])
             self.btnDir = gui.Button(self,title="Zoek",action=self.zoekdir)
-            t = ""
+        elif self.apptype == "single":
+            self.lblDirt = gui.Label(self,"In file/directory:")
+            self.lblDir = gui.Label(self,self.fnames[0])
         else:
             t = "van geselecteerde directories \n"
 
-        self.cbSubs = gui.Button(self,text= t + "ook subdirectories doorzoeken    ",
-            style="check")
+        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+            self.cbSubs = gui.Button(self,text= t + "ook subdirectories doorzoeken    ",
+                style="check")
 
-        self.lblTypes = gui.Label(self,title="alleen files van type:")
-        self.cmbTypes = gui.Combo(self,choices=self._mruItems["types"])
+            self.lblTypes = gui.Label(self,title="alleen files van type:")
+            self.cmbTypes = gui.Combo(self,choices=self._mruItems["types"])
 
         if self.apptype == "multi":
             self.lblFiles = gui.Label(self,title="In de volgende files/directories:")
@@ -159,15 +163,26 @@ class MainFrame(gui.CeFrame, ABase):
             h1.add(self.btnDir)
             h0.add(h1)
             v0.add(h0)
-        h0 = gui.HBox() #(2,2,2,2),spacing=2)
-        spcr = gui.Spacer(x=60,y=0)
-        h0.add(spcr)
-        h0.add(self.cbSubs)
-        v0.add(h0)
-        h0 = gui.HBox() #(2,2,2,2),spacing=2)
-        h0.add(self.lblTypes)
-        h0.add(self.cmbTypes)
-        v0.add(h0)
+        elif self.apptype == "single":
+            h0 = gui.HBox() #(2,2,2,2),spacing=2)
+            h1 = gui.HBox((2,2,13,2))
+            h1.add(self.lblDirt)
+            h0.add(h1)
+            h0.add(self.lblDir)
+            h1 = gui.HBox((2,-1,2,-1))
+            h1.add(self.btnDir)
+            h0.add(h1)
+            v0.add(h0)
+        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+            h0 = gui.HBox() #(2,2,2,2),spacing=2)
+            spcr = gui.Spacer(x=60,y=0)
+            h0.add(spcr)
+            h0.add(self.cbSubs)
+            v0.add(h0)
+            h0 = gui.HBox() #(2,2,2,2),spacing=2)
+            h0.add(self.lblTypes)
+            h0.add(self.cmbTypes)
+            v0.add(h0)
         if self.apptype == "multi":
             h0 = gui.HBox() #(2,2,2,2),spacing=2)
             h0.add(self.lblFiles)
@@ -200,13 +215,19 @@ class MainFrame(gui.CeFrame, ABase):
         if not mld:
             self.checkverv(self.cmbVerv.get_text(), self.cbVervang.checked)
             self.checkattr(self.cbCase.checked, self.cbWoord.checked)
-            b = self.cmbTypes.get_text()
+            try:
+                b = self.cmbTypes.get_text()
+            except AttributeError:
+                b = None
             if b:
                 self.checktype(b)
             if not self.apptype:
                 mld = self.checkpath(self.cmbDir.get_text())
         if not mld:
-            self.checksubs(self.cbSubs.checked)
+            try:
+                self.checksubs(self.cbSubs.checked)
+            except AttributeError:
+                pass
 
         #-- nog niet toegevoegd in deze interface
         # self.p["backup"] = self.vraagBackup.GetValue()

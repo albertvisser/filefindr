@@ -227,6 +227,7 @@ class MainFrame(ABase):
             variable=self.word
             )
         self.vraagWoord.pack(side=tk.LEFT)
+        t = ""
         if self.apptype == "":
             frm = tk.Frame(self.master)
             frm.pack(fill=tk.BOTH, expand=True)
@@ -240,26 +241,32 @@ class MainFrame(ABase):
             self.Zoek = tk.Button(frm, text="Zoek", command=self.zoekdir)
             self.Zoek.pack(side=tk.LEFT, padx=5)
             tk.Label(frm, text="").pack(side=tk.RIGHT)
-            t = ""
+        elif self.apptype == "single":
+            frm = tk.Frame(self.master)
+            frm.pack(fill=tk.BOTH, expand=True)
+            tk.Label(frm, text="In file/directory", width=17).pack(side=tk.LEFT)
+            tk.Label(frm, text=self.fnames[0]).pack(side=tk.LEFT)
+            tk.Label(frm, text="").pack(side=tk.RIGHT)
         else:
             t = "van geselecteerde directories "
-        frm = tk.Frame(self.master)
-        frm.pack(fill=tk.BOTH, expand=True)
-        tk.Label(frm, text="", width=17).pack(side=tk.LEFT)
-        self.vraagSubs = tk.Checkbutton(frm,
-            text = t + "ook subdirectories doorzoeken    ",
-            variable=self.subdirs,
-            )
-        self.vraagSubs.pack(side=tk.LEFT)
-        frm = tk.Frame(self.master)
-        frm.pack(fill=tk.BOTH, expand=True)
-        tk.Label(frm, text = "alleen files van type:", width=17).pack(side=tk.LEFT)
-        self.vraagTypes = ttk.Combobox(frm,
-            values = self._mruItems["types"],
-            width = 40,
-            textvariable = self.typestr,
-            )
-        self.vraagTypes.pack(side=tk.LEFT, padx=5, pady=5)
+        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+            frm = tk.Frame(self.master)
+            frm.pack(fill=tk.BOTH, expand=True)
+            tk.Label(frm, text="", width=17).pack(side=tk.LEFT)
+            self.vraagSubs = tk.Checkbutton(frm,
+                text = t + "ook subdirectories doorzoeken    ",
+                variable=self.subdirs,
+                )
+            self.vraagSubs.pack(side=tk.LEFT)
+            frm = tk.Frame(self.master)
+            frm.pack(fill=tk.BOTH, expand=True)
+            tk.Label(frm, text = "alleen files van type:", width=17).pack(side=tk.LEFT)
+            self.vraagTypes = ttk.Combobox(frm,
+                values = self._mruItems["types"],
+                width = 40,
+                textvariable = self.typestr,
+                )
+            self.vraagTypes.pack(side=tk.LEFT, padx=5, pady=5)
         frm = tk.Frame(self.master)
         frm.pack(fill=tk.BOTH, expand=True)
         if self.apptype == "multi":
@@ -305,14 +312,20 @@ class MainFrame(ABase):
         if not mld:
             self.checkverv(self.vervstr.get(), self.vervleeg.get())
             self.checkattr(bool(self.case.get()), bool(self.word.get()))
-            item = self.typestr.get()
+            try:
+                item = self.typestr.get()
+            except AttributeError:
+                b = None
             if item:
                 self.checktype(item)
             if not self.apptype:
                 mld = self.checkpath(self.dirnaam.get())
 
         if not mld:
-            self.checksubs(bool(self.subdirs.get()))
+            try:
+                self.checksubs(bool(self.subdirs.get()))
+            except AttributeError:
+                pass
 
         self.p["backup"] = bool(self.backup.get())
 

@@ -96,7 +96,7 @@ class findr(object):
         "recursieve routine voor zoek/vervang in subdirectories"
         for fname in os.listdir(pad):
             entry = os.path.join(pad, fname)
-            print "zoeken in ", entry
+            ## print("zoeken in ",entry,sep = " ")
             if not os.path.isdir(entry):
                 h, ext = os.path.splitext(entry)
                 if len(self.p['extlist']) == 0 or ext.upper() in self.extlistUpper:
