@@ -80,6 +80,7 @@ class Results(wx.Dialog):
                         kop += " in {0}".format(fname)
                     where = lineno
                 i = self.lijst.InsertStringItem(sys.maxsize, where)
+                ## print what
                 self.lijst.SetStringItem(i, 0, where)
                 self.lijst.SetStringItem(i, 1, what)
                 self.results.append((where, what))
@@ -293,13 +294,19 @@ class MainFrame(wx.Frame, ABase):
         if not mld:
             self.checkverv(self.vraagVerv.GetValue(), self.cVervang.GetValue())
             self.checkattr(self.vraagCase.GetValue(), self.vraagWoord.GetValue())
-            b = self.vraagTypes.GetValue()
+            try:
+                b = self.vraagTypes.GetValue()
+            except AttributeError:
+                b = None
             if b:
                 self.checktype(b)
             if not self.apptype:
                 mld = self.checkpath(self.vraagDir.GetValue())
         if not mld:
-            self.checksubs(self.vraagSubs.GetValue())
+            try:
+                self.checksubs(self.vraagSubs.GetValue())
+            except AttributeError:
+                pass
         self.p["backup"] = self.vraagBackup.GetValue()
 
         if mld:

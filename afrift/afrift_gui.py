@@ -80,6 +80,7 @@ class Results(wx.Dialog):
                         kop += " in {0}".format(fname)
                     where = lineno
                 i = self.lijst.InsertStringItem(sys.maxsize, where)
+                ## print what
                 self.lijst.SetStringItem(i, 0, where)
                 self.lijst.SetStringItem(i, 1, what)
                 self.results.append((where, what))
@@ -176,18 +177,19 @@ class MainFrame(wx.Frame, ABase):
         else:
             t = "van geselecteerde directories "
 
-        c7 = wx.CheckBox(self.pnl, -1,
-            label = t + "ook subdirectories doorzoeken",
-            )
-        c7.SetValue(self.p["subdirs"])
-        self.vraagSubs = c7
+        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+            c7 = wx.CheckBox(self.pnl, -1,
+                label = t + "ook subdirectories doorzoeken",
+                )
+            c7.SetValue(self.p["subdirs"])
+            self.vraagSubs = c7
 
-        t8 =  wx.StaticText(self.pnl, -1, "alleen files van type:")
-        c8 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1),
-            choices=self._mruItems["types"],
-            style=wx.CB_DROPDOWN
-            )
-        self.vraagTypes = c8
+            t8 =  wx.StaticText(self.pnl, -1, "alleen files van type:")
+            c8 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1),
+                choices=self._mruItems["types"],
+                style=wx.CB_DROPDOWN
+                )
+            self.vraagTypes = c8
 
         if self.apptype == "multi":
             t9 = wx.StaticText(self.pnl, -1, "In de volgende files/directories:")
@@ -241,11 +243,12 @@ class MainFrame(wx.Frame, ABase):
             gbsizer.Add(t6t, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
             gbsizer.Add(t6, (row, 1), flag=wx.EXPAND | wx.ALL, border=4)
             gbsizer.Add(t6b, (row,2), flag=wx.EXPAND | wx.ALL, border=4)
-        row += 1
-        gbsizer.Add(c7, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
-        row += 1
-        gbsizer.Add(t8, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
-        gbsizer.Add(c8, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
+        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+            row += 1
+            gbsizer.Add(c7, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
+            row += 1
+            gbsizer.Add(t8, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
+            gbsizer.Add(c8, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
         if self.apptype == "multi":
             row += 1
             gbsizer.Add(t9, (row, 0), (1, 2), flag=wx.EXPAND | wx.LEFT | wx.TOP, border=4)
@@ -291,13 +294,19 @@ class MainFrame(wx.Frame, ABase):
         if not mld:
             self.checkverv(self.vraagVerv.GetValue(), self.cVervang.GetValue())
             self.checkattr(self.vraagCase.GetValue(), self.vraagWoord.GetValue())
-            b = self.vraagTypes.GetValue()
+            try:
+                b = self.vraagTypes.GetValue()
+            except AttributeError:
+                b = None
             if b:
                 self.checktype(b)
             if not self.apptype:
                 mld = self.checkpath(self.vraagDir.GetValue())
         if not mld:
-            self.checksubs(self.vraagSubs.GetValue())
+            try:
+                self.checksubs(self.vraagSubs.GetValue())
+            except AttributeError:
+                pass
         self.p["backup"] = self.vraagBackup.GetValue()
 
         if mld:
