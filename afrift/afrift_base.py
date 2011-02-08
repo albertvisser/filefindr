@@ -18,10 +18,10 @@ class ABase(object):
     deze class bevat methoden die onafhanelijk zijn van de gekozen
     GUI-toolkit"""
 
-    def __init__(self, parent, apptype="", data=""):
+    def __init__(self, parent, apptype="", fnaam=""):
         "attributen die altijd nodig zijn"
-        if len(data) > 1:
-            prognaam, fnaam = data
+        ## if len(data) > 1:
+            ## prognaam, fnaam = data
         try:
             self.parent = parent
         except AttributeError: # ppygui doet dit zelf al
