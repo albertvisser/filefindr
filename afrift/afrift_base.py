@@ -4,10 +4,10 @@ het meeste hiervan bevind zich in een class die als mixin gebruikt wordt"""
 
 import os
 import sys
-if sys.version.startswith('3'):
-    from configparser import SafeConfigParser
-else:
-    from ConfigParser import SafeConfigParser
+try:
+    from configobj import ConfigObj
+except ImportError:
+    sys.exit('configobj waarschijnlijk niet geinstalleerd')
 HERE = os.path.dirname(__file__)
 iconame = os.path.join(HERE,"find.ico")
 
@@ -61,82 +61,52 @@ class ABase(object):
         for ix, name in enumerate(self.fnames):
             if name.endswith("\\") or name.endswith("/"):
                 self.fnames[ix] = name[:-1]
+        self._inifile = os.path.join(self.hier, "afrift.ini")
+        self._keys = ("zoek", "verv", "types", "dirs")
+        self._optionskey = "options"
+        self._sections = ('zoek', 'vervang', 'filetypes', 'dirs')
+        self._words = ('woord', 'woord', 'spec', 'pad', )
+        self._optkeys = ("case", "woord", "subdirs")
+        self._options = ("matchcase", "matchwords", "searchsubdirs")
         self.readini()
         self._vervleeg = False
         self._backup = True
 
     def readini(self):
         "lees ini file (met eerder gebruikte zoekinstellingen)"
-        self.inifile = self.hier + "/afriftftc.ini"
-        # inlezen mru-gegevens
-        self._mruItems["zoek"] = []
-        self._mruItems["verv"] = []
-        self._mruItems["types"] = []
-        self._mruItems["dirs"] = []
-        self.p["case"] = False
-        self.p["woord"] = False
-        self.p["subdirs"] = False
-        s = SafeConfigParser()
-        s.read(self.inifile)
-        if s.has_section("zoek"):
-            for i in range(len(s.options("zoek"))):
-                ky = ("woord%i"  % (i+1))
-                self._mruItems["zoek"].append(s.get("zoek", ky))
-        if s.has_section("vervang"):
-            for i in range(len(s.options("vervang"))):
-                ky = ("woord%i"  % (i+1))
-                self._mruItems["verv"].append(s.get("vervang", ky))
-        if s.has_section("filetypes"):
-            for i in range(len(s.options("filetypes"))):
-                ky = ("spec%i"  % (i+1))
-                self._mruItems["types"].append(s.get("filetypes", ky))
-        if s.has_section("dirs"):
-            for i in range(len(s.options("dirs"))):
-                ky = ("pad%i"  % (i+1))
-                self._mruItems["dirs"].append(s.get("dirs", ky))
-        if s.has_section("options"):
-            if s.has_option("options", "matchCase"):
-                if s.getboolean("options", "matchCase"):
-                    self.p["case"] = True
-            if s.has_option("options", "matchWords"):
-                if s.getboolean("options", "matchWords"):
-                    self.p["woord"] = True
-            if s.has_option("options", "searchSubdirs"):
-                if s.getboolean("options", "searchSubdirs"):
-                    self.p["subdirs"] = True
-        ## print self._mruItems
+        for key in self._keys:
+            self._mruItems[key] = []
+        for key in self._optkeys:
+            self.p[key] = False
+        conf = ConfigObj(self._inifile)
+        for ix, sect in enumerate(self._keys):
+            if self._sections[ix] in conf:
+                for nr, item in enumerate(conf[self._sections[ix]]):
+                    ky = "".join((self._words[ix],str(nr + 1)))
+                    ## print ky
+                    self._mruItems[sect].append(conf[self._sections[ix]][ky])
+        if self._optionskey in conf:
+            for ix, opt in enumerate(self._options):
+                if opt in conf[self._optionskey]:
+                    if conf[self._optionskey].as_bool(opt):
+                        self.p[self._optkeys[ix]] = True
 
     def schrijfini(self):
         """huidige settings toevoegen dan wel vervangen in ini file"""
-        ## print self.p
-        s = SafeConfigParser()
-        ## print "*** schrijfini ***"
-        ## print self._mruItems
-        for ix, item in enumerate(self._mruItems["zoek"]):
+        conf = ConfigObj()
+        conf.filename = self._inifile
+        for ix, sect in enumerate(self._sections):
+            for nr, item in enumerate(self._mruItems[self._keys[ix]]):
+                if nr == 0:
+                    conf[sect] = {}
+                ky = "".join((self._words[ix],str(nr + 1)))
+                conf[sect][ky] = item
+        for ix, opt in enumerate(self._options):
             if ix == 0:
-                s.add_section("zoek")
-            s.set("zoek", "woord{0}".format(ix + 1), item)
-        for ix, item in enumerate(self._mruItems["verv"]):
-            if ix == 0:
-                s.add_section("vervang")
-            s.set("vervang", "woord{0}".format(ix + 1), item)
-        for ix, item in enumerate(self._mruItems["types"]):
-            if ix == 0:
-                s.add_section("filetypes")
-            s.set("filetypes", "spec{0}".format(ix + 1), item)
-        for ix, item in enumerate(self._mruItems["dirs"]):
-            if ix == 0:
-                s.add_section("dirs")
-            s.set("dirs", "pad{0}".format(ix + 1), item)
-        s.add_section("options")
-        h = "True" if self.p["case"] else "False"
-        s.set("options", "matchCase", h)
-        h = "True" if self.p["woord"] else "False"
-        s.set("options", "matchWords", h)
-        h = "True" if self.p["subdirs"] else "False"
-        s.set("options", "searchSubdirs", h)
-        with open(self.inifile, "w") as f_out:
-            s.write(f_out)
+                conf[self._optionskey] = {}
+            h = "True" if self.p[self._optkeys[ix]] else "False"
+            conf[self._optionskey][opt] = h
+        conf.write()
 
     def checkzoek(self, item):
         "controleer zoekargument"
