@@ -289,7 +289,7 @@ class MainFrame(wx.Frame, ABase):
             ev.Skip()
 
     def doe(self, event=None):
-        """Zoekactie uitvoeren en resultaatscherm tonen"""
+        """Invoer controleren, indien ok zoekactie uitvoeren en resultaatscherm tonen"""
         mld = self.checkzoek(self.vraagZoek.GetValue())
         if not mld:
             self.checkverv(self.vraagVerv.GetValue(), self.cVervang.GetValue())
@@ -340,7 +340,7 @@ class MainFrame(wx.Frame, ABase):
 def test():
     "test routine"
     ## MainFrame()
-    MainFrame(apptype = "single", fnaam = '/home/visser/Python/filefindr/afrift/afrift_gui.py')
+    MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
     ## MainFrame(apptype = "multi", fnaam = 'CMDAE.tmp')
 
 if __name__ == "__main__":

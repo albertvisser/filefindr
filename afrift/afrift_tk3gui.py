@@ -292,13 +292,30 @@ class MainFrame(ABase):
         self.vraagBackup.pack(side=tk.LEFT)
         frm = tk.Frame(self.master)
         frm.pack()
-        self.DoIt = tk.Button(frm, text="Uitvoeren", command=self.doe)
+        self.DoIt = ttk.Button(frm, text="Uitvoeren", command=self.doe)
         self.DoIt.pack(side=tk.LEFT, padx=5, pady=5)
         self.master.bind_all("<Return>", self.doe)
         self.vraagZoek.focus_set()
-        self.Cancel = tk.Button(frm, text="Einde", command=self.master.quit)
+        self.Cancel = ttk.Button(frm, text="Einde", command=self.master.quit)
         self.Cancel.pack(side=tk.LEFT, padx=5, pady=5)
         self.master.bind_all("<Escape>", self.einde)
+        # playing with ttk style
+        style = ttk.Style()
+        ## style.theme_use('classic') # alt, clam, default,
+        ## style.configure("TButton", padding=6, relief="flat",
+            ## background="#ccc")
+        ## style.theme_settings("default", {
+           ## "TCombobox": {
+               ## "configure": {"padding": 5},
+               ## "map": {
+                   ## "background": [("active", "green2"),
+                                  ## ("!disabled", "green4")],
+                   ## "fieldbackground": [("!disabled", "green3")],
+                   ## "foreground": [("focus", "OliveDrab1"),
+                                  ## ("!disabled", "OliveDrab2")]
+               ## }
+           ## }
+        ## })
 
     def einde(self, event):
         """applicatie afsluiten"""
@@ -358,7 +375,7 @@ def test():
     "test routine"
     root = tk.Tk()
     ## MainFrame(root)
-    MainFrame(root, "single", '/home/visser/Python/filefindr/afrift/afrift_gui.py')
+    MainFrame(root, "single", '/home/albert/filefindr/afrift/afrift_gui.py')
     ## MainFrame(root, 'multi', 'CMDAE.tmp')
     root.mainloop()
 

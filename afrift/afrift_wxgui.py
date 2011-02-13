@@ -340,7 +340,7 @@ class MainFrame(wx.Frame, ABase):
 def test():
     "test routine"
     ## MainFrame()
-    MainFrame(apptype = "single", fnaam = '/home/visser/Python/filefindr/afrift/afrift_gui.py')
+    MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
     ## MainFrame(apptype = "multi", fnaam = 'CMDAE.tmp')
 
 if __name__ == "__main__":

@@ -5,4 +5,7 @@
 import sys
 from afrift.afrift_gui import MainFrame
 
-MainFrame(apptype = "multi", fnaam = sys.argv)
+if len(sys.argv) > 1:
+    MainFrame(apptype = "multi", fnaam = sys.argv)
+else:
+    MainFrame(apptype = "multi")

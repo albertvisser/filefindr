@@ -301,7 +301,7 @@ class MainFrame(gui.QWidget, ABase):
 def test():
     "test routine"
     ## win = MainFrame()
-    MainFrame(apptype = "single", fnaam = '/home/visser/Python/filefindr/afrift/afrift_gui.py')
+    MainFrame(apptype = "single", fnaam = '/home/visser/filefindr/afrift/afrift_gui.py')
     ## win = MainFrame(apptype="multi", fnaam = 'CMDAE.tmp')
 
 if __name__ == "__main__":

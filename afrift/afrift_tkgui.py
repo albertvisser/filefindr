@@ -397,7 +397,7 @@ def test():
     root = tk.Tk()
     Pmw.initialise(root)
     ## MainFrame(root)
-    MainFrame(root, 'single', '/home/visser/Python/filefindr/afrift/afrift_gui.py')
+    MainFrame(root, 'single', '/home/albert/filefindr/afrift/afrift_gui.py')
     ## MainFrame(root, 'multi', 'CMDAE.tmp')
     root.mainloop()
 
