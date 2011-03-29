@@ -12,12 +12,13 @@ import shutil
 class findr(object):
     "interpreteren van de parameters en aansturen van de zoek/vervang routine"
     def __init__(self, **parms):
+        ## print parms
         self.p = {
-            'zoek':'',
-            'vervang':'',
-            'pad':'',
-            'extlist':[],
-            'filelist':[],
+            'zoek': '',
+            'vervang': '',
+            'pad': '',
+            'extlist': [],
+            'filelist': [],
             'subdirs': False,
             "case": False,
             "woord": False,
@@ -29,6 +30,8 @@ class findr(object):
                 self.p[x] = parms[x]
             else:
                 raise TypeError('Onbekende optie ' + x)
+        ## print self.p
+        ## sys.exit()
         self.ok = True
         self.rpt = [] # verslag van wat er gebeurd is
         if self.p['filelist'] == [] and self.p['pad'] == "":
@@ -39,11 +42,13 @@ class findr(object):
             self.rpt.append('Fout: geen zoekstring opgegeven')
         if self.rpt:
             self.ok = False
-            h = "Zoekactie niet mogelijk:"
+            specs = "Zoekactie niet mogelijk"
         else:
             self.p['wijzig'] = True if self.p['vervang'] is not None else False
             self.extlistUpper = []
             for x in self.p['extlist']:
+                if not x.startswith("."):
+                    x = "." + x
                 self.extlistUpper.append(x.upper())
             # moet hier nog iets mee doen m.h.o.o. woorddelen of niet
             zoek = ''
