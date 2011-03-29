@@ -82,7 +82,10 @@ class Results(wx.Dialog):
                 i = self.lijst.InsertStringItem(sys.maxsize, where)
                 ## print what
                 self.lijst.SetStringItem(i, 0, where)
-                self.lijst.SetStringItem(i, 1, what)
+                try:
+                    self.lijst.SetStringItem(i, 1, what)
+                except UnicodeDecodeError as e:
+                    self.lijst.SetStringItem(i, 1, ">> {0} <<".format(e))
                 self.results.append((where, what))
         self.results.insert(0, kop)
 
