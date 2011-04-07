@@ -44,14 +44,17 @@ class ABase(object):
             self.fnames = []
             with open(fnaam) as f_in:
                 for line in f_in:
-                    line = line.strip()
+                    ## line = line.strip()
                     if not self.hier:
+                        if line.endswith("\\") or line.endswith("/"):
+                            line = line[:-1]
                         self.hier = os.path.dirname(line)
-                    if line.endswith("\\") or line.endswith("/"):
-                        # directory afwandelen en onderliggende files verzamelen
-                        pass
-                    else:
-                        self.fnames.append(line)
+                    ## if line.endswith("\\") or line.endswith("/"):
+                        ## # directory afwandelen en onderliggende files verzamelen
+                        ## pass
+                    ## else:
+                        ## self.fnames.append(line)
+                    self.fnames.append(line)
         else:
             raise ValueError('application type should be empty, "single" or "multi"')
         self.s = ""
