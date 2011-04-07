@@ -71,8 +71,8 @@ class findr(object):
                 specs.append(" en dit vervangen door '{0}'".format(self.p['vervang']))
             if self.p['extlist']:
                 if len(self.p['extlist']) > 1:
-                     s = " en ".join(", ".join(self.p['extlist'][:-1]),
-                                                self.p['extlist'][-1])
+                     s = " en ".join((", ".join(self.p['extlist'][:-1]),
+                                                self.p['extlist'][-1]))
                 else:
                      s = self.p['extlist'][0]
                 specs.append(" in bestanden van type {0}".format(s))
@@ -94,7 +94,7 @@ class findr(object):
                     #~ self.zoek(entry)
             if self.p['subdirs']:
                 specs.append(" en onderliggende directories")
-        self.rpt.insert(0, "".join(specs))
+            self.rpt.insert(0, "".join(specs))
         ## self.rpt.append("")
 
     def subdirs(self, pad):
@@ -114,14 +114,15 @@ class findr(object):
         "het daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
         ## print "----"
         ## print(best)
-        with open(best,"r") as f_in:
-            regels = f_in.readlines()
         pos = 0
         lines = []
-        for x in regels:
-            ## print(x[:-1])
-            lines.append(pos)
-            pos += len(x)
+        regels = []
+        with open(best,"r") as f_in:
+            for x in f_in:
+                lines.append(pos)
+                x = x.strip()
+                regels.append(x)
+                pos += len(x)
         lines.append(pos)
         data = "".join(regels)
         found = False
