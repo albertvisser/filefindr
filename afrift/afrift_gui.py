@@ -322,7 +322,8 @@ class MainFrame(wx.Frame, ABase):
         self.zoekvervang = findr(**self.p)
 
         if len(self.zoekvervang.rpt) == 1:
-            dlg = wx.MessageDialog(self, "Niks gevonden", self.resulttitel,
+            txt = "Niks gevonden" if self.zoekvervang.ok else self.zoekvervang.rpt[0]
+            dlg = wx.MessageDialog(self, txt, self.resulttitel,
                 wx.OK | wx.ICON_INFORMATION)
         else:
             dlg = Results(self, -1, self.resulttitel)
@@ -342,8 +343,8 @@ class MainFrame(wx.Frame, ABase):
 
 def test():
     "test routine"
-    ## MainFrame()
-    MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
+    MainFrame()
+    ## MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
     ## MainFrame(apptype = "multi", fnaam = 'CMDAE.tmp')
 
 if __name__ == "__main__":
