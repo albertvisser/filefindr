@@ -66,6 +66,7 @@ class Results(wx.Dialog):
         ## vsizer.SetSizeHints(self)
         self.Layout()
         self.Show(True)
+        self.SetFocus()
 
     def populate_list(self):
         "resultaten in de listbox zetten"
@@ -80,7 +81,6 @@ class Results(wx.Dialog):
                         kop += " in {0}".format(fname)
                     where = lineno
                 i = self.lijst.InsertStringItem(sys.maxsize, where)
-                ## print what
                 self.lijst.SetStringItem(i, 0, where)
                 try:
                     self.lijst.SetStringItem(i, 1, what)
@@ -274,6 +274,7 @@ class MainFrame(wx.Frame, ABase):
 
         self.pnl.Layout()
         self.vraagZoek.SetFocus()
+        self.noescape = False
         self.Bind(wx.EVT_KEY_UP, self.on_key_up)
         ## for win in self.GetChildren():
             ## self.Bind(wx.EVT_KEY_UP,self.on_key_up,win)
@@ -285,9 +286,11 @@ class MainFrame(wx.Frame, ABase):
 
     def on_key_up(self, ev):
         """event handler voor toetsaanslagen"""
-        ## print(ev.GetKeyCode())
         if ev.GetKeyCode() == wx.WXK_ESCAPE:
-            self.einde()
+            if self.noescape:
+                self.noescape = False
+            else:
+                self.einde()
         else:
             ev.Skip()
 
@@ -326,6 +329,7 @@ class MainFrame(wx.Frame, ABase):
             dlg = wx.MessageDialog(self, txt, self.resulttitel,
                 wx.OK | wx.ICON_INFORMATION)
         else:
+            self.noescape = True
             dlg = Results(self, -1, self.resulttitel)
         dlg.ShowModal()
         dlg.Destroy()
@@ -343,8 +347,8 @@ class MainFrame(wx.Frame, ABase):
 
 def test():
     "test routine"
-    MainFrame()
-    ## MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
+    ## MainFrame()
+    MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
     ## MainFrame(apptype = "multi", fnaam = 'CMDAE.tmp')
 
 if __name__ == "__main__":
