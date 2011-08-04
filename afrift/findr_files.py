@@ -138,7 +138,7 @@ class findr(object):
                         in_line = lineno + from_line
                         if in_line != last_in_line:
                             self.rpt.append("{0} r. {1}: {2}".format(
-                                best, in_line, regels[in_line - 1][:-1]))
+                                best, in_line, regels[in_line - 1]))
                         last_in_line = in_line
                     from_line = lineno
                     break
