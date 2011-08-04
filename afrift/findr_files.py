@@ -120,7 +120,7 @@ class findr(object):
         with open(best,"r") as f_in:
             for x in f_in:
                 lines.append(pos)
-                x = x.strip()
+                ## x = x.strip()
                 regels.append(x)
                 pos += len(x)
         lines.append(pos)
@@ -143,7 +143,7 @@ class findr(object):
                     from_line = lineno
                     break
         if found and self.p['wijzig']:
-            aant, ndata = self.re.subn(unicode(self.p["vervang"]), data)
+            ndata, aant = self.re.subn(unicode(self.p["vervang"]), data)
             self.rpt.append("%s: %s times" % (best, aant))
             if self.p['backup']:
                 bestnw = best + ".bak"

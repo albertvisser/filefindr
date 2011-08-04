@@ -75,11 +75,15 @@ class Results(wx.Dialog):
                 kop = line
             elif line != "":
                 where, what = line.split(": ", 1)
-                if self.parent.apptype == "single":
+                try:
                     fname, lineno = where.split("r.", 1)
-                    if ix == 1:
-                        kop += " in {0}".format(fname)
-                    where = lineno
+                except ValueError:
+                    pass
+                else:
+                    if self.parent.apptype == "single":
+                        if ix == 1:
+                            kop += " in {0}".format(fname)
+                        where = lineno
                 i = self.lijst.InsertStringItem(sys.maxsize, where)
                 self.lijst.SetStringItem(i, 0, where)
                 try:
@@ -347,8 +351,8 @@ class MainFrame(wx.Frame, ABase):
 
 def test():
     "test routine"
-    ## MainFrame()
-    MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
+    MainFrame()
+    ## MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
     ## MainFrame(apptype = "multi", fnaam = 'CMDAE.tmp')
 
 if __name__ == "__main__":
