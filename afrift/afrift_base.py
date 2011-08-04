@@ -86,7 +86,6 @@ class ABase(object):
             if self._sections[ix] in conf:
                 for nr, item in enumerate(conf[self._sections[ix]]):
                     ky = "".join((self._words[ix],str(nr + 1)))
-                    ## print ky
                     self._mruItems[sect].append(conf[self._sections[ix]][ky])
         if self._optionskey in conf:
             for ix, opt in enumerate(self._options):
@@ -151,12 +150,12 @@ class ABase(object):
         ss = ""
         if case:
             ss = "case-sensitive"
-            self.p["case"] = case
+        self.p["case"] = case
         if words:
             if ss:
                 ss += ", "
             ss += "hele woorden"
-            self.p["woord"] = words
+        self.p["woord"] = words
         if ss:
             self.s += " ({0})".format(ss)
         return mld
