@@ -120,7 +120,10 @@ class findr(object):
         with open(best,"r") as f_in:
             for x in f_in:
                 lines.append(pos)
-                ## x = x.strip()
+                x = x.rstrip() + os.linesep
+                ## x = " " + x
+                ## if x[0] == chr(13):
+                    ## x = x[1:]
                 regels.append(x)
                 pos += len(x)
         lines.append(pos)
