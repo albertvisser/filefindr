@@ -53,7 +53,7 @@ class findr(object):
             # moet hier nog iets mee doen m.h.o.o. woorddelen of niet
             zoek = ''
             for ch in self.p['zoek']:
-                if ch in ('^','$','*','+','?','{','}','[',']','(',')','|','\\'):
+                if ch in ('.', '^','$','*','+','?','{','}','[',']','(',')','|','\\'):
                     zoek += "\\"
                 zoek += ch
             if self.p['case']:
