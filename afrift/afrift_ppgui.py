@@ -257,7 +257,7 @@ class MainFrame(gui.CeFrame, ABase):
 def test():
     app = gui.Application(MainFrame())
     ## app = gui.Application(MainFrame(apptype = "single",
-        ## fnaam = '/home/visser/filefindr/afrift/afrift_gui.py'))
+        ## fnaam = '/home/albert/filefindr/afrift/afrift_gui.py'))
     ## app = gui.Application(MainFrame(apptype = "multi", fnaam = 'CMDAE.tmp'))
     app.run()
 

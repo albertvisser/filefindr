@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-"AFRIFT PyGT versie"
+"AFRIFT PyQt versie"
 
 import os
 import sys
