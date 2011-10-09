@@ -207,6 +207,9 @@ class MainFrame(wx.Frame, ABase):
         c10 = wx.CheckBox(self.pnl, -1, label="gewijzigde bestanden backuppen")
         c10.SetValue(self._backup)
         self.vraagBackup = c10
+        c11 = wx.CheckBox(self.pnl, -1, label="direct afsluiten na vervangen")
+        c11.SetValue(self._exit_when_ready)
+        self.vraag_exit = c11
 
         self.DoIt = wx.Button(self.pnl, -1, label="&Uitvoeren")
         self.Bind(wx.EVT_BUTTON, self.doe, self.DoIt)
@@ -263,6 +266,8 @@ class MainFrame(wx.Frame, ABase):
             gbsizer.Add(c9, (row, 0), (1, 2), flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=4)
         row += 1
         gbsizer.Add(c10, (row, 1), flag = wx.EXPAND)
+        row += 1
+        gbsizer.Add(c11, (row, 1), flag = wx.EXPAND)
         row += 1
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hsizer.Add(self.DoIt, 0, wx.EXPAND | wx.ALL, 4)
@@ -337,6 +342,8 @@ class MainFrame(wx.Frame, ABase):
             dlg = Results(self, -1, self.resulttitel)
         dlg.ShowModal()
         dlg.Destroy()
+        if self.vraag_exit.GetValue() and self.p["vervang"] is not None:
+            self.einde()
 
     def zoekdir(self, event):
         """event handler voor 'zoek in directory'"""

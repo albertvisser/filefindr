@@ -74,6 +74,7 @@ class ABase(object):
         self.readini()
         self._vervleeg = False
         self._backup = True
+        self._exit_when_ready = False
 
     def readini(self):
         "lees ini file (met eerder gebruikte zoekinstellingen)"
