@@ -64,7 +64,10 @@ class ABase(object):
         for ix, name in enumerate(self.fnames):
             if name.endswith("\\") or name.endswith("/"):
                 self.fnames[ix] = name[:-1]
-        self._inifile = os.path.join(self.hier, "afrift.ini")
+        if os.access(self.hier, os.W_OK):
+            self._inifile = os.path.join(self.hier, "afrift.ini")
+        else:
+            self._inifile = os.path.join(os.path.dirname(__file__), "afrift.ini")
         self._keys = ("zoek", "verv", "types", "dirs")
         self._optionskey = "options"
         self._sections = ('zoek', 'vervang', 'filetypes', 'dirs')
