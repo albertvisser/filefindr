@@ -285,6 +285,7 @@ class MainFrame(ABase):
                 label_justify=tk.LEFT)
             self.vraagTypes.pack(side=tk.LEFT, padx=5, pady=5)
 
+        frm.pack(fill=tk.BOTH, expand=True)
         if self.apptype == "multi":
             frm = tk.Frame(self.master)
             frm.pack(fill=tk.BOTH, expand=True)

@@ -93,6 +93,24 @@ class Results(wx.Dialog):
                 self.results.append((where, what))
         self.results.insert(0, kop)
 
+    def populate_list(self):
+        "resultaten in de listbox zetten"
+        for ix, line in enumerate(self.parent.zoekvervang.rpt):
+            if ix == 0:
+                kop = line
+            elif line != "":
+                where, what = line.split(": ", 1)
+                if self.parent.apptype == "single":
+                    fname, lineno = where.split("r.", 1)
+                    if ix == 1:
+                        kop += " in {0}".format(fname)
+                    where = lineno
+                i = self.lijst.InsertStringItem(sys.maxsize, where)
+                self.lijst.SetStringItem(i, 0, where)
+                self.lijst.SetStringItem(i, 1, what)
+                self.results.append((where, what))
+        self.results.insert(0, kop)
+
     def kopie(self, event=None):
         "callback for button 'Copy to file'"
         toonpad = self.cb.GetValue()
@@ -296,6 +314,7 @@ class MainFrame(wx.Frame, ABase):
 
     def on_key_up(self, ev):
         """event handler voor toetsaanslagen"""
+        ## print(ev.GetKeyCode())
         if ev.GetKeyCode() == wx.WXK_ESCAPE:
             if self.noescape:
                 self.noescape = False
@@ -357,9 +376,7 @@ class MainFrame(wx.Frame, ABase):
             self.vraagDir.SetValue(dlg.GetPath())
         dlg.Destroy()
 
-def test():
     "test routine"
-    MainFrame()
     ## MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
     ## MainFrame(apptype = "multi", fnaam = 'CMDAE.tmp')
 

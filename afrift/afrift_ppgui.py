@@ -210,12 +210,15 @@ class MainFrame(gui.CeFrame, ABase):
         """Zoekactie uitvoeren en resultaatscherm tonen"""
         ## self.toonpad = False
         ## self.showpath = False
+            if not self.apptype:
+                mld = self.checkpath(self.cmbDir.get_text())
+        if not mld:
+            self.checksubs(self.cbSubs.checked)
 
         mld = self.checkzoek(self.cmbZoek.get_text())
         if not mld:
             self.checkverv(self.cmbVerv.get_text(), self.cbVervang.checked)
             self.checkattr(self.cbCase.checked, self.cbWoord.checked)
-            try:
                 b = self.cmbTypes.get_text()
             except AttributeError:
                 b = None
@@ -224,21 +227,16 @@ class MainFrame(gui.CeFrame, ABase):
             if not self.apptype:
                 mld = self.checkpath(self.cmbDir.get_text())
         if not mld:
-            try:
                 self.checksubs(self.cbSubs.checked)
             except AttributeError:
-                pass
 
         #-- nog niet toegevoegd in deze interface
         # self.p["backup"] = self.vraagBackup.GetValue()
 
         if mld:
             gui.Message.ok(self.fouttitel,mld,icon='error')
-            return
-
         self.schrijfini()
         self.zoekvervang = findr(**self.p)
-
         if len(self.zoekvervang.rpt) == 1:
             gui.Message.ok(self.resulttitel,"Niks gevonden")
         else:
