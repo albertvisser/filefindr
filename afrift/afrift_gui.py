@@ -288,6 +288,7 @@ class MainFrame(wx.Frame, ABase):
         ## for win in self.GetChildren():
             ## self.Bind(wx.EVT_KEY_UP,self.on_key_up,win)
         self.Show(True)
+        self.SetFocus()
 
     def einde(self, event=None):
         """applicatie afsluiten"""
