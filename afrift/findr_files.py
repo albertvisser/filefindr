@@ -60,7 +60,6 @@ class findr(object):
                 if sys.version.startswith("3"):
                     self.re = re.compile(str(zoek))
                 else:
-                else:
                     self.re = re.compile(unicode(zoek))
             else:
                 if sys.version.startswith("3"):
