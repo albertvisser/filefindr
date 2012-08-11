@@ -16,6 +16,7 @@ class Results(wx.Dialog):
             ):
         self.parent = parent
         self.results = []
+        print self.parent.apptype
         if self.parent.apptype == "": # breedte linkerkolom
             breedte, titel = 300, 'File/Regel'
         elif self.parent.apptype == "single":
@@ -75,39 +76,23 @@ class Results(wx.Dialog):
                 kop = line
             elif line != "":
                 where, what = line.split(": ", 1)
-                try:
-                    fname, lineno = where.split("r.", 1)
-                except ValueError:
-                    pass
-                else:
-                    if self.parent.apptype == "single":
-                        if ix == 1:
-                            kop += " in {0}".format(fname)
-                        where = lineno
+                ## try:
+                fname, lineno = where.split("r.", 1)
+                ## except ValueError:
+                    ## pass
+                ## else:
+                if self.parent.apptype == "single":
+                    if ix == 1:
+                        kop += " in {0}".format(fname)
+                    where = lineno
+                elif not self.parent.apptype:
+                    where = where.replace(self.parent.p['pad'], '')[1:]
                 i = self.lijst.InsertStringItem(sys.maxsize, where)
                 self.lijst.SetStringItem(i, 0, where)
                 try:
                     self.lijst.SetStringItem(i, 1, what)
                 except UnicodeDecodeError as e:
                     self.lijst.SetStringItem(i, 1, ">> {0} <<".format(e))
-                self.results.append((where, what))
-        self.results.insert(0, kop)
-
-    def populate_list(self):
-        "resultaten in de listbox zetten"
-        for ix, line in enumerate(self.parent.zoekvervang.rpt):
-            if ix == 0:
-                kop = line
-            elif line != "":
-                where, what = line.split(": ", 1)
-                if self.parent.apptype == "single":
-                    fname, lineno = where.split("r.", 1)
-                    if ix == 1:
-                        kop += " in {0}".format(fname)
-                    where = lineno
-                i = self.lijst.InsertStringItem(sys.maxsize, where)
-                self.lijst.SetStringItem(i, 0, where)
-                self.lijst.SetStringItem(i, 1, what)
                 self.results.append((where, what))
         self.results.insert(0, kop)
 
@@ -353,12 +338,12 @@ class MainFrame(wx.Frame, ABase):
         self.schrijfini()
         self.zoekvervang = findr(**self.p)
 
+        self.noescape = True
         if len(self.zoekvervang.rpt) == 1:
             txt = "Niks gevonden" if self.zoekvervang.ok else self.zoekvervang.rpt[0]
             dlg = wx.MessageDialog(self, txt, self.resulttitel,
                 wx.OK | wx.ICON_INFORMATION)
         else:
-            self.noescape = True
             dlg = Results(self, -1, self.resulttitel)
         dlg.ShowModal()
         dlg.Destroy()
@@ -375,10 +360,6 @@ class MainFrame(wx.Frame, ABase):
         if dlg.ShowModal() == wx.ID_OK:
             self.vraagDir.SetValue(dlg.GetPath())
         dlg.Destroy()
-
-    "test routine"
-    ## MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
-    ## MainFrame(apptype = "multi", fnaam = 'CMDAE.tmp')
 
 if __name__ == "__main__":
     test()
