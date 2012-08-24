@@ -1,5 +1,5 @@
 Find/Replace in Files
----------------------
+=====================
 
 This application is meant to show occurrences of text in files contained in
 one or more directories, as well as replacing those with other text.
@@ -20,7 +20,7 @@ The possible calls are:
 Dependencies
 ------------
 
-Python
-wxPython for the current GUI version
-Tkinter, PyQt4 for older GUI versions and Python3 GUI versions
-PocketPyGUI for a PocketPC version
+- Python
+- wxPython for the current GUI version
+- Tkinter, PyQt4 for older GUI versions and Python3 GUI versions
+- PocketPyGUI for a PocketPC version
