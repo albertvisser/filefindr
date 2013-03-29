@@ -3,7 +3,7 @@
 import os
 import sys
 import wx
-from findr_files import findr
+from findr_files import Finder
 from afrift_base import iconame, ABase
 
 class Results(wx.Dialog):
@@ -77,7 +77,7 @@ class Results(wx.Dialog):
             elif line != "":
                 where, what = line.split(": ", 1)
                 ## try:
-                fname, lineno = where.split("r.", 1)
+                fname, lineno = where.rsplit("r.", 1)
                 ## except ValueError:
                     ## pass
                 ## else:
@@ -103,11 +103,10 @@ class Results(wx.Dialog):
         for char in '/\\?%*:|"><.':
             if char in f:
                 f = f.replace(char, "~")
-        f +=  ".txt"
         dlg = wx.FileDialog(self,
             message = "Resultaat naar bestand kopieren",
             defaultDir = self.parent.hier,
-            defaultFile = f,
+            defaultFile = f.join(('searchfor_', ".txt")),
             wildcard = "text files (*.txt)|*.txt|all files (*.*)|*.*",
             style = wx.SAVE
             )
@@ -336,7 +335,7 @@ class MainFrame(wx.Frame, ABase):
             return
 
         self.schrijfini()
-        self.zoekvervang = findr(**self.p)
+        self.zoekvervang = Finder(**self.p)
 
         self.noescape = True
         if len(self.zoekvervang.rpt) == 1:
@@ -362,4 +361,4 @@ class MainFrame(wx.Frame, ABase):
         dlg.Destroy()
 
 if __name__ == "__main__":
-    test()
+    MainFrame()

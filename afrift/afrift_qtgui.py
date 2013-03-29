@@ -5,7 +5,7 @@ import os
 import sys
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
-from findr_files import findr
+from findr_files import Finder
 from afrift_base import iconame, ABase
 
 class Results(gui.QDialog):
@@ -231,6 +231,12 @@ class MainFrame(gui.QWidget, ABase):
             c10.toggle()
         grid.addWidget(c10, row, 1)
         self.vraagBackup = c10
+        row += 1
+        c11 = gui.QCheckBox("direct afsluiten na vervangen")
+        if self._exit_when_ready:
+            c11.toggle()
+        grid.addWidget(c11, row, 1)
+        self.vraag_exit = c11
 
         row += 1
         hbox = gui.QHBoxLayout()
@@ -282,13 +288,15 @@ class MainFrame(gui.QWidget, ABase):
             return
 
         self.schrijfini()
-        self.zoekvervang = findr(**self.p)
+        self.zoekvervang = Finder(**self.p)
 
         if len(self.zoekvervang.rpt) == 1:
             gui.QMessageBox.information(self, self.resulttitel, "Niks gevonden",
                 gui.QMessageBox.Ok)
         else:
             dlg = Results(self)
+        if self.vraag_exit.isChecked() and self.p["vervang"] is not None:
+            self.einde()
 
     def zoekdir(self):
         """event handler voor 'zoek in directory'"""
@@ -300,8 +308,8 @@ class MainFrame(gui.QWidget, ABase):
 
 def test():
     "test routine"
-    ## win = MainFrame()
-    MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
+    win = MainFrame()
+    ## MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
     ## win = MainFrame(apptype="multi", fnaam = 'CMDAE.tmp')
 
 if __name__ == "__main__":

@@ -44,7 +44,7 @@ class ABase(object):
             self.fnames = []
             with open(fnaam) as f_in:
                 for line in f_in:
-                    ## line = line.strip()
+                    line = line.strip()
                     if not self.hier:
                         if line.endswith("\\") or line.endswith("/"):
                             line = line[:-1]

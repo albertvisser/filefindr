@@ -7,9 +7,8 @@ import sys
 import os
 import re
 import shutil
-#from mystuff import splitjoin
 
-class findr(object):
+class Finder(object):
     "interpreteren van de parameters en aansturen van de zoek/vervang routine"
     def __init__(self, **parms):
         ## print parms
@@ -34,11 +33,11 @@ class findr(object):
         ## sys.exit()
         self.ok = True
         self.rpt = [] # verslag van wat er gebeurd is
-        if self.p['filelist'] == [] and self.p['pad'] == "":
+        if not self.p['filelist'] and not self.p['pad']:
             self.rpt.append("Fout: geen lijst bestanden en geen directory opgegeven")
-        elif self.p['filelist'] != [] and self.p['pad'] != "":
+        elif self.p['filelist'] and self.p['pad']:
             self.rpt.append("Fout: lijst bestanden én directory opgegeven")
-        elif self.p['zoek'] == "":
+        elif not self.p['zoek']:
             self.rpt.append('Fout: geen zoekstring opgegeven')
         if self.rpt:
             self.ok = False
@@ -87,7 +86,7 @@ class findr(object):
                 for entry in self.p['filelist']:
                     if not os.path.isdir(entry):
                         d, ext = os.path.splitext(entry)
-                        if len(self.p['extlist']) == 0 or ext.upper() in self.extlistUpper:
+                        if ext.upper() in self.extlistUpper or not self.p['extlist']:
                             self.zoek(entry)
                     else:
                         self.subdirs(entry)
@@ -156,25 +155,23 @@ class findr(object):
 
 def test():
     "test routine"
-    h = findr(
-        zoek="bestand\nwaarin",
-        #vervang="voor",
-        pad=os.getcwd(),
+    import logging
+    logging.basicConfig(filename='whatidid.rpt')
+    logger = logging.getLogger(__name__)
+    h = Finder(
+        zoek="logging",
+        vervang=None, # "voor",
+        pad='/home/albert',
         #filelist=['test.py.txt',],
-        extlist = [".txt",".ini"],
+        extlist = ['py'], # [".txt",".ini"],
         subdirs=True, # zoeken in subdirectories
-        case=True, # case-sensitive ja/nee
+        ## case=True, # case-sensitive ja/nee
         woord=True, # woord/woorddeel
         #regexp=True,  # zoekstring is regexp
         #backup=True
         )
-    f = open("whatidid.rpt","w")
     for x in h.rpt:
-        f.write("%s\n" % x)
-    f.close()
-    for x in open("whatidid.rpt"):
-        print(x)
-
+        logger.info("%s\n" % x)
 
 if __name__ == '__main__':
     test()
