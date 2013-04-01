@@ -3,7 +3,7 @@
 import os
 import sys
 import wx
-from findr_files import findr
+from findr_files import Finder
 from afrift_base import iconame, ABase
 
 class Results(wx.Dialog):
@@ -16,6 +16,7 @@ class Results(wx.Dialog):
             ):
         self.parent = parent
         self.results = []
+        print self.parent.apptype
         if self.parent.apptype == "": # breedte linkerkolom
             breedte, titel = 300, 'File/Regel'
         elif self.parent.apptype == "single":
@@ -66,6 +67,7 @@ class Results(wx.Dialog):
         ## vsizer.SetSizeHints(self)
         self.Layout()
         self.Show(True)
+        self.SetFocus()
 
     def populate_list(self):
         "resultaten in de listbox zetten"
@@ -74,15 +76,23 @@ class Results(wx.Dialog):
                 kop = line
             elif line != "":
                 where, what = line.split(": ", 1)
+                ## try:
+                fname, lineno = where.rsplit("r.", 1)
+                ## except ValueError:
+                    ## pass
+                ## else:
                 if self.parent.apptype == "single":
-                    fname, lineno = where.split("r.", 1)
                     if ix == 1:
                         kop += " in {0}".format(fname)
                     where = lineno
+                elif not self.parent.apptype:
+                    where = where.replace(self.parent.p['pad'], '')[1:]
                 i = self.lijst.InsertStringItem(sys.maxsize, where)
-                ## print what
                 self.lijst.SetStringItem(i, 0, where)
-                self.lijst.SetStringItem(i, 1, what)
+                try:
+                    self.lijst.SetStringItem(i, 1, what)
+                except UnicodeDecodeError as e:
+                    self.lijst.SetStringItem(i, 1, ">> {0} <<".format(e))
                 self.results.append((where, what))
         self.results.insert(0, kop)
 
@@ -93,11 +103,10 @@ class Results(wx.Dialog):
         for char in '/\\?%*:|"><.':
             if char in f:
                 f = f.replace(char, "~")
-        f +=  ".txt"
         dlg = wx.FileDialog(self,
             message = "Resultaat naar bestand kopieren",
             defaultDir = self.parent.hier,
-            defaultFile = f,
+            defaultFile = f.join(('searchfor_', ".txt")),
             wildcard = "text files (*.txt)|*.txt|all files (*.*)|*.*",
             style = wx.SAVE
             )
@@ -200,6 +209,9 @@ class MainFrame(wx.Frame, ABase):
         c10 = wx.CheckBox(self.pnl, -1, label="gewijzigde bestanden backuppen")
         c10.SetValue(self._backup)
         self.vraagBackup = c10
+        c11 = wx.CheckBox(self.pnl, -1, label="direct afsluiten na vervangen")
+        c11.SetValue(self._exit_when_ready)
+        self.vraag_exit = c11
 
         self.DoIt = wx.Button(self.pnl, -1, label="&Uitvoeren")
         self.Bind(wx.EVT_BUTTON, self.doe, self.DoIt)
@@ -257,6 +269,8 @@ class MainFrame(wx.Frame, ABase):
         row += 1
         gbsizer.Add(c10, (row, 1), flag = wx.EXPAND)
         row += 1
+        gbsizer.Add(c11, (row, 1), flag = wx.EXPAND)
+        row += 1
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hsizer.Add(self.DoIt, 0, wx.EXPAND | wx.ALL, 4)
         hsizer.Add(self.Cancel, 0, wx.EXPAND | wx.ALL, 4)
@@ -271,10 +285,12 @@ class MainFrame(wx.Frame, ABase):
 
         self.pnl.Layout()
         self.vraagZoek.SetFocus()
+        self.noescape = False
         self.Bind(wx.EVT_KEY_UP, self.on_key_up)
         ## for win in self.GetChildren():
             ## self.Bind(wx.EVT_KEY_UP,self.on_key_up,win)
         self.Show(True)
+        self.SetFocus()
 
     def einde(self, event=None):
         """applicatie afsluiten"""
@@ -284,12 +300,15 @@ class MainFrame(wx.Frame, ABase):
         """event handler voor toetsaanslagen"""
         ## print(ev.GetKeyCode())
         if ev.GetKeyCode() == wx.WXK_ESCAPE:
-            self.einde()
+            if self.noescape:
+                self.noescape = False
+            else:
+                self.einde()
         else:
             ev.Skip()
 
     def doe(self, event=None):
-        """Zoekactie uitvoeren en resultaatscherm tonen"""
+        """Invoer controleren, indien ok zoekactie uitvoeren en resultaatscherm tonen"""
         mld = self.checkzoek(self.vraagZoek.GetValue())
         if not mld:
             self.checkverv(self.vraagVerv.GetValue(), self.cVervang.GetValue())
@@ -316,15 +335,19 @@ class MainFrame(wx.Frame, ABase):
             return
 
         self.schrijfini()
-        self.zoekvervang = findr(**self.p)
+        self.zoekvervang = Finder(**self.p)
 
+        self.noescape = True
         if len(self.zoekvervang.rpt) == 1:
-            dlg = wx.MessageDialog(self, "Niks gevonden", self.resulttitel,
+            txt = "Niks gevonden" if self.zoekvervang.ok else self.zoekvervang.rpt[0]
+            dlg = wx.MessageDialog(self, txt, self.resulttitel,
                 wx.OK | wx.ICON_INFORMATION)
         else:
             dlg = Results(self, -1, self.resulttitel)
         dlg.ShowModal()
         dlg.Destroy()
+        if self.vraag_exit.GetValue() and self.p["vervang"] is not None:
+            self.einde()
 
     def zoekdir(self, event):
         """event handler voor 'zoek in directory'"""
@@ -337,11 +360,5 @@ class MainFrame(wx.Frame, ABase):
             self.vraagDir.SetValue(dlg.GetPath())
         dlg.Destroy()
 
-def test():
-    "test routine"
-    ## MainFrame()
-    MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
-    ## MainFrame(apptype = "multi", fnaam = 'CMDAE.tmp')
-
 if __name__ == "__main__":
-    test()
+    MainFrame()
