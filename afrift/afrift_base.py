@@ -82,6 +82,8 @@ class ABase(object):
         self._sections = ('zoek', 'vervang', 'filetypes', 'dirs')
         self._words = ('woord', 'woord', 'spec', 'pad', )
         self._optkeys = ("case", "woord", "subdirs")
+        for key in self._optkeys:
+            self.p[key] = False
         self._options = ("matchcase", "matchwords", "searchsubdirs")
         self.pickled = self.readini()
         self._vervleeg = False
@@ -91,17 +93,20 @@ class ABase(object):
     def readini(self):
         """lees ini file (met eerder gebruikte zoekinstellingen)
 
-        als het niet lukt op de oude manier (met ConfigObj) dan initieel laten
+        geen settings file of niet te lezen dan initieel laten
         """
         pickled = True
-        with open(self._inifile, 'rb') as f_in:
-            try:
-                self._mru_items = pickle.load(f_in)
-            except pickle.PickleError:
-                pickled = False
-            if pickled:
-                for opt in self._optkeys:
-                    self.p[opt] = pickle.load(f_in)
+        try:
+            with open(self._inifile, 'rb') as f_in:
+                try:
+                    self._mru_items = pickle.load(f_in)
+                except pickle.PickleError:
+                    pickled = False
+                if pickled:
+                    for opt in self._optkeys:
+                        self.p[opt] = pickle.load(f_in)
+        except IOError:
+            pass
         return pickled # voor als je wilt terugmelden dat het settings ophalen mislukt is
 
     def schrijfini(self):
