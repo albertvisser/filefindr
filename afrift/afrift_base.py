@@ -1,25 +1,26 @@
-"""Gui-onafhankelije code t.b.v. Afrift applicaties
+"""Gui-onafhankelijke code t.b.v. Afrift applicaties
 
 het meeste hiervan bevind zich in een class die als mixin gebruikt wordt"""
 
 import os
 import sys
-try:
-    from configobj import ConfigObj
-except ImportError:
-    sys.exit('configobj waarschijnlijk niet geinstalleerd')
 HERE = os.path.dirname(__file__)
 iconame = os.path.join(HERE,"find.ico")
+import pickle
 
 class ABase(object):
     """
     mixin base class voor de Application classes
 
-    deze class bevat methoden die onafhanelijk zijn van de gekozen
+    deze class bevat methoden die onafhankelijk zijn van de gekozen
     GUI-toolkit"""
 
-    def __init__(self, parent, apptype="", fnaam=""):
-        "attributen die altijd nodig zijn"
+    def __init__(self, parent, apptype="", fnaam="", flist=None):
+        """attributen die altijd nodig zijn
+
+        self.pickled geeft aan of bij het op de nieuwe manier (met pickle) lezen
+        van de mru-settings gelukt is of niet.
+        """
         ## if len(data) > 1:
             ## prognaam, fnaam = data
         try:
@@ -31,30 +32,38 @@ class ABase(object):
         self.resulttitel = self.title + " - Resultaten"
         self.apptype = apptype
         self.hier = ""
-        self._mruItems = {}
+        self._mru_items = {}
         if apptype == "":
             self.fnames = []
             self.hier = os.getcwd()
         elif self.apptype == "single": # data is file om te verwerken
             self.title += " - single file version"
+            if not fnaam:
+                raise ValueError('Need filename for application type "single"')
             self.fnames = [fnaam,]
             self.hier = os.path.dirname(fnaam)
         elif self.apptype == "multi": # data is file met namen om te verwerken
             self.title += " - file list version"
             self.fnames = []
-            with open(fnaam) as f_in:
-                for line in f_in:
-                    line = line.strip()
-                    if not self.hier:
-                        if line.endswith("\\") or line.endswith("/"):
-                            line = line[:-1]
-                        self.hier = os.path.dirname(line)
-                    ## if line.endswith("\\") or line.endswith("/"):
-                        ## # directory afwandelen en onderliggende files verzamelen
-                        ## pass
-                    ## else:
-                        ## self.fnames.append(line)
-                    self.fnames.append(line)
+            if fnaam:
+                with open(fnaam) as f_in:
+                    for line in f_in:
+                        line = line.strip()
+                        if not self.hier:
+                            if line.endswith("\\") or line.endswith("/"):
+                                line = line[:-1]
+                            self.hier = os.path.dirname(line)
+                        ## if line.endswith("\\") or line.endswith("/"):
+                            ## # directory afwandelen en onderliggende files verzamelen
+                            ## pass
+                        ## else:
+                            ## self.fnames.append(line)
+                        self.fnames.append(line)
+            elif flist:
+                self.fnames = flist
+            else:
+                raise ValueError('Need filename or list of files for application'
+                    ' type "multi"')
         else:
             raise ValueError('application type should be empty, "single" or "multi"')
         self.s = ""
@@ -74,45 +83,33 @@ class ABase(object):
         self._words = ('woord', 'woord', 'spec', 'pad', )
         self._optkeys = ("case", "woord", "subdirs")
         self._options = ("matchcase", "matchwords", "searchsubdirs")
-        self.readini()
+        self.pickled = self.readini()
         self._vervleeg = False
         self._backup = True
         self._exit_when_ready = False
 
     def readini(self):
-        "lees ini file (met eerder gebruikte zoekinstellingen)"
-        for key in self._keys:
-            self._mruItems[key] = []
-        for key in self._optkeys:
-            self.p[key] = False
-        conf = ConfigObj(self._inifile)
-        for ix, sect in enumerate(self._keys):
-            if self._sections[ix] in conf:
-                for nr, item in enumerate(conf[self._sections[ix]]):
-                    ky = "".join((self._words[ix],str(nr + 1)))
-                    self._mruItems[sect].append(conf[self._sections[ix]][ky])
-        if self._optionskey in conf:
-            for ix, opt in enumerate(self._options):
-                if opt in conf[self._optionskey]:
-                    if conf[self._optionskey].as_bool(opt):
-                        self.p[self._optkeys[ix]] = True
+        """lees ini file (met eerder gebruikte zoekinstellingen)
+
+        als het niet lukt op de oude manier (met ConfigObj) dan initieel laten
+        """
+        pickled = True
+        with open(self._inifile, 'rb') as f_in:
+            try:
+                self._mru_items = pickle.load(f_in)
+            except pickle.PickleError:
+                pickled = False
+            if pickled:
+                for opt in self._optkeys:
+                    self.p[opt] = pickle.load(f_in)
+        return pickled # voor als je wilt terugmelden dat het settings ophalen mislukt is
 
     def schrijfini(self):
         """huidige settings toevoegen dan wel vervangen in ini file"""
-        conf = ConfigObj()
-        conf.filename = self._inifile
-        for ix, sect in enumerate(self._sections):
-            for nr, item in enumerate(self._mruItems[self._keys[ix]]):
-                if nr == 0:
-                    conf[sect] = {}
-                ky = "".join((self._words[ix],str(nr + 1)))
-                conf[sect][ky] = item
-        for ix, opt in enumerate(self._options):
-            if ix == 0:
-                conf[self._optionskey] = {}
-            h = "True" if self.p[self._optkeys[ix]] else "False"
-            conf[self._optionskey][opt] = h
-        conf.write()
+        with open(self._inifile, "wb") as f_out:
+            pickle.dump(self._mru_items, f_out, protocol=2)
+            for opt in self._optkeys:
+                pickle.dump(self.p[opt], f_out, protocol=2)
 
     def checkzoek(self, item):
         "controleer zoekargument"
@@ -121,10 +118,10 @@ class ABase(object):
         else:
             mld = ""
             try:
-                self._mruItems["zoek"].remove(item)
+                self._mru_items["zoek"].remove(item)
             except ValueError:
                 pass
-            self._mruItems["zoek"].insert(0, item)
+            self._mru_items["zoek"].insert(0, item)
             self.s += "zoeken naar {0}".format(item)
             self.p["zoek"] = item
         return mld
@@ -136,10 +133,10 @@ class ABase(object):
         vervang, leeg = items
         if vervang:
             try:
-                self._mruItems["verv"].remove(vervang)
+                self._mru_items["verv"].remove(vervang)
             except ValueError:
                 pass
-            self._mruItems["verv"].insert(0, vervang)
+            self._mru_items["verv"].insert(0, vervang)
             self.s = "\nen vervangen door {0}".format(vervang)
             self.p["vervang"] = vervang
         elif leeg:
@@ -168,10 +165,10 @@ class ABase(object):
         "controleer speciale bestandstypen (extensies)"
         mld = ""
         try:
-            self._mruItems["types"].remove(item)
+            self._mru_items["types"].remove(item)
         except ValueError:
             pass
-        self._mruItems["types"].insert(0, item)
+        self._mru_items["types"].insert(0, item)
         self.s += "\nin bestanden van type {0}".format(item)
         h = item.split(",")
         self.p["extlist"] = [x.lstrip().strip() for x in h]
@@ -186,10 +183,10 @@ class ABase(object):
         else:
             mld = ""
             try:
-                self._mruItems["dirs"].remove(item)
+                self._mru_items["dirs"].remove(item)
             except ValueError:
                 pass
-            self._mruItems["dirs"].insert(0, item)
+            self._mru_items["dirs"].insert(0, item)
             self.s += "\nin {0}".format(item)
             self.p["pad"] = item
         return mld
@@ -210,10 +207,10 @@ class ABase(object):
         else:
             mld = ""
             try:
-                self._mruItems["dirs"].remove(item)
+                self._mru_items["dirs"].remove(item)
             except ValueError:
                 pass
-            self._mruItems["dirs"].insert(0, item)
+            self._mru_items["dirs"].insert(0, item)
             self.s += "\nin {0}".format(item)
             self.p["pad"] = item
         return mld

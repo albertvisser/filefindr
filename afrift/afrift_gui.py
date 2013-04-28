@@ -1,364 +1,313 @@
-# -*- coding: UTF-8 -*-
-"""AFRIFT wxPython versie"""
+#! /usr/bin/env python
+"AFRIFT PyQt versie"
+
 import os
 import sys
-import wx
-from findr_files import Finder
-from afrift_base import iconame, ABase
+import PyQt4.QtGui as gui
+import PyQt4.QtCore as core
+from .findr_files import Finder
+from .afrift_base import iconame, ABase
 
-class Results(wx.Dialog):
+class Results(gui.QDialog):
     """Resultaten scherm"""
 
-    def __init__(
-            self, parent, ID, title,
-            ## size=wx.DefaultSize, pos=wx.DefaultPosition,
-            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
-            ):
+    def __init__(self, parent):
         self.parent = parent
         self.results = []
-        print self.parent.apptype
-        if self.parent.apptype == "": # breedte linkerkolom
+        if self.parent.apptype == "":
             breedte, titel = 300, 'File/Regel'
         elif self.parent.apptype == "single":
             breedte, titel = 50, 'Regel'
         elif self.parent.apptype == "multi":
             breedte, titel = 200, 'File/Regel'
-        wx.Dialog.__init__(self, parent, ID, title, style = style)
-        self.SetIcon(wx.Icon(iconame, wx.BITMAP_TYPE_ICO))
+        gui.QDialog.__init__(self, parent)
+        self.setWindowTitle(self.parent.resulttitel)
+        self.setWindowIcon(gui.QIcon(iconame))
 
-        #pnl = wx.Panel(self,-1)
-        txt = wx.StaticText(self, -1, "{0} ({1} items)".format(
-            self.parent.zoekvervang.rpt[0], len(self.parent.zoekvervang.rpt)-1))
-        self.lijst = wx.ListCtrl(self, -1, size = (breedte + 385, 160),
-            style = wx.LC_REPORT | wx.LC_VRULES,
-            )
-        self.lijst.InsertColumn(0, titel)
-        self.lijst.SetColumnWidth(0, breedte)
-        self.lijst.InsertColumn(1, "Data")
-        self.lijst.SetColumnWidth(1, 380)
+        txt = gui.QLabel("{0} ({1} items)".format(self.parent.zoekvervang.rpt[0],
+            len(self.parent.zoekvervang.rpt)-1), self)
+        self.lijst = gui.QTableWidget(self)
+        self.lijst.setColumnCount(2)
+        self.lijst.setHorizontalHeaderLabels((titel, 'Data'))
+        self.lijst.setColumnWidth(0, breedte)
+        self.lijst.setColumnWidth(1, 520)
         self.populate_list()
 
-        b2 = wx.Button(self, wx.ID_CANCEL, "&Klaar")
-        ## self.Bind(wx.EVT_BUTTON, self.einde,  b2)
-        b1 = wx.Button(self, -1, "&Copy to File")
-        self.Bind(wx.EVT_BUTTON, self.kopie, b1)
-        cb = wx.CheckBox(self, -1, label="toon directorypad in uitvoer")
-        cb.SetValue(False)
-        self.cb = cb
+        b1 = gui.QPushButton("&Klaar", self)
+        self.connect(b1, core.SIGNAL('clicked()'), self.klaar)
+        b2 = gui.QPushButton("&Copy to File", self)
+        self.connect(b2, core.SIGNAL('clicked()'), self.kopie)
+        self.cb = gui.QCheckBox("toon directorypad in uitvoer", self)
 
-        vsizer = wx.BoxSizer(wx.VERTICAL)
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hsizer.Add(txt, 0, wx.EXPAND | wx.ALL, 5)
-        vsizer.Add(hsizer, 0, wx.EXPAND)
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hsizer.Add(self.lijst, 1, wx.EXPAND | wx.ALL)
-        vsizer.Add(hsizer, 1, wx.EXPAND)
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        bsizer = wx.BoxSizer(wx.HORIZONTAL)
-        bsizer.Add(b1, 0, wx.ALL, 5)
-        bsizer.Add(b2, 0, wx.ALL, 5)
-        bsizer.Add(cb, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
-        hsizer.Add(bsizer, 0)
-        vsizer.Add(hsizer, 0, wx.ALIGN_CENTER_HORIZONTAL) # wx.EXPAND)
+        vbox = gui.QVBoxLayout()
 
-        self.SetAutoLayout(True)
-        self.SetSizer(vsizer)
-        vsizer.Fit(self)
-        ## vsizer.SetSizeHints(self)
-        self.Layout()
-        self.Show(True)
-        self.SetFocus()
+        hbox = gui.QHBoxLayout()
+        hbox.addWidget(txt)
+        vbox.addLayout(hbox)
+
+        hbox = gui.QHBoxLayout()
+        hbox.addWidget(self.lijst)
+        vbox.addLayout(hbox)
+
+        hboks = gui.QHBoxLayout()
+        hbox = gui.QHBoxLayout()
+        hbox.addWidget(b1)
+        hbox.addWidget(b2)
+        hbox.addWidget(self.cb)
+        hbox.insertStretch(0, 1)
+        hbox.addStretch(1)
+        hboks.addLayout(hbox)
+        vbox.addLayout(hboks)
+
+        self.setLayout(vbox)
+        self.resize(574 + breedte, 480)
+        self.exec_()
 
     def populate_list(self):
         "resultaten in de listbox zetten"
+        # table.setItem(row, column, QtGui.QWidget(self))
+        headers = []
         for ix, line in enumerate(self.parent.zoekvervang.rpt):
             if ix == 0:
                 kop = line
             elif line != "":
                 where, what = line.split(": ", 1)
-                ## try:
-                fname, lineno = where.rsplit("r.", 1)
-                ## except ValueError:
-                    ## pass
-                ## else:
                 if self.parent.apptype == "single":
+                    fname, lineno = where.split("r.", 1)
                     if ix == 1:
                         kop += " in {0}".format(fname)
                     where = lineno
-                elif not self.parent.apptype:
-                    where = where.replace(self.parent.p['pad'], '')[1:]
-                i = self.lijst.InsertStringItem(sys.maxsize, where)
-                self.lijst.SetStringItem(i, 0, where)
-                try:
-                    self.lijst.SetStringItem(i, 1, what)
-                except UnicodeDecodeError as e:
-                    self.lijst.SetStringItem(i, 1, ">> {0} <<".format(e))
+                self.lijst.insertRow(ix - 1)
+                headers.append('')
+                item = gui.QTableWidgetItem(where)
+                item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
+                self.lijst.setItem(ix - 1, 0, item)
+                item = gui.QTableWidgetItem(what)
+                item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
+                self.lijst.setItem(ix - 1, 1, item)
                 self.results.append((where, what))
+        self.lijst.setVerticalHeaderLabels(headers)
         self.results.insert(0, kop)
 
-    def kopie(self, event=None):
+    def klaar(self):
+        "dialoog afsluiten"
+        gui.QDialog.done(self, 0)
+
+    def kopie(self):
         "callback for button 'Copy to file'"
-        toonpad = self.cb.GetValue()
+        toonpad = True if self.cb.isChecked() else False
         f = self.parent.p["zoek"]
         for char in '/\\?%*:|"><.':
             if char in f:
                 f = f.replace(char, "~")
-        dlg = wx.FileDialog(self,
-            message = "Resultaat naar bestand kopieren",
-            defaultDir = self.parent.hier,
-            defaultFile = f.join(('searchfor_', ".txt")),
-            wildcard = "text files (*.txt)|*.txt|all files (*.*)|*.*",
-            style = wx.SAVE
+        f +=  ".txt"
+        dlg = gui.QFileDialog.getSaveFileName(self,
+            "Resultaat naar bestand kopieren",
+            os.path.join(self.parent.hier,f),
+            "Text files (*.txt);;All files (*.*)",
             )
-        if dlg.ShowModal() == wx.ID_OK:
-            fn = dlg.GetPath()
-            with open(fn, "w") as f_out:
-                f_out.write("{0}\n".format(self.results[0]))
-                for r1, r2 in self.results[1:]:
-                    if toonpad:
-                        f_out.write("{0} {1}\n".format(r1, r2))
-                    else:
-                        f_out.write("{0} {1}\n".format(r1.split(os.sep)[-1], r2))
-        dlg.Destroy()
+        if not dlg:
+            return
+        with open(dlg, "w") as f_out:
+            f_out.write("{0}\n".format(self.results[0]))
+            for r1, r2 in self.results[1:]:
+                if toonpad:
+                    f_out.write("{0} {1}\n".format(r1, r2))
+                else:
+                    f_out.write("{0} {1}\n".format(r1.split(os.sep)[-1], r2))
 
-    ## def einde(self, event=None):
-        ## "End screen"
-        ## self.destroy()
+class MainFrame(gui.QWidget, ABase):
+    """Hoofdscherm van de applicatie
 
-class MainFrame(wx.Frame, ABase):
-    """Hoofdscherm van de applicatie"""
-
-    def __init__(self, parent=None, apptype="", fnaam=""):
-        app = wx.PySimpleApp(redirect=True, filename="afrift.log")
+    QMainWindow is een beetje overkill, daarom maar een QWidget
+    """
+    def __init__(self, parent = None, apptype = "", fnaam = ""):
+        app = gui.QApplication(sys.argv)
         ABase.__init__(self, parent, apptype, fnaam)
-        wx.Frame.__init__(self, parent, wx.ID_ANY, self.title,
-            style=wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE
-            )
-        self.setupscreen()
-        app.MainLoop()
+        gui.QWidget.__init__(self, parent)
 
-    def setupscreen(self):
-        self.SetTitle(self.title)
-        self.SetIcon(wx.Icon(iconame, wx.BITMAP_TYPE_ICO))
-        self.pnl = wx.Panel(self, -1)
+        self.setWindowTitle(self.title)
+        self.setWindowIcon(gui.QIcon(iconame))
 
         TXTW = 200
+        grid = gui.QGridLayout()
 
-        ## box = wx.StaticBox(self.pnl, -1)
-        t1 = wx.StaticText(self.pnl, -1, "Zoek naar:")
-        c1 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1),
-            choices=self._mruItems["zoek"],
-            style=wx.CB_DROPDOWN
-            )
+        row = 0
+        grid.addWidget(gui.QLabel('Zoek naar:'), row, 0)
+        c1 = gui.QComboBox(self)
+        c1.setMaximumWidth(TXTW)
+        c1.insertItems(0, self._mru_items["zoek"])
+        c1.setEditable(True)
+        c1.clearEditText()
+        grid.addWidget(c1, row, 1)
         self.vraagZoek = c1
 
-        t2 = wx.StaticText(self.pnl, -1, "Vervang door:")
-        c2 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1),
-            choices=self._mruItems["verv"],
-            style=wx.CB_DROPDOWN
-            )
+        row += 1
+        grid.addWidget(gui.QLabel('Vervang door:'), row, 0)
+        c2 = gui.QComboBox(self)
+        c2.setMaximumWidth(TXTW)
+        c2.insertItems(0, self._mru_items["verv"])
+        c2.setEditable(True)
+        c2.clearEditText()
+        grid.addWidget(c2, row, 1)
         self.vraagVerv = c2
 
-        c3 = wx.CheckBox(self.pnl, -1, label="lege vervangtekst = weghalen")
-        c3.SetValue(self._vervleeg)
+        row += 1
+        vbox = gui.QVBoxLayout()
+        c3 = gui.QCheckBox("lege vervangtekst = weghalen", self)
+        if self._vervleeg:
+            c3.toggle()
+        vbox.addWidget(c3)
         self.cVervang = c3
-        c4 = wx.CheckBox(self.pnl, -1, label="hoofd/kleine letters gelijk")
-        c4.SetValue(self.p["case"])
+        c4 = gui.QCheckBox("hoofd/kleine letters gelijk", self)
+        if self.p["case"]:
+            c4.toggle()
+        vbox.addWidget(c4)
         self.vraagCase = c4
-        c5 = wx.CheckBox(self.pnl, -1, label="hele woorden")
-        c5.SetValue(self.p["woord"])
+        c5 = gui.QCheckBox("hele woorden", self)
+        if self.p["woord"]:
+            c5.toggle()
+        vbox.addWidget(c5)
         self.vraagWoord = c5
+        grid.addLayout(vbox, row, 1)
 
         t = ""
         if self.apptype == "":
-            t6 =  wx.StaticText(self.pnl, -1, "In directory:")
-            c6 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1),
-                choices=self._mruItems["dirs"],
-                style=wx.CB_DROPDOWN
-                )
+            row += 1
+            grid.addWidget(gui.QLabel("In directory:"), row, 0)
+            c6 = gui.QComboBox(self)
+            c6.setMaximumWidth(TXTW)
+            c6.insertItems(0, self._mru_items["dirs"])
+            c6.setEditable(True)
+            c6.clearEditText()
+            grid.addWidget(c6, row, 1)
             self.vraagDir = c6
-            self.Zoek = wx.Button(self.pnl, -1, label="&Zoek")
-            self.Bind(wx.EVT_BUTTON, self.zoekdir, self.Zoek)
+            self.zoek = gui.QPushButton("&Zoek")
+            self.connect(self.zoek, core.SIGNAL('clicked()'), self.zoekdir)
+            grid.addWidget(self.zoek, row, 2)
         elif self.apptype == "single":
-            t6t = wx.StaticText(self.pnl, -1, "In file/directory:")
-            t6 =  wx.StaticText(self.pnl, -1, self.fnames[0])
-            t6b = wx.StaticText(self.pnl, -1, "", size = (120,-1))
-        else:
+            row += 1
+            grid.addWidget(gui.QLabel("In file/directory:"), row, 0)
+            grid.addWidget(gui.QLabel(self.fnames[0]), row, 1)
+            grid.addWidget(gui.QLabel(""), row, 2) # size = (120,-1))
+        elif self.apptype == "multi":
             t = "van geselecteerde directories "
 
         if self.apptype != "single" or os.path.isdir(self.fnames[0]):
-            c7 = wx.CheckBox(self.pnl, -1,
-                label = t + "ook subdirectories doorzoeken",
-                )
-            c7.SetValue(self.p["subdirs"])
+            row += 1
+            c7 = gui.QCheckBox(t + "ook subdirectories doorzoeken")
+            if self.p["subdirs"]:
+                c7.toggle()
+            grid.addWidget(c7, row, 1)
             self.vraagSubs = c7
 
-            t8 =  wx.StaticText(self.pnl, -1, "alleen files van type:")
-            c8 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1),
-                choices=self._mruItems["types"],
-                style=wx.CB_DROPDOWN
-                )
+            row += 1
+            grid.addWidget(gui.QLabel("alleen files van type:"), row, 0)
+            c8 = gui.QComboBox(self)
+            c8.setMaximumWidth(TXTW)
+            c8.insertItems(0, self._mru_items["types"])
+            c8.setEditable(True)
+            c8.clearEditText()
+            grid.addWidget(c8, row, 1)
             self.vraagTypes = c8
 
         if self.apptype == "multi":
-            t9 = wx.StaticText(self.pnl, -1, "In de volgende files/directories:")
-            c9 = wx.ListBox(self.pnl, -1, size=(TXTW, -1), choices=self.fnames)
+            row += 1
+            grid.addWidget(gui.QLabel("In de volgende files/directories:"), row, 0,
+                1, 3)
+            row += 1
+            c9 = gui.QListWidget(self)
+            ## c9.setMaximumWidth(TXTW)
+            c9.insertItems(0, self.fnames)
+            grid.addWidget(c9, row, 0, 1, 3)
             self.lb = c9
 
-        ## t10 =  wx.StaticText(self.pnl, -1,"", size=wid)
-        c10 = wx.CheckBox(self.pnl, -1, label="gewijzigde bestanden backuppen")
-        c10.SetValue(self._backup)
+        row += 1
+        c10 = gui.QCheckBox("gewijzigd(e) bestand(en) backuppen")
+        if self._backup:
+            c10.toggle()
+        grid.addWidget(c10, row, 1)
         self.vraagBackup = c10
-        c11 = wx.CheckBox(self.pnl, -1, label="direct afsluiten na vervangen")
-        c11.SetValue(self._exit_when_ready)
+        row += 1
+        c11 = gui.QCheckBox("direct afsluiten na vervangen")
+        if self._exit_when_ready:
+            c11.toggle()
+        grid.addWidget(c11, row, 1)
         self.vraag_exit = c11
 
-        self.DoIt = wx.Button(self.pnl, -1, label="&Uitvoeren")
-        self.Bind(wx.EVT_BUTTON, self.doe, self.DoIt)
-        ## self.Cancel = wx.Button(self.pnl,  wx.ID_CANCEL, "&Einde") # helpt niet
-        self.Cancel = wx.Button(self.pnl, -1, label="&Einde")
-        self.Bind(wx.EVT_BUTTON, self.einde, self.Cancel)
-
-        bsizer = wx.BoxSizer(wx.VERTICAL)
-        gbsizer = wx.GridBagSizer(4)
-        row = 0
-        gbsizer.Add(t1, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
-        gbsizer.Add(c1, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
         row += 1
-        gbsizer.Add(t2, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
-        gbsizer.Add(c2, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
-        row += 1
-        vsizer = wx.BoxSizer(wx.VERTICAL)
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer.Add(c3, 0)
-        hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
-        vsizer.Add(hsizer, 0, wx.EXPAND)
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer.Add(c4, 0)
-        hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
-        vsizer.Add(hsizer, 0, wx.EXPAND)
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer.Add(c5, 0)
-        hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
-        vsizer.Add(hsizer, 0, wx.EXPAND)
-        gbsizer.Add(vsizer, (row, 1)) #,(1, 2))
-        if self.apptype == "":
-            row += 1
-            gbsizer.Add(t6, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
-            gbsizer.Add(c6, (row, 1), flag=wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
-            gbsizer.Add(self.Zoek, (row, 2), flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=4 )
-        elif self.apptype == "single":
-            row += 1
-            gbsizer.Add(t6t, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
-            gbsizer.Add(t6, (row, 1), flag=wx.EXPAND | wx.ALL, border=4)
-            gbsizer.Add(t6b, (row,2), flag=wx.EXPAND | wx.ALL, border=4)
-        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
-            row += 1
-            gbsizer.Add(c7, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
-            row += 1
-            gbsizer.Add(t8, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
-            gbsizer.Add(c8, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
-        if self.apptype == "multi":
-            row += 1
-            gbsizer.Add(t9, (row, 0), (1, 2), flag=wx.EXPAND | wx.LEFT | wx.TOP, border=4)
-            row += 1
-            gbsizer.Add(c9, (row, 0), (1, 2), flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=4)
-        row += 1
-        gbsizer.Add(c10, (row, 1), flag = wx.EXPAND)
-        row += 1
-        gbsizer.Add(c11, (row, 1), flag = wx.EXPAND)
-        row += 1
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hsizer.Add(self.DoIt, 0, wx.EXPAND | wx.ALL, 4)
-        hsizer.Add(self.Cancel, 0, wx.EXPAND | wx.ALL, 4)
-        gbsizer.Add(hsizer, (row, 0), (1, 3), flag = wx.ALIGN_BOTTOM | wx.ALIGN_CENTER_HORIZONTAL,
-            border=0)
-        bsizer.Add(gbsizer, 0, wx.ALL, 4)
+        hbox = gui.QHBoxLayout()
+        hbox.addStretch(1)
+        self.DoIt = gui.QPushButton('&Uitvoeren', self)
+        self.connect(self.DoIt, core.SIGNAL('clicked()'), self.doe)
+        hbox.addWidget(self.DoIt)
+        self.Cancel = gui.QPushButton('&Einde', self)
+        self.connect(self.Cancel, core.SIGNAL('clicked()'),
+            self.close)
+        hbox.addWidget(self.Cancel)
+        hbox.addStretch(1)
+        grid.addLayout(hbox, row, 0, 1, 3)
 
-        ## self.pnl.SetAutoLayout(True)
-        self.pnl.SetSizer(bsizer)
-        bsizer.Fit(self)
-        ## bsizer.SetSizeHints(self)
+        vbox = gui.QVBoxLayout()
+        vbox.addLayout(grid)
 
-        self.pnl.Layout()
-        self.vraagZoek.SetFocus()
-        self.noescape = False
-        self.Bind(wx.EVT_KEY_UP, self.on_key_up)
-        ## for win in self.GetChildren():
-            ## self.Bind(wx.EVT_KEY_UP,self.on_key_up,win)
-        self.Show(True)
-        self.SetFocus()
+        self.setLayout(vbox)
+        ## self.resize(250, 150)
+        self.vraagZoek.setFocus()
 
-    def einde(self, event=None):
-        """applicatie afsluiten"""
-        self.Close(True)
+        self.show()
+        sys.exit(app.exec_())
 
-    def on_key_up(self, ev):
+    def keyPressEvent(self, event):
         """event handler voor toetsaanslagen"""
-        ## print(ev.GetKeyCode())
-        if ev.GetKeyCode() == wx.WXK_ESCAPE:
-            if self.noescape:
-                self.noescape = False
-            else:
-                self.einde()
-        else:
-            ev.Skip()
+        if event.key() == core.Qt.Key_Escape:
+            self.close()
 
-    def doe(self, event=None):
-        """Invoer controleren, indien ok zoekactie uitvoeren en resultaatscherm tonen"""
-        mld = self.checkzoek(self.vraagZoek.GetValue())
+    def doe(self):
+        """Zoekactie uitvoeren en resultaatscherm tonen"""
+        mld = self.checkzoek(str(self.vraagZoek.currentText()))
         if not mld:
-            self.checkverv(self.vraagVerv.GetValue(), self.cVervang.GetValue())
-            self.checkattr(self.vraagCase.GetValue(), self.vraagWoord.GetValue())
-            try:
-                b = self.vraagTypes.GetValue()
-            except AttributeError:
-                b = None
-            if b:
-                self.checktype(b)
+            self.checkverv(str(self.vraagVerv.currentText()), self.cVervang.isChecked())
+            self.checkattr(self.vraagCase.isChecked(), self.vraagWoord.isChecked())
+            if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+                b = str(self.vraagTypes.currentText())
+                if b:
+                    self.checktype(b)
             if not self.apptype:
-                mld = self.checkpath(self.vraagDir.GetValue())
+                mld = self.checkpath(str(self.vraagDir.currentText()))
         if not mld:
-            try:
-                self.checksubs(self.vraagSubs.GetValue())
-            except AttributeError:
-                pass
-        self.p["backup"] = self.vraagBackup.GetValue()
+            if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+                self.checksubs(self.vraagSubs.isChecked())
+        self.p["backup"] = self.vraagBackup.isChecked()
 
         if mld:
-            dlg = wx.MessageDialog(self, mld, self.fouttitel, wx.OK | wx.ICON_ERROR)
-            dlg.ShowModal()
-            dlg.Destroy()
+            gui.QMessageBox.critical(self, self.fouttitel, mld, gui.QMessageBox.Ok)
             return
 
         self.schrijfini()
         self.zoekvervang = Finder(**self.p)
 
-        self.noescape = True
         if len(self.zoekvervang.rpt) == 1:
-            txt = "Niks gevonden" if self.zoekvervang.ok else self.zoekvervang.rpt[0]
-            dlg = wx.MessageDialog(self, txt, self.resulttitel,
-                wx.OK | wx.ICON_INFORMATION)
+            gui.QMessageBox.information(self, self.resulttitel, "Niks gevonden",
+                gui.QMessageBox.Ok)
         else:
-            dlg = Results(self, -1, self.resulttitel)
-        dlg.ShowModal()
-        dlg.Destroy()
-        if self.vraag_exit.GetValue() and self.p["vervang"] is not None:
+            dlg = Results(self)
+        if self.vraag_exit.isChecked() and self.p["vervang"] is not None:
             self.einde()
 
-    def zoekdir(self, event):
+    def zoekdir(self):
         """event handler voor 'zoek in directory'"""
-        oupad = self.vraagDir.GetValue()
-        dlg = wx.DirDialog(self, "Choose a directory:",
-            defaultPath = oupad,
-            style=wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST
-            )
-        if dlg.ShowModal() == wx.ID_OK:
-            self.vraagDir.SetValue(dlg.GetPath())
-        dlg.Destroy()
+        oupad = self.vraagDir.currentText()
+        dlg = gui.QFileDialog.getExistingDirectory(self, "Choose a directory:",
+            oupad)
+        if dlg:
+            self.vraagDir.setEditText(dlg)
+
+def test():
+    "test routine"
+    win = MainFrame()
+    ## MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
+    ## win = MainFrame(apptype="multi", fnaam = 'CMDAE.tmp')
 
 if __name__ == "__main__":
-    MainFrame()
+    test()
