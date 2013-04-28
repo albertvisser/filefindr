@@ -41,14 +41,14 @@ def test_abase(parent=None, apptype="", fnaam=""):
 
 if __name__ == '__main__':
     test_abase()
-    ## for item in ("glug", "single", "multi"):
-        ## try:
-            ## test_abase(apptype=item)
-        ## except ValueError as err:
-            ## logger.info(str(err))
-    ## for item, naam in (("single", "test_afrift_base.py"),
-            ## ("multi", "afrift_args")):
-        ## try:
-            ## test_abase(apptype=item, fnaam=naam)
-        ## except ValueError as err:
-            ## logger.info(str(err))
+    for item in ("glug", "single", "multi"):
+        try:
+            test_abase(apptype=item)
+        except ValueError as err:
+            logger.info(str(err))
+    for item, naam in (("single", "test_afrift_base.py"),
+            ("multi", "afrift_args")):
+        try:
+            test_abase(apptype=item, fnaam=naam)
+        except ValueError as err:
+            logger.info(str(err))
