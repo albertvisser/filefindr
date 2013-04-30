@@ -78,6 +78,8 @@ class ABase(object):
         else:
             self._inifile = os.path.join(os.path.dirname(__file__), "afrift.ini")
         self._keys = ("zoek", "verv", "types", "dirs")
+        for key in self._keys:
+            self._mru_items[key] = []
         self._optionskey = "options"
         self._sections = ('zoek', 'vervang', 'filetypes', 'dirs')
         self._words = ('woord', 'woord', 'spec', 'pad', )
