@@ -29,9 +29,13 @@ class Results(gui.QDialog):
         self.lijst = gui.QTableWidget(self)
         self.lijst.setColumnCount(2)
         self.lijst.setHorizontalHeaderLabels((titel, 'Data'))
+        self.lijst.verticalHeader().setVisible(False)
+        ## self.lijst.setShowGrid(False) # hierbij komt de tweede kolom top- ipv middle-aligned
+        self.lijst.setGridStyle(core.Qt.NoPen)# hierbij niet
         self.lijst.setColumnWidth(0, breedte)
         self.lijst.setColumnWidth(1, 520)
         self.populate_list()
+        ## self.lijst.resizeRowsToContents()
 
         b1 = gui.QPushButton("&Klaar", self)
         self.connect(b1, core.SIGNAL('clicked()'), self.klaar)
@@ -66,19 +70,23 @@ class Results(gui.QDialog):
     def populate_list(self):
         "resultaten in de listbox zetten"
         # table.setItem(row, column, QtGui.QWidget(self))
-        headers = []
+        ## headers = []
         for ix, line in enumerate(self.parent.zoekvervang.rpt):
             if ix == 0:
                 kop = line
             elif line != "":
                 where, what = line.split(": ", 1)
                 if self.parent.apptype == "single":
-                    fname, lineno = where.split("r.", 1)
-                    if ix == 1:
-                        kop += " in {0}".format(fname)
-                    where = lineno
+                    if "r." in where:
+                        fname, lineno = where.split("r.", 1)
+                        if ix == 1:
+                            kop += " in {0}".format(fname)
+                        where = lineno
+                    else:
+                        where = ""
                 self.lijst.insertRow(ix - 1)
-                headers.append('')
+                self.lijst.setRowHeight(ix - 1, 18)
+                ## headers.append('')
                 item = gui.QTableWidgetItem(where)
                 item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
                 self.lijst.setItem(ix - 1, 0, item)
@@ -86,7 +94,7 @@ class Results(gui.QDialog):
                 item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
                 self.lijst.setItem(ix - 1, 1, item)
                 self.results.append((where, what))
-        self.lijst.setVerticalHeaderLabels(headers)
+        ## self.lijst.setVerticalHeaderLabels(headers)
         self.results.insert(0, kop)
 
     def klaar(self):
