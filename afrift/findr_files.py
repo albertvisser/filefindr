@@ -111,14 +111,18 @@ class Finder(object):
 
     def zoek(self, best):
         "het daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
-        print("----")
-        print(best)
+        ## print("----")
+        ## print(best)
         pos = 0
         lines = []
         regels = []
         msg = ""
-        with open(best, "r", encoding="latin-1") as f_in: # truc om niet-utf tekstfiles toch te kunnen lezen
-            ## try:
+        if sys.version < "3":
+            f_in = open(best, "r")
+        else:
+            f_in = open(best, "r", encoding="iso-8859-1")
+        with f_in: # truc om niet-utf tekstfiles toch te kunnen lezen
+            try:
                 for x in f_in:
                     lines.append(pos)
                     x = x.rstrip() + os.linesep
@@ -127,9 +131,26 @@ class Finder(object):
                         ## x = x[1:]
                     regels.append(x)
                     pos += len(x)
-            ## except UnicodeDecodeError:
-                ## self.rpt.append("{}: overgeslagen, waarschijnlijk geen tekst"
-                    ## "bestand".format(best))
+            except UnicodeDecodeError:
+                msg = best + ": overgeslagen, waarschijnlijk geen tekstbestand"
+        ## if msg and sys.version >= "3":
+            ## import chardet
+            ## with open(best, "rb") as f_in:
+                ## data = f_in.read()
+            ## result = chardet.detect(data)
+            ## msg = ""
+            ## with open(best, "r", encoding=result["encoding"]) as f_in:
+                ## try:
+                    ## for x in f_in:
+                        ## lines.append(pos)
+                        ## x = x.rstrip() + os.linesep
+                        ## regels.append(x)
+                        ## pos += len(x)
+                ## except UnicodeDecodeError:
+                    ## msg = best + ": overgeslagen, waarschijnlijk geen tekstbestand"
+        if msg:
+            self.rpt.append(msg)
+            return
         lines.append(pos)
         data = "".join(regels)
         found = False
