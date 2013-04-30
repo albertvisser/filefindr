@@ -111,20 +111,25 @@ class Finder(object):
 
     def zoek(self, best):
         "het daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
-        ## print "----"
-        ## print(best)
+        print("----")
+        print(best)
         pos = 0
         lines = []
         regels = []
-        with open(best,"r") as f_in:
-            for x in f_in:
-                lines.append(pos)
-                x = x.rstrip() + os.linesep
-                ## x = " " + x
-                ## if x[0] == chr(13):
-                    ## x = x[1:]
-                regels.append(x)
-                pos += len(x)
+        msg = ""
+        with open(best, "r", encoding="latin-1") as f_in: # truc om niet-utf tekstfiles toch te kunnen lezen
+            ## try:
+                for x in f_in:
+                    lines.append(pos)
+                    x = x.rstrip() + os.linesep
+                    ## x = " " + x
+                    ## if x[0] == chr(13):
+                        ## x = x[1:]
+                    regels.append(x)
+                    pos += len(x)
+            ## except UnicodeDecodeError:
+                ## self.rpt.append("{}: overgeslagen, waarschijnlijk geen tekst"
+                    ## "bestand".format(best))
         lines.append(pos)
         data = "".join(regels)
         found = False
