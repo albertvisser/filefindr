@@ -94,7 +94,7 @@ class Results(tk.Toplevel):
             elif item != "":
                 where, what = item.split(": ",1)
                 if self.parent.apptype == "single":
-                    fname, lineno = where.split("r.",1)
+                    fname, lineno = where.split("r. ",1)
                     if ix == 1:
                         kop += " in {0}".format(fname)
                     where = lineno

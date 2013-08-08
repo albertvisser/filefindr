@@ -77,7 +77,7 @@ class Results(wx.Dialog):
             elif line != "":
                 where, what = line.split(": ", 1)
                 ## try:
-                fname, lineno = where.rsplit("r.", 1)
+                fname, lineno = where.rsplit("r. ", 1)
                 ## except ValueError:
                     ## pass
                 ## else:

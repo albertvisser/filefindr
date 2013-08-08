@@ -5,8 +5,8 @@ import os
 import sys
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
-from findr_files import Finder
-from afrift_base import iconame, ABase
+from .findr_files import Finder
+from .afrift_base import iconame, ABase
 
 class Results(gui.QDialog):
     """Resultaten scherm"""
@@ -29,9 +29,13 @@ class Results(gui.QDialog):
         self.lijst = gui.QTableWidget(self)
         self.lijst.setColumnCount(2)
         self.lijst.setHorizontalHeaderLabels((titel, 'Data'))
+        self.lijst.verticalHeader().setVisible(False)
+        ## self.lijst.setShowGrid(False) # hierbij komt de tweede kolom top- ipv middle-aligned
+        self.lijst.setGridStyle(core.Qt.NoPen)# hierbij niet
         self.lijst.setColumnWidth(0, breedte)
         self.lijst.setColumnWidth(1, 520)
         self.populate_list()
+        ## self.lijst.resizeRowsToContents()
 
         b1 = gui.QPushButton("&Klaar", self)
         self.connect(b1, core.SIGNAL('clicked()'), self.klaar)
@@ -66,19 +70,23 @@ class Results(gui.QDialog):
     def populate_list(self):
         "resultaten in de listbox zetten"
         # table.setItem(row, column, QtGui.QWidget(self))
-        headers = []
+        ## headers = []
         for ix, line in enumerate(self.parent.zoekvervang.rpt):
             if ix == 0:
                 kop = line
             elif line != "":
                 where, what = line.split(": ", 1)
                 if self.parent.apptype == "single":
-                    fname, lineno = where.split("r.", 1)
-                    if ix == 1:
-                        kop += " in {0}".format(fname)
-                    where = lineno
+                    if "r. " in where:
+                        fname, lineno = where.split("r. ", 1)
+                        if ix == 1:
+                            kop += " in {0}".format(fname)
+                        where = lineno
+                    else:
+                        where = ""
                 self.lijst.insertRow(ix - 1)
-                headers.append('')
+                self.lijst.setRowHeight(ix - 1, 18)
+                ## headers.append('')
                 item = gui.QTableWidgetItem(where)
                 item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
                 self.lijst.setItem(ix - 1, 0, item)
@@ -86,7 +94,7 @@ class Results(gui.QDialog):
                 item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
                 self.lijst.setItem(ix - 1, 1, item)
                 self.results.append((where, what))
-        self.lijst.setVerticalHeaderLabels(headers)
+        ## self.lijst.setVerticalHeaderLabels(headers)
         self.results.insert(0, kop)
 
     def klaar(self):
@@ -118,13 +126,9 @@ class Results(gui.QDialog):
 
 class MainFrame(gui.QWidget, ABase):
     """Hoofdscherm van de applicatie
-    hmmm... sizen werkt wel met een QWidget maar niet met een QMainWindow?
 
-    QWidget::setLayout: Attempting to set QLayout "" on MainWindow "",
-    which already has a layout
-
-    geeft nog steeds een segfault bij afsluiten"""
-
+    QMainWindow is een beetje overkill, daarom maar een QWidget
+    """
     def __init__(self, parent = None, apptype = "", fnaam = ""):
         app = gui.QApplication(sys.argv)
         ABase.__init__(self, parent, apptype, fnaam)
@@ -140,7 +144,7 @@ class MainFrame(gui.QWidget, ABase):
         grid.addWidget(gui.QLabel('Zoek naar:'), row, 0)
         c1 = gui.QComboBox(self)
         c1.setMaximumWidth(TXTW)
-        c1.insertItems(0, self._mruItems["zoek"])
+        c1.insertItems(0, self._mru_items["zoek"])
         c1.setEditable(True)
         c1.clearEditText()
         grid.addWidget(c1, row, 1)
@@ -150,7 +154,7 @@ class MainFrame(gui.QWidget, ABase):
         grid.addWidget(gui.QLabel('Vervang door:'), row, 0)
         c2 = gui.QComboBox(self)
         c2.setMaximumWidth(TXTW)
-        c2.insertItems(0, self._mruItems["verv"])
+        c2.insertItems(0, self._mru_items["verv"])
         c2.setEditable(True)
         c2.clearEditText()
         grid.addWidget(c2, row, 1)
@@ -181,7 +185,7 @@ class MainFrame(gui.QWidget, ABase):
             grid.addWidget(gui.QLabel("In directory:"), row, 0)
             c6 = gui.QComboBox(self)
             c6.setMaximumWidth(TXTW)
-            c6.insertItems(0, self._mruItems["dirs"])
+            c6.insertItems(0, self._mru_items["dirs"])
             c6.setEditable(True)
             c6.clearEditText()
             grid.addWidget(c6, row, 1)
@@ -209,7 +213,7 @@ class MainFrame(gui.QWidget, ABase):
             grid.addWidget(gui.QLabel("alleen files van type:"), row, 0)
             c8 = gui.QComboBox(self)
             c8.setMaximumWidth(TXTW)
-            c8.insertItems(0, self._mruItems["types"])
+            c8.insertItems(0, self._mru_items["types"])
             c8.setEditable(True)
             c8.clearEditText()
             grid.addWidget(c8, row, 1)
@@ -217,12 +221,13 @@ class MainFrame(gui.QWidget, ABase):
 
         if self.apptype == "multi":
             row += 1
-            grid.addWidget(gui.QLabel("In de volgende files/directories:"), row, 0)
+            grid.addWidget(gui.QLabel("In de volgende files/directories:"), row, 0,
+                1, 3)
             row += 1
             c9 = gui.QListWidget(self)
             ## c9.setMaximumWidth(TXTW)
             c9.insertItems(0, self.fnames)
-            grid.addWidget(c9, row, 0)
+            grid.addWidget(c9, row, 0, 1, 3)
             self.lb = c9
 
         row += 1
@@ -305,12 +310,3 @@ class MainFrame(gui.QWidget, ABase):
             oupad)
         if dlg:
             self.vraagDir.setEditText(dlg)
-
-def test():
-    "test routine"
-    win = MainFrame()
-    ## MainFrame(apptype = "single", fnaam = '/home/albert/filefindr/afrift/afrift_gui.py')
-    ## win = MainFrame(apptype="multi", fnaam = 'CMDAE.tmp')
-
-if __name__ == "__main__":
-    test()

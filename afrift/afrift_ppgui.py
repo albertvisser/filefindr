@@ -46,7 +46,7 @@ class Results(gui.ceFrame):
             elif line != "":
                 where, what = line.split(": ", 1)
                 if self.parent.apptype == "single":
-                    fname, lineno = where.split("r.", 1)
+                    fname, lineno = where.split("r. ", 1)
                     if ix == 1:
                         kop += " in {0}".format(fname)
                     where = lineno
