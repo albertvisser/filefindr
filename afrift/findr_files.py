@@ -3,6 +3,7 @@
 
 de uitvoering wordt gestuurd door in een dictionary verzamelde parameters"""
 
+from __future__ import print_function
 import sys
 import os
 import re
@@ -22,7 +23,9 @@ class Finder(object):
             "case": False,
             "woord": False,
             "regexp": False,
-            "backup": False
+            "backup": False,
+            "follow_symlinks": False,
+            "maxdepth": 5,
             }
         for x in parms:
             if x in self.p:
@@ -84,35 +87,55 @@ class Finder(object):
                 else:
                     specs.append(" in opgegeven bestanden/directories")
                 for entry in self.p['filelist']:
-                    if not os.path.isdir(entry):
-                        d, ext = os.path.splitext(entry)
-                        if ext.upper() in self.extlistUpper or not self.p['extlist']:
-                            self.zoek(entry)
-                    else:
-                        self.subdirs(entry)
+                    self.subdirs(entry, is_list=False)
+                    ## if os.path.isdir(entry):
+                        ## self.subdirs(entry)
+                    ## elif os.path.islink(entry) and not self.p['follow_symlinks']:
+                        ## pass
+                    ## else:
+                        ## d, ext = os.path.splitext(entry)
+                        ## if ext.upper() in self.extlistUpper or not self.p['extlist']:
+                            ## self.zoek(entry)
                     #~ self.zoek(entry)
             if self.p['subdirs']:
                 specs.append(" en onderliggende directories")
             self.rpt.insert(0, "".join(specs))
         ## self.rpt.append("")
 
-    def subdirs(self, pad):
-        "recursieve routine voor zoek/vervang in subdirectories"
-        for fname in os.listdir(pad):
-            entry = os.path.join(pad, fname)
-            ## print("zoeken in ",entry,sep = " ")
-            if not os.path.isdir(entry):
+    def subdirs(self, pad, is_list=True, level=0):
+        """recursieve routine voor zoek/vervang in subdirectories
+
+        als is_list = False dan wordt van de doorgegeven naam eerst een list
+        gemaakt. Daardoor hoeft de logica nog maar één keer gedefinieerd te
+        worden, in plaats van ook nog een keer in de aanroepende routine
+        """
+        if self.p["maxdepth"] != -1:
+            level += 1
+            if level > self.p["maxdepth"]:
+                return
+        ## print(pad, is_list)
+        if is_list:
+            _list = (os.path.join(pad, fname) for fname in os.listdir(pad))
+        else:
+            _list = (pad,)
+        for entry in _list:
+            ## print("zoeken in ",entry)
+            if os.path.isdir(entry):
+                ## print('is directory')
+                if self.p['subdirs']:
+                    self.subdirs(entry, level=level)
+            elif os.path.islink(entry) and not self.p['follow_symlinks']:
+                ## print('is symlink')
+                pass
+            else:
                 h, ext = os.path.splitext(entry)
                 if len(self.p['extlist']) == 0 or ext.upper() in self.extlistUpper:
                     self.zoek(entry)
-            else:
-                if self.p['subdirs']:
-                    self.subdirs(entry)
 
     def zoek(self, best):
         "het daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
         ## print("----")
-        ## print(best)
+        ## print('zoeken naar', self.p["zoek"])
         pos = 0
         lines = []
         regels = []
@@ -182,7 +205,7 @@ class Finder(object):
 def test():
     "test routine"
     import logging
-    logging.basicConfig(filename='whatidid.rpt')
+    logging.basicConfig(filename='findr_files.log')
     logger = logging.getLogger(__name__)
     h = Finder(
         zoek="logging",

@@ -183,21 +183,28 @@ class MainFrame(gui.QWidget, ABase):
         if self.apptype == "":
             row += 1
             grid.addWidget(gui.QLabel("In directory:"), row, 0)
+            box = gui.QHBoxLayout()
             c6 = gui.QComboBox(self)
             c6.setMaximumWidth(TXTW)
             c6.insertItems(0, self._mru_items["dirs"])
             c6.setEditable(True)
             c6.clearEditText()
-            grid.addWidget(c6, row, 1)
+            box.addWidget(c6)
             self.vraagDir = c6
             self.zoek = gui.QPushButton("&Zoek")
             self.connect(self.zoek, core.SIGNAL('clicked()'), self.zoekdir)
-            grid.addWidget(self.zoek, row, 2)
+            box.addWidget(self.zoek)
+            box.addStretch()
+            grid.addLayout(box, row, 1)
+
         elif self.apptype == "single":
             row += 1
             grid.addWidget(gui.QLabel("In file/directory:"), row, 0)
-            grid.addWidget(gui.QLabel(self.fnames[0]), row, 1)
-            grid.addWidget(gui.QLabel(""), row, 2) # size = (120,-1))
+            box = gui.QHBoxLayout()
+            boxaddWidget(gui.QLabel(self.fnames[0]))
+            box.addStretch()
+            grid.addLayout(box, row, 1)
+
         elif self.apptype == "multi":
             t = "van geselecteerde directories "
 
@@ -208,6 +215,22 @@ class MainFrame(gui.QWidget, ABase):
                 c7.toggle()
             grid.addWidget(c7, row, 1)
             self.vraagSubs = c7
+
+            row += 1
+            choice = gui.QCheckBox("symlinks volgen")
+            box = gui.QHBoxLayout()
+            box.addWidget(choice)
+            self.vraag_links = choice
+            box2 = gui.QHBoxLayout()
+            box2.addWidget(gui.QLabel("    max. diepte (-1 is alles):"))
+            choice = gui.QSpinBox(self)
+            choice.setMinimum(-1)
+            choice.setValue(5)
+            box2.addWidget(choice)
+            box2.addStretch()
+            box.addLayout(box2)
+            self.vraag_diepte = choice
+            grid.addLayout(box, row, 1)
 
             row += 1
             grid.addWidget(gui.QLabel("alleen files van type:"), row, 0)
@@ -222,12 +245,12 @@ class MainFrame(gui.QWidget, ABase):
         if self.apptype == "multi":
             row += 1
             grid.addWidget(gui.QLabel("In de volgende files/directories:"), row, 0,
-                1, 3)
+                1, 2)
             row += 1
             c9 = gui.QListWidget(self)
             ## c9.setMaximumWidth(TXTW)
             c9.insertItems(0, self.fnames)
-            grid.addWidget(c9, row, 0, 1, 3)
+            grid.addWidget(c9, row, 0, 1, 2)
             self.lb = c9
 
         row += 1
@@ -254,7 +277,7 @@ class MainFrame(gui.QWidget, ABase):
             self.close)
         hbox.addWidget(self.Cancel)
         hbox.addStretch(1)
-        grid.addLayout(hbox, row, 0, 1, 3)
+        grid.addLayout(hbox, row, 0, 1, 2)
 
         vbox = gui.QVBoxLayout()
         vbox.addLayout(grid)
@@ -285,7 +308,8 @@ class MainFrame(gui.QWidget, ABase):
                 mld = self.checkpath(str(self.vraagDir.currentText()))
         if not mld:
             if self.apptype != "single" or os.path.isdir(self.fnames[0]):
-                self.checksubs(self.vraagSubs.isChecked())
+                self.checksubs(self.vraagSubs.isChecked(), self.vraag_links.isChecked(),
+                    self.vraag_diepte.value())
         self.p["backup"] = self.vraagBackup.isChecked()
 
         if mld:

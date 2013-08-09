@@ -222,8 +222,12 @@ class ABase(object):
             self.p["pad"] = item
         return mld
 
-    def checksubs(self, item):
+    def checksubs(self, *items):
         "subdirs aangeven"
-        if item:
+        subdirs, links, depth = items
+        if subdirs:
             self.s += " en onderliggende directories"
-        self.p["subdirs"] = item
+        self.p["subdirs"] = subdirs
+        self.p["follow_symlinks"] = links
+        self.p["maxdepth"] = depth
+
