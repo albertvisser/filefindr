@@ -201,7 +201,7 @@ class MainFrame(gui.QWidget, ABase):
             row += 1
             grid.addWidget(gui.QLabel("In file/directory:"), row, 0)
             box = gui.QHBoxLayout()
-            boxaddWidget(gui.QLabel(self.fnames[0]))
+            box.addWidget(gui.QLabel(self.fnames[0]))
             box.addStretch()
             grid.addLayout(box, row, 1)
 
