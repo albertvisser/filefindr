@@ -13,9 +13,9 @@ as well as the location and type of the file to process.
 
 The possible calls are:
 
-+ `python afrift.pyw` to call the primary version
-+ `python afrift_multi.pyw <filename>` to call the version working on multiple files and directories; the argument is the name of a file containing those
-+ `python afrift_single.pyw <filename>` to call the version working on a single file.
++ ``python afrift.pyw`` to call the primary version
++ ``python afrift_multi.pyw <filename>`` to call the version working on multiple files and directories; the argument is the name of a file containing those
++ ``python afrift_single.pyw <filename>`` to call the version working on a single file.
 
 Dependencies
 ------------
