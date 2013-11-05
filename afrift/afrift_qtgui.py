@@ -79,8 +79,8 @@ class Results(gui.QDialog):
                 if self.parent.apptype == "single":
                     if "r. " in where:
                         fname, lineno = where.split("r. ", 1)
-                        if ix == 1:
-                            kop += " in {0}".format(fname)
+                        ## if ix == 1:
+                            ## kop += " in {0}".format(fname)
                         where = lineno
                     else:
                         where = ""
