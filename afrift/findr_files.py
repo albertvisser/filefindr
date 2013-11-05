@@ -189,12 +189,12 @@ class Finder(object):
                         in_line = lineno + from_line
                         if in_line != last_in_line:
                             self.rpt.append("{0} r. {1}: {2}".format(
-                                best, in_line, regels[in_line - 1]))
+                                best, in_line, regels[in_line - 1].rstrip()))
                         last_in_line = in_line
                     from_line = lineno
                     break
         if found and self.p['wijzig']:
-            ndata, aant = self.re.subn(unicode(self.p["vervang"]), data)
+            ndata, aant = self.re.subn(self.p["vervang"], data)
             self.rpt.append("%s: %s times" % (best, aant))
             if self.p['backup']:
                 bestnw = best + ".bak"
