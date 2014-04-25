@@ -230,8 +230,8 @@ class MainFrame(gui.QWidget, ABase):
             box2.addStretch()
             box.addLayout(box2)
             self.vraag_diepte = choice
-            grid.addLayout(box, row, 1)
 
+        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
             row += 1
             grid.addWidget(gui.QLabel("alleen files van type:"), row, 0)
             c8 = gui.QComboBox(self)
@@ -310,6 +310,8 @@ class MainFrame(gui.QWidget, ABase):
             if self.apptype != "single" or os.path.isdir(self.fnames[0]):
                 self.checksubs(self.vraagSubs.isChecked(), self.vraag_links.isChecked(),
                     self.vraag_diepte.value())
+            elif self.apptype == "single" and os.path.islink(self.fnames[0]):
+                self.p["follow_symlinks"] = True
         self.p["backup"] = self.vraagBackup.isChecked()
 
         if mld:
