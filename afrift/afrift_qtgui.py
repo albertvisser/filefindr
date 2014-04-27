@@ -328,7 +328,7 @@ class MainFrame(gui.QWidget, ABase):
         else:
             dlg = Results(self)
         if self.vraag_exit.isChecked() and self.p["vervang"] is not None:
-            self.einde()
+            self.close()
 
     def zoekdir(self):
         """event handler voor 'zoek in directory'"""
