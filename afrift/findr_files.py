@@ -78,6 +78,7 @@ class Finder(object):
                 else:
                      s = self.p['extlist'][0]
                 specs.append(" in bestanden van type {0}".format(s))
+            self.filenames = []
             if self.p['pad']:
                 specs.append(" in {0}".format(self.p['pad']))
                 self.subdirs(self.p['pad'])
@@ -104,10 +105,10 @@ class Finder(object):
 
     def subdirs(self, pad, is_list=True, level=0):
         """recursieve routine voor zoek/vervang in subdirectories
+        samenstellen lijst met te verwerken bestanden
 
         als is_list = False dan wordt van de doorgegeven naam eerst een list
-        gemaakt. Daardoor hoeft de logica nog maar één keer gedefinieerd te
-        worden, in plaats van ook nog een keer in de aanroepende routine
+        gemaakt. Daardoor hebben we altijd een iterable met directorynamen.
         """
         if self.p["maxdepth"] != -1:
             level += 1
@@ -130,7 +131,11 @@ class Finder(object):
             else:
                 h, ext = os.path.splitext(entry)
                 if len(self.p['extlist']) == 0 or ext.upper() in self.extlistUpper:
-                    self.zoek(entry)
+                    self.filenames.append(entry)
+
+    def do_action(self):
+        for name in self.filenames:
+            self.zoek(name)
 
     def zoek(self, best):
         "het daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"

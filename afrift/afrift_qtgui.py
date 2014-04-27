@@ -8,6 +8,58 @@ import PyQt4.QtCore as core
 from .findr_files import Finder
 from .afrift_base import iconame, ABase
 
+class SelectNames(gui.QDialog):
+    """Tussenscherm om te verwerken files te kiezen"""
+
+    def __init__(self, parent):
+        self.parent = parent
+        self.results = []
+        gui.QDialog.__init__(self, parent)
+        self.setWindowTitle(self.parent.title + " - file list")
+        self.setWindowIcon(gui.QIcon(iconame))
+        vbox = gui.QVBoxLayout()
+
+        txt = gui.QLabel("Selecteer de bestanden die je *niet* wilt verwerken", self)
+        hbox = gui.QHBoxLayout()
+        hbox.addWidget(txt)
+        vbox.addLayout(hbox)
+
+        frm = gui.QFrame(self)
+        fvbox = gui.QVBoxLayout()
+        self.checklist = []
+        for item in self.parent.zoekvervang.filenames:
+            cb = gui.QCheckBox(item, frm)
+            fhbox = gui.QHBoxLayout()
+            fhbox.addWidget(cb)
+            self.checklist.append(cb)
+            fvbox.addLayout(fhbox)
+        frm.setLayout(fvbox)
+        scrl = gui.QScrollArea(self)
+        scrl.setWidget(frm)
+        hbox = gui.QHBoxLayout()
+        hbox.addWidget(scrl)
+        vbox.addLayout(hbox)
+
+        b1 = gui.QPushButton("&Klaar", self)
+        self.connect(b1, core.SIGNAL('clicked()'), self.klaar)
+        hboks = gui.QHBoxLayout()
+        hbox = gui.QHBoxLayout()
+        hbox.addStretch(1)
+        hbox.addWidget(b1)
+        hbox.addStretch(1)
+        hboks.addLayout(hbox)
+        vbox.addLayout(hboks)
+
+        self.setLayout(vbox)
+        self.exec_()
+
+    def klaar(self):
+        "dialoog afsluiten"
+        for cb in self.checklist:
+            if cb.isChecked():
+                self.parent.zoekvervang.filenames.remove(cb.text())
+        gui.QDialog.done(self, 0)
+
 class Results(gui.QDialog):
     """Resultaten scherm"""
 
@@ -321,7 +373,18 @@ class MainFrame(gui.QWidget, ABase):
 
         self.schrijfini()
         self.zoekvervang = Finder(**self.p)
+        if not self.zoekvervang.filenames:
+            gui.QMessageBox.information(self, self.resulttitel,
+                "Geen bestanden gevonden", gui.QMessageBox.Ok)
+            return
 
+        if self.apptype == "single" or (
+                len(self.fnames) == 1 and os.path.isfile(self.fnames[0])):
+            pass
+        else:
+            dlg = SelectNames(self)
+
+        self.zoekvervang.do_action()
         if len(self.zoekvervang.rpt) == 1:
             gui.QMessageBox.information(self, self.resulttitel, "Niks gevonden",
                 gui.QMessageBox.Ok)
