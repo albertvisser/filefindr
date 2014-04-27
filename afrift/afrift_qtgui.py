@@ -11,7 +11,8 @@ from .afrift_base import iconame, ABase
 class SelectNames(gui.QDialog):
     """Tussenscherm om te verwerken files te kiezen"""
 
-    def __init__(self, parent):
+    def __init__(self, parent, files=True):
+        self.dofiles = files
         self.parent = parent
         self.results = []
         gui.QDialog.__init__(self, parent)
@@ -19,7 +20,11 @@ class SelectNames(gui.QDialog):
         self.setWindowIcon(gui.QIcon(iconame))
         vbox = gui.QVBoxLayout()
 
-        txt = gui.QLabel("Selecteer de bestanden die je *niet* wilt verwerken", self)
+        if files:
+            text = "Selecteer de bestanden die je *niet* wilt verwerken"
+        else:
+            text = "Selecteer de directories die je *niet* wilt verwerken"
+        txt = gui.QLabel(text, self)
         hbox = gui.QHBoxLayout()
         hbox.addWidget(txt)
         vbox.addLayout(hbox)
@@ -27,7 +32,7 @@ class SelectNames(gui.QDialog):
         frm = gui.QFrame(self)
         fvbox = gui.QVBoxLayout()
         self.checklist = []
-        for item in self.parent.zoekvervang.filenames:
+        for item in self.parent.names:
             cb = gui.QCheckBox(item, frm)
             fhbox = gui.QHBoxLayout()
             fhbox.addWidget(cb)
@@ -55,9 +60,15 @@ class SelectNames(gui.QDialog):
 
     def klaar(self):
         "dialoog afsluiten"
+        dirs = []
         for cb in self.checklist:
             if cb.isChecked():
-                self.parent.zoekvervang.filenames.remove(cb.text())
+                if self.dofiles:
+                    self.parent.names.remove(cb.text())
+                else:
+                    dirs.append(cb.text())
+        if not self.dofiles:
+            self.parent.names = dirs
         gui.QDialog.done(self, 0)
 
 class Results(gui.QDialog):
@@ -382,7 +393,25 @@ class MainFrame(gui.QWidget, ABase):
                 len(self.fnames) == 1 and os.path.isfile(self.fnames[0])):
             pass
         else:
+            # eerste ronde: toon directories
+            ## self.names = [x for x in self.zoekvervang.filenames if os.path.isdir(x)]
+            if self.zoekvervang.dirnames:
+                self.names = sorted(self.zoekvervang.dirnames)
+                dlg = SelectNames(self, files=False)
+                # tweede ronde: toon de files die overblijven
+                fnames = self.zoekvervang.filenames[:]
+                for name in self.names:
+                    for fname in fnames:
+                        if fname.startswith(name + '/'):
+                            print(name)
+                            print(fname)
+                            ## try:
+                            self.zoekvervang.filenames.remove(fname)
+                            ## except ValueError:
+                                ## pass # may already be removed
+            self.names = self.zoekvervang.filenames
             dlg = SelectNames(self)
+            self.zoekvervang.filenames = self.names
 
         self.zoekvervang.do_action()
         if len(self.zoekvervang.rpt) == 1:

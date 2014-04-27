@@ -79,6 +79,7 @@ class Finder(object):
                      s = self.p['extlist'][0]
                 specs.append(" in bestanden van type {0}".format(s))
             self.filenames = []
+            self.dirnames = set()
             if self.p['pad']:
                 specs.append(" in {0}".format(self.p['pad']))
                 self.subdirs(self.p['pad'])
@@ -110,6 +111,9 @@ class Finder(object):
         als is_list = False dan wordt van de doorgegeven naam eerst een list
         gemaakt. Daardoor hebben we altijd een iterable met directorynamen.
         """
+        print(pad)
+        if os.path.isdir(pad):
+            self.dirnames.add(pad)
         if self.p["maxdepth"] != -1:
             level += 1
             if level > self.p["maxdepth"]:
