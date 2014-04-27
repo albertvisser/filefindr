@@ -229,6 +229,7 @@ class MainFrame(gui.QWidget, ABase):
             box2.addWidget(choice)
             box2.addStretch()
             box.addLayout(box2)
+            grid.addLayout(box, row, 1)
             self.vraag_diepte = choice
 
         if self.apptype != "single" or os.path.isdir(self.fnames[0]):
