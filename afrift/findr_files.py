@@ -111,26 +111,24 @@ class Finder(object):
         als is_list = False dan wordt van de doorgegeven naam eerst een list
         gemaakt. Daardoor hebben we altijd een iterable met directorynamen.
         """
-        print(pad)
         if os.path.isdir(pad):
             self.dirnames.add(pad)
         if self.p["maxdepth"] != -1:
             level += 1
             if level > self.p["maxdepth"]:
                 return
-        ## print(pad, is_list)
         if is_list:
-            _list = (os.path.join(pad, fname) for fname in os.listdir(pad))
+            try:
+                _list = (os.path.join(pad, fname) for fname in os.listdir(pad))
+            except PermissionError:
+                _list = []
         else:
             _list = (pad,)
         for entry in _list:
-            ## print("zoeken in ",entry)
             if os.path.isdir(entry):
-                ## print('is directory')
                 if self.p['subdirs']:
                     self.subdirs(entry, level=level)
             elif os.path.islink(entry) and not self.p['follow_symlinks']:
-                ## print('is symlink')
                 pass
             else:
                 h, ext = os.path.splitext(entry)
@@ -143,8 +141,6 @@ class Finder(object):
 
     def zoek(self, best):
         "het daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
-        ## print("----")
-        ## print('zoeken naar', self.p["zoek"])
         pos = 0
         lines = []
         regels = []

@@ -394,7 +394,6 @@ class MainFrame(gui.QWidget, ABase):
             pass
         else:
             # eerste ronde: toon directories
-            ## self.names = [x for x in self.zoekvervang.filenames if os.path.isdir(x)]
             if self.zoekvervang.dirnames:
                 self.names = sorted(self.zoekvervang.dirnames)
                 dlg = SelectNames(self, files=False)
@@ -403,8 +402,6 @@ class MainFrame(gui.QWidget, ABase):
                 for name in self.names:
                     for fname in fnames:
                         if fname.startswith(name + '/'):
-                            print(name)
-                            print(fname)
                             ## try:
                             self.zoekvervang.filenames.remove(fname)
                             ## except ValueError:
