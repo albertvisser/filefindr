@@ -205,41 +205,41 @@ class MainFrame(gui.QWidget, ABase):
 
         row = 0
         grid.addWidget(gui.QLabel('Zoek naar:'), row, 0)
-        c1 = gui.QComboBox(self)
-        c1.setMaximumWidth(TXTW)
-        c1.insertItems(0, self._mru_items["zoek"])
-        c1.setEditable(True)
-        c1.clearEditText()
-        grid.addWidget(c1, row, 1)
-        self.vraagZoek = c1
+        cb = gui.QComboBox(self)
+        cb.setMaximumWidth(TXTW)
+        cb.insertItems(0, self._mru_items["zoek"])
+        cb.setEditable(True)
+        cb.clearEditText()
+        grid.addWidget(cb, row, 1)
+        self.vraagZoek = cb
 
         row += 1
         grid.addWidget(gui.QLabel('Vervang door:'), row, 0)
-        c2 = gui.QComboBox(self)
-        c2.setMaximumWidth(TXTW)
-        c2.insertItems(0, self._mru_items["verv"])
-        c2.setEditable(True)
-        c2.clearEditText()
-        grid.addWidget(c2, row, 1)
-        self.vraagVerv = c2
+        cb = gui.QComboBox(self)
+        cb.setMaximumWidth(TXTW)
+        cb.insertItems(0, self._mru_items["verv"])
+        cb.setEditable(True)
+        cb.clearEditText()
+        grid.addWidget(cb, row, 1)
+        self.vraagVerv = cb
 
         row += 1
         vbox = gui.QVBoxLayout()
-        c3 = gui.QCheckBox("lege vervangtekst = weghalen", self)
+        cb = gui.QCheckBox("lege vervangtekst = weghalen", self)
         if self._vervleeg:
-            c3.toggle()
-        vbox.addWidget(c3)
-        self.cVervang = c3
-        c4 = gui.QCheckBox("hoofd/kleine letters gelijk", self)
+            cb.toggle()
+        vbox.addWidget(cb)
+        self.cVervang = cb
+        cb = gui.QCheckBox("hoofd/kleine letters gelijk", self)
         if self.p["case"]:
-            c4.toggle()
-        vbox.addWidget(c4)
-        self.vraagCase = c4
-        c5 = gui.QCheckBox("hele woorden", self)
+            cb.toggle()
+        vbox.addWidget(cb)
+        self.vraagCase = cb
+        cb = gui.QCheckBox("hele woorden", self)
         if self.p["woord"]:
-            c5.toggle()
-        vbox.addWidget(c5)
-        self.vraagWoord = c5
+            cb.toggle()
+        vbox.addWidget(cb)
+        self.vraagWoord = cb
         grid.addLayout(vbox, row, 1)
 
         t = ""
@@ -247,13 +247,13 @@ class MainFrame(gui.QWidget, ABase):
             row += 1
             grid.addWidget(gui.QLabel("In directory:"), row, 0)
             box = gui.QHBoxLayout()
-            c6 = gui.QComboBox(self)
-            c6.setMaximumWidth(TXTW)
-            c6.insertItems(0, self._mru_items["dirs"])
-            c6.setEditable(True)
-            c6.clearEditText()
-            box.addWidget(c6)
-            self.vraagDir = c6
+            cb = gui.QComboBox(self)
+            cb.setMaximumWidth(TXTW)
+            cb.insertItems(0, self._mru_items["dirs"])
+            cb.setEditable(True)
+            cb.clearEditText()
+            box.addWidget(cb)
+            self.vraagDir = cb
             self.zoek = gui.QPushButton("&Zoek")
             self.connect(self.zoek, core.SIGNAL('clicked()'), self.zoekdir)
             box.addWidget(self.zoek)
@@ -273,11 +273,11 @@ class MainFrame(gui.QWidget, ABase):
 
         if self.apptype != "single" or os.path.isdir(self.fnames[0]):
             row += 1
-            c7 = gui.QCheckBox(t + "ook subdirectories doorzoeken")
+            cb = gui.QCheckBox(t + "ook subdirectories doorzoeken")
             if self.p["subdirs"]:
-                c7.toggle()
-            grid.addWidget(c7, row, 1)
-            self.vraagSubs = c7
+                cb.toggle()
+            grid.addWidget(cb, row, 1)
+            self.vraagSubs = cb
 
             row += 1
             choice = gui.QCheckBox("symlinks volgen")
@@ -295,40 +295,56 @@ class MainFrame(gui.QWidget, ABase):
             grid.addLayout(box, row, 1)
             self.vraag_diepte = choice
 
+            row += 1
+            choice = gui.QCheckBox("selecteer directories om over te slaan")
+            choice.toggle()
+            box = gui.QHBoxLayout()
+            box.addWidget(choice)
+            self.ask_skipdirs = choice
+            grid.addLayout(box, row, 1)
+
+            row += 1
+            choice = gui.QCheckBox("selecteer bestanden om over te slaan")
+            choice.toggle()
+            box = gui.QHBoxLayout()
+            box.addWidget(choice)
+            self.ask_skipfiles = choice
+            grid.addLayout(box, row, 1)
+
         if self.apptype != "single" or os.path.isdir(self.fnames[0]):
             row += 1
             grid.addWidget(gui.QLabel("alleen files van type:"), row, 0)
-            c8 = gui.QComboBox(self)
-            c8.setMaximumWidth(TXTW)
-            c8.insertItems(0, self._mru_items["types"])
-            c8.setEditable(True)
-            c8.clearEditText()
-            grid.addWidget(c8, row, 1)
-            self.vraagTypes = c8
+            cb = gui.QComboBox(self)
+            cb.setMaximumWidth(TXTW)
+            cb.insertItems(0, self._mru_items["types"])
+            cb.setEditable(True)
+            cb.clearEditText()
+            grid.addWidget(cb, row, 1)
+            self.vraagTypes = cb
 
         if self.apptype == "multi":
             row += 1
             grid.addWidget(gui.QLabel("In de volgende files/directories:"), row, 0,
                 1, 2)
             row += 1
-            c9 = gui.QListWidget(self)
-            ## c9.setMaximumWidth(TXTW)
-            c9.insertItems(0, self.fnames)
-            grid.addWidget(c9, row, 0, 1, 2)
-            self.lb = c9
+            cb = gui.QListWidget(self)
+            ## cb.setMaximumWidth(TXTW)
+            cb.insertItems(0, self.fnames)
+            grid.addWidget(cb, row, 0, 1, 2)
+            self.lb = cb
 
         row += 1
-        c10 = gui.QCheckBox("gewijzigd(e) bestand(en) backuppen")
+        cb = gui.QCheckBox("gewijzigd(e) bestand(en) backuppen")
         if self._backup:
-            c10.toggle()
-        grid.addWidget(c10, row, 1)
-        self.vraagBackup = c10
+            cb.toggle()
+        grid.addWidget(cb, row, 1)
+        self.vraagBackup = cb
         row += 1
-        c11 = gui.QCheckBox("direct afsluiten na vervangen")
+        cb = gui.QCheckBox("direct afsluiten na vervangen")
         if self._exit_when_ready:
-            c11.toggle()
-        grid.addWidget(c11, row, 1)
-        self.vraag_exit = c11
+            cb.toggle()
+        grid.addWidget(cb, row, 1)
+        self.vraag_exit = cb
 
         row += 1
         hbox = gui.QHBoxLayout()
@@ -393,22 +409,25 @@ class MainFrame(gui.QWidget, ABase):
                 len(self.fnames) == 1 and os.path.isfile(self.fnames[0])):
             pass
         else:
-            # eerste ronde: toon directories
-            if self.zoekvervang.dirnames:
-                self.names = sorted(self.zoekvervang.dirnames)
-                dlg = SelectNames(self, files=False)
-                # tweede ronde: toon de files die overblijven
-                fnames = self.zoekvervang.filenames[:]
-                for name in self.names:
-                    for fname in fnames:
-                        if fname.startswith(name + '/'):
-                            ## try:
-                            self.zoekvervang.filenames.remove(fname)
-                            ## except ValueError:
-                                ## pass # may already be removed
-            self.names = self.zoekvervang.filenames
-            dlg = SelectNames(self)
-            self.zoekvervang.filenames = self.names
+            ## print(self.skipdirs_overslaan, self.skipfiles_overslaan)
+            if self.ask_skipdirs.isChecked():
+                # eerste ronde: toon directories
+                if self.zoekvervang.dirnames:
+                    self.names = sorted(self.zoekvervang.dirnames)
+                    dlg = SelectNames(self, files=False)
+                    # tweede ronde: toon de files die overblijven
+                    fnames = self.zoekvervang.filenames[:]
+                    for name in self.names:
+                        for fname in fnames:
+                            if fname.startswith(name + '/'):
+                                ## try:
+                                self.zoekvervang.filenames.remove(fname)
+                                ## except ValueError:
+                                    ## pass # may already be removed
+            if self.ask_skipfiles.isChecked():
+                self.names = self.zoekvervang.filenames
+                dlg = SelectNames(self)
+                self.zoekvervang.filenames = self.names
 
         self.zoekvervang.do_action()
         if len(self.zoekvervang.rpt) == 1:
