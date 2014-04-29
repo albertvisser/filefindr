@@ -171,14 +171,17 @@ class ABase(object):
     def checktype(self, item):
         "controleer speciale bestandstypen (extensies)"
         mld = ""
-        try:
-            self._mru_items["types"].remove(item)
-        except ValueError:
-            pass
-        self._mru_items["types"].insert(0, item)
-        self.s += "\nin bestanden van type {0}".format(item)
-        h = item.split(",")
-        self.p["extlist"] = [x.lstrip().strip() for x in h]
+        if item:
+            try:
+                self._mru_items["types"].remove(item)
+            except ValueError:
+                pass
+            self._mru_items["types"].insert(0, item)
+            self.s += "\nin bestanden van type {0}".format(item)
+            h = item.split(",")
+            self.p["extlist"] = [x.lstrip().strip() for x in h]
+        else:
+            self.p["extlist"] = []
         return mld
 
     def checkpath(self, item):

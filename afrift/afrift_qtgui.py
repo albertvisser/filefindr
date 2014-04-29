@@ -378,12 +378,11 @@ class MainFrame(gui.QWidget, ABase):
         """Zoekactie uitvoeren en resultaatscherm tonen"""
         mld = self.checkzoek(str(self.vraagZoek.currentText()))
         if not mld:
-            self.checkverv(str(self.vraagVerv.currentText()), self.cVervang.isChecked())
+            self.checkverv(str(self.vraagVerv.currentText()),
+                self.cVervang.isChecked())
             self.checkattr(self.vraagCase.isChecked(), self.vraagWoord.isChecked())
             if self.apptype != "single" or os.path.isdir(self.fnames[0]):
-                b = str(self.vraagTypes.currentText())
-                if b:
-                    self.checktype(b)
+                self.checktype(str(self.vraagTypes.currentText()))
             if not self.apptype:
                 mld = self.checkpath(str(self.vraagDir.currentText()))
         if not mld:
