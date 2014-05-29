@@ -102,8 +102,10 @@ class Results(gui.QDialog):
 
         b1 = gui.QPushButton("&Klaar", self)
         self.connect(b1, core.SIGNAL('clicked()'), self.klaar)
-        b2 = gui.QPushButton("&Copy to File", self)
+        b2 = gui.QPushButton("Copy to &File", self)
         self.connect(b2, core.SIGNAL('clicked()'), self.kopie)
+        b3 = gui.QPushButton("Copy to &Clipboard", self)
+        self.connect(b3, core.SIGNAL('clicked()'), self.to_clipboard)
         self.cb = gui.QCheckBox("toon directorypad in uitvoer", self)
 
         vbox = gui.QVBoxLayout()
@@ -120,6 +122,7 @@ class Results(gui.QDialog):
         hbox = gui.QHBoxLayout()
         hbox.addWidget(b1)
         hbox.addWidget(b2)
+        hbox.addWidget(b3)
         hbox.addWidget(self.cb)
         hbox.insertStretch(0, 1)
         hbox.addStretch(1)
@@ -164,6 +167,15 @@ class Results(gui.QDialog):
         "dialoog afsluiten"
         gui.QDialog.done(self, 0)
 
+    def get_results(self, toonpad):
+        text = ["{0}".format(self.results[0])]
+        for r1, r2 in self.results[1:]:
+            if toonpad:
+                text.append("{0} {1}".format(r1, r2))
+            else:
+                text.append("{0} {1}".format(r1.split(os.sep)[-1], r2))
+        return text
+
     def kopie(self):
         "callback for button 'Copy to file'"
         toonpad = True if self.cb.isChecked() else False
@@ -180,12 +192,14 @@ class Results(gui.QDialog):
         if not dlg:
             return
         with open(dlg, "w") as f_out:
-            f_out.write("{0}\n".format(self.results[0]))
-            for r1, r2 in self.results[1:]:
-                if toonpad:
-                    f_out.write("{0} {1}\n".format(r1, r2))
-                else:
-                    f_out.write("{0} {1}\n".format(r1.split(os.sep)[-1], r2))
+            for line in self.get_results(toonpad):
+                f_out.write(line + "\n")
+
+    def to_clipboard(self):
+        "callback for button 'Copy to clipboard'"
+        toonpad = True if self.cb.isChecked() else False
+        clp = gui.QApplication.clipboard()
+        clp.setText('\n'.join(self.get_results(toonpad)))
 
 class MainFrame(gui.QWidget, ABase):
     """Hoofdscherm van de applicatie
