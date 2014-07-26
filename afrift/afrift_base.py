@@ -124,6 +124,8 @@ class ABase(object):
             mld = "Kan niet zoeken zonder zoekargument"
         else:
             mld = ""
+            print(item, ";", self._mru_items["zoek"])
+            print(item in self._mru_items["zoek"])
             try:
                 self._mru_items["zoek"].remove(item)
             except ValueError:
@@ -187,31 +189,8 @@ class ABase(object):
     def checkpath(self, item):
         "controleer zoekpad"
         if not item:
-            mld = "Ik wil wel graag weten in welke directory ik moet (beginnen met) zoeken"
-        elif not os.path.exists(item):
-            mld = "De opgegeven directory bestaat niet"
-        else:
-            mld = ""
-            try:
-                self._mru_items["dirs"].remove(item)
-            except ValueError:
-                pass
-            self._mru_items["dirs"].insert(0, item)
-            self.s += "\nin {0}".format(item)
-            self.p["pad"] = item
-        return mld
-
-    def checksubs(self, item):
-        "subdirs aangeven"
-        if item:
-            self.s += " en onderliggende directories"
-        self.p["subdirs"] = item
-        return mld
-
-    def checkpath(self, item):
-        "controleer zoekpad"
-        if not item:
-            mld = "Ik wil wel graag weten in welke directory ik moet (beginnen met) zoeken"
+            mld = ("Ik wil wel graag weten in welke directory ik moet "
+                   "(beginnen met) zoeken")
         elif not os.path.exists(item):
             mld = "De opgegeven directory bestaat niet"
         else:
