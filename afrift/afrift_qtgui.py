@@ -234,6 +234,7 @@ class MainFrame(gui.QWidget, ABase):
         cb.insertItems(0, self._mru_items["verv"])
         cb.setEditable(True)
         cb.clearEditText()
+        cb.setAutoCompletionCaseSensitivity(core.Qt.CaseSensitive)
         grid.addWidget(cb, row, 1)
         self.vraagVerv = cb
 
@@ -245,6 +246,7 @@ class MainFrame(gui.QWidget, ABase):
         vbox.addWidget(cb)
         self.cVervang = cb
         cb = gui.QCheckBox("hoofd/kleine letters gelijk", self)
+        cb.stateChanged[int].connect(self.check_case)
         if self.p["case"]:
             cb.toggle()
         vbox.addWidget(cb)
@@ -382,6 +384,15 @@ class MainFrame(gui.QWidget, ABase):
 
         self.show()
         sys.exit(app.exec_())
+
+    def check_case(self, int):
+        """autocompletion voor zoektekst in overeenstemming brengen met case
+        indicator"""
+        if int == core.Qt.Checked:
+            new_value = core.Qt.CaseSensitive
+        else:
+            new_value = core.Qt.CaseInSensitive
+        self.vraagZoek.setAutoCompletionCaseSensitivity(new_value)
 
     def keyPressEvent(self, event):
         """event handler voor toetsaanslagen"""
