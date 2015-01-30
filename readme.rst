@@ -34,3 +34,6 @@ Dependencies
 - wxPython for the current GUI version
 - Tkinter, PyQt4 for older GUI versions and Python3 GUI versions
 - PocketPyGUI for a PocketPC version
+
+Note that for saving previousy entered values between sessions, the current
+implementation uses *pickle*.
