@@ -72,7 +72,8 @@ class SelectNames(gui.QDialog):
         gui.QDialog.done(self, 0)
 
 class Results(gui.QDialog):
-    """Resultaten scherm"""
+    """Show results on screen
+    """
 
     def __init__(self, parent):
         self.parent = parent
@@ -134,7 +135,8 @@ class Results(gui.QDialog):
         self.exec_()
 
     def populate_list(self):
-        "resultaten in de listbox zetten"
+        """copy results to listbox
+        """
         # table.setItem(row, column, QtGui.QWidget(self))
         ## headers = []
         for ix, line in enumerate(self.parent.zoekvervang.rpt):
@@ -164,10 +166,13 @@ class Results(gui.QDialog):
         self.results.insert(0, kop)
 
     def klaar(self):
-        "dialoog afsluiten"
+        """finish dialog
+        """
         gui.QDialog.done(self, 0)
 
     def get_results(self, toonpad):
+        """apply switch to show complete path to results
+        """
         text = ["{0}".format(self.results[0])]
         for r1, r2 in self.results[1:]:
             if toonpad:
@@ -177,13 +182,14 @@ class Results(gui.QDialog):
         return text
 
     def kopie(self):
-        "callback for button 'Copy to file'"
+        """callback for button 'Copy to file'
+        """
         toonpad = True if self.cb.isChecked() else False
         f = self.parent.p["zoek"]
         for char in '/\\?%*:|"><.':
             if char in f:
                 f = f.replace(char, "~")
-        f +=  ".txt"
+        f =  f.join(("files containing ", ".txt"))
         dlg = gui.QFileDialog.getSaveFileName(self,
             "Resultaat naar bestand kopieren",
             os.path.join(self.parent.hier,f),
@@ -196,7 +202,8 @@ class Results(gui.QDialog):
                 f_out.write(line + "\n")
 
     def to_clipboard(self):
-        "callback for button 'Copy to clipboard'"
+        """callback for button 'Copy to clipboard'
+        """
         toonpad = True if self.cb.isChecked() else False
         clp = gui.QApplication.clipboard()
         clp.setText('\n'.join(self.get_results(toonpad)))
@@ -240,6 +247,9 @@ class MainFrame(gui.QWidget, ABase):
 
         row += 1
         vbox = gui.QVBoxLayout()
+        cb = gui.QCheckBox("regular expression (Python format)", self)
+        vbox.addWidget(cb)
+        self.vraag_regex = cb
         cb = gui.QCheckBox("lege vervangtekst = weghalen", self)
         if self._vervleeg:
             cb.toggle()
@@ -312,23 +322,6 @@ class MainFrame(gui.QWidget, ABase):
             self.vraag_diepte = choice
 
             row += 1
-            choice = gui.QCheckBox("selecteer directories om over te slaan")
-            choice.toggle()
-            box = gui.QHBoxLayout()
-            box.addWidget(choice)
-            self.ask_skipdirs = choice
-            grid.addLayout(box, row, 1)
-
-            row += 1
-            choice = gui.QCheckBox("selecteer bestanden om over te slaan")
-            choice.toggle()
-            box = gui.QHBoxLayout()
-            box.addWidget(choice)
-            self.ask_skipfiles = choice
-            grid.addLayout(box, row, 1)
-
-        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
-            row += 1
             grid.addWidget(gui.QLabel("alleen files van type:"), row, 0)
             cb = gui.QComboBox(self)
             cb.setMaximumWidth(TXTW)
@@ -348,6 +341,23 @@ class MainFrame(gui.QWidget, ABase):
             cb.insertItems(0, self.fnames)
             grid.addWidget(cb, row, 0, 1, 2)
             self.lb = cb
+
+        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+            row += 1
+            choice = gui.QCheckBox("selecteer (sub)directories om over te slaan")
+            ## choice.toggle()
+            box = gui.QHBoxLayout()
+            box.addWidget(choice)
+            self.ask_skipdirs = choice
+            grid.addLayout(box, row, 1)
+
+            row += 1
+            choice = gui.QCheckBox("selecteer bestanden om over te slaan")
+            ## choice.toggle()
+            box = gui.QHBoxLayout()
+            box.addWidget(choice)
+            self.ask_skipfiles = choice
+            grid.addLayout(box, row, 1)
 
         row += 1
         cb = gui.QCheckBox("gewijzigd(e) bestand(en) backuppen")
@@ -405,7 +415,8 @@ class MainFrame(gui.QWidget, ABase):
         if not mld:
             self.checkverv(str(self.vraagVerv.currentText()),
                 self.cVervang.isChecked())
-            self.checkattr(self.vraagCase.isChecked(), self.vraagWoord.isChecked())
+            self.checkattr(self.vraag_regex.isChecked(), self.vraagCase.isChecked(),
+                self.vraagWoord.isChecked())
             if self.apptype != "single" or os.path.isdir(self.fnames[0]):
                 self.checktype(str(self.vraagTypes.currentText()))
             if not self.apptype:

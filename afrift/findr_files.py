@@ -55,9 +55,12 @@ class Finder(object):
             # moet hier nog iets mee doen m.h.o.o. woorddelen of niet
             zoek = ''
             for ch in self.p['zoek']:
-                if ch in ('.', '^','$','*','+','?','{','}','[',']','(',')','|','\\'):
-                    zoek += "\\"
+                if not self.p['regexp']:
+                    if ch in ('.', '^','$','*','+','?','{','}','[',']','(',')','|',
+                                '\\'):
+                        zoek += "\\"
                 zoek += ch
+            print(zoek)
             if self.p['case']:
                 if sys.version.startswith("3"):
                     self.re = re.compile(str(zoek))
@@ -65,9 +68,9 @@ class Finder(object):
                     self.re = re.compile(unicode(zoek))
             else:
                 if sys.version.startswith("3"):
-                    self.re = re.compile(str(zoek), re.IGNORECASE)
+                    self.re = re.compile(str(zoek), re.IGNORECASE | re.MULTILINE)
                 else:
-                    self.re = re.compile(unicode(zoek), re.IGNORECASE)
+                    self.re = re.compile(unicode(zoek), re.IGNORECASE | re.MULTILINE)
             specs = ["Gezocht naar '{0}'".format(self.p['zoek'])]
             if self.p['wijzig']:
                 specs.append(" en dit vervangen door '{0}'".format(self.p['vervang']))

@@ -124,8 +124,6 @@ class ABase(object):
             mld = "Kan niet zoeken zonder zoekargument"
         else:
             mld = ""
-            print(item, ";", self._mru_items["zoek"])
-            print(item in self._mru_items["zoek"])
             try:
                 self._mru_items["zoek"].remove(item)
             except ValueError:
@@ -156,18 +154,19 @@ class ABase(object):
     def checkattr(self, *items):
         "controleer extra opties"
         mld = ""
-        case, words = items
-        ss = ""
+        regex, case, words = items
+        ss = []
+        if regex:
+            ss.append("regular expression")
+        self.p["regexp"] = regex
         if case:
-            ss = "case-sensitive"
+            ss.append("case-sensitive")
         self.p["case"] = case
         if words:
-            if ss:
-                ss += ", "
-            ss += "hele woorden"
+            ss.append("hele woorden")
         self.p["woord"] = words
         if ss:
-            self.s += " ({0})".format(ss)
+            self.s += " ({0})".format(', '.join(ss))
         return mld
 
     def checktype(self, item):
