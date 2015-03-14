@@ -8,9 +8,11 @@ import sys
 import os
 import re
 import shutil
+import collections
 
 class Finder(object):
-    "interpreteren van de parameters en aansturen van de zoek/vervang routine"
+    """interpreteren van de parameters en aansturen van de zoek/vervang routine
+    """
     def __init__(self, **parms):
         ## print parms
         self.p = {
@@ -27,15 +29,19 @@ class Finder(object):
             "follow_symlinks": False,
             "maxdepth": 5,
             }
+        self.use_complex = False    # temporary switch for using the new way to search
         for x in parms:
             if x in self.p:
                 self.p[x] = parms[x]
+            elif x == 'use_complex':
+                self.use_complex = x
             else:
                 raise TypeError('Onbekende optie ' + x)
         ## print self.p
         ## sys.exit()
         self.ok = True
         self.rpt = [] # verslag van wat er gebeurd is
+        self.re, self.ignore = '', ''
         if not self.p['filelist'] and not self.p['pad']:
             self.rpt.append("Fout: geen lijst bestanden en geen directory opgegeven")
         elif self.p['filelist'] and self.p['pad']:
@@ -53,24 +59,10 @@ class Finder(object):
                     x = "." + x
                 self.extlistUpper.append(x.upper())
             # moet hier nog iets mee doen m.h.o.o. woorddelen of niet
-            zoek = ''
-            for ch in self.p['zoek']:
-                if not self.p['regexp']:
-                    if ch in ('.', '^','$','*','+','?','{','}','[',']','(',')','|',
-                                '\\'):
-                        zoek += "\\"
-                zoek += ch
-            print(zoek)
-            if self.p['case']:
-                if sys.version.startswith("3"):
-                    self.re = re.compile(str(zoek))
-                else:
-                    self.re = re.compile(unicode(zoek))
+            if self.use_complex:
+                self.re, self.ignore = self.build_regexes_new()
             else:
-                if sys.version.startswith("3"):
-                    self.re = re.compile(str(zoek), re.IGNORECASE | re.MULTILINE)
-                else:
-                    self.re = re.compile(unicode(zoek), re.IGNORECASE | re.MULTILINE)
+                self.re = self.build_regexes()
             specs = ["Gezocht naar '{0}'".format(self.p['zoek'])]
             if self.p['wijzig']:
                 specs.append(" en dit vervangen door '{0}'".format(self.p['vervang']))
@@ -138,6 +130,97 @@ class Finder(object):
                 if len(self.p['extlist']) == 0 or ext.upper() in self.extlistUpper:
                     self.filenames.append(entry)
 
+    def build_regexes(self):
+        """build the search regexp(s)
+        this original version returns one compiled expression
+        """
+        zoek = ''
+        for ch in self.p['zoek']:
+            if not self.p['regexp']:
+                if ch in ('.', '^','$','*','+','?','{','}','[',']','(',')','|',
+                            '\\'):
+                    zoek += "\\"
+            zoek += ch
+        flags = re.MULTILINE
+        if not self.p['case']:
+            flags |= re.IGNORECASE
+        if sys.version[0] >= "3":
+            return re.compile(str(zoek), flags)
+        else:
+            return re.compile(unicode(zoek), flags)
+
+    def build_regexes_new(self):
+        """build the search regexp(s)
+        this version makes a complex search possible by looking for special
+        separators
+
+        returns a list of re's to look for and a re of strings to ignore"""
+        def escape(data):   # only for strings
+            """escape special characters when they are not to be interpreted
+            """
+            zoek = ''
+            for ch in data:
+                if ch in ('.', '^','$','*','+','?','{','}','[',']','(',')','|',
+                        '\\'):
+                    zoek += "\\"
+                zoek += ch
+            return zoek
+
+        negeer = ''
+        if self.p['regexp'] or self.p['wijzig']: # in these cases: always take literally
+            zoek = [re.compile(escape(self.p['zoek']))]
+        else:
+            zoek_naar, zoek_ook, zoek_niet = self.parse_zoek()
+            zoek = [re.compile('|'.join([escape(x) for x in zoek_naar]))]
+            zoek += [re.compile(escape(x)) for x in zoek_ook]
+            if zoek_niet:
+                negeer = re.compile('|'.join([escape(x) for x in zoek_niet]))
+        return zoek, negeer
+
+    def parse_zoek(self):
+        """
+            levert drie lists op:
+            - een lijst met frasen waarvan er tenminste één moet voorkomen
+            - een lijst met frasen die daarnaast ook moeten voorkomen
+            - een lijst met frasen die niet mag voorkomen
+        """
+        in_quotes = also_required = forbidden = False
+        zoekitem = ''
+        possible_matches = []
+        required_matches = []
+        forbidden_matches = []
+        def add_to_matches():
+            nonlocal zoekitem, also_required, forbidden
+            ## print('add_to_matches called with zoekitem', zoekitem, also_required)
+            zoekitem = zoekitem.strip()
+            if not zoekitem:
+                return
+            if also_required:
+                required_matches.append(zoekitem)
+            elif forbidden:
+                forbidden_matches.append(zoekitem)
+            else:
+                possible_matches.append(zoekitem)
+            zoekitem = ''
+            also_required = forbidden = False
+        for char in self.p['zoek']:
+            if char == '"':
+                if in_quotes:
+                    add_to_matches()
+                in_quotes = not in_quotes
+            elif char == ',' and not in_quotes:
+                add_to_matches()
+            elif char == '+' and not in_quotes:
+                add_to_matches()
+                also_required = True
+            elif char == '-' and not in_quotes:
+                add_to_matches()
+                forbidden=True
+            else:
+                zoekitem += char
+        add_to_matches()
+        return possible_matches, required_matches, forbidden_matches
+
     def do_action(self):
         for name in self.filenames:
             self.zoek(name)
@@ -157,28 +240,10 @@ class Finder(object):
                 for x in f_in:
                     lines.append(pos)
                     x = x.rstrip() + os.linesep
-                    ## x = " " + x
-                    ## if x[0] == chr(13):
-                        ## x = x[1:]
                     regels.append(x)
                     pos += len(x)
             except UnicodeDecodeError:
                 msg = best + ": overgeslagen, waarschijnlijk geen tekstbestand"
-        ## if msg and sys.version >= "3":
-            ## import chardet
-            ## with open(best, "rb") as f_in:
-                ## data = f_in.read()
-            ## result = chardet.detect(data)
-            ## msg = ""
-            ## with open(best, "r", encoding=result["encoding"]) as f_in:
-                ## try:
-                    ## for x in f_in:
-                        ## lines.append(pos)
-                        ## x = x.rstrip() + os.linesep
-                        ## regels.append(x)
-                        ## pos += len(x)
-                ## except UnicodeDecodeError:
-                    ## msg = best + ": overgeslagen, waarschijnlijk geen tekstbestand"
         if msg:
             self.rpt.append(msg)
             return
@@ -187,20 +252,28 @@ class Finder(object):
         found = False
         from_line = 0
         last_in_line = 0
-        for vind in self.re.finditer(data):
-            found = True
-            ## print(vind, vind.span(), sep = " ")
-            for lineno, linestart in enumerate(lines[from_line:]):
-                ## print(from_line,lineno,linestart)
-                if vind.start() < linestart:
-                    if not self.p['wijzig']:
-                        in_line = lineno + from_line
-                        if in_line != last_in_line:
-                            self.rpt.append("{0} r. {1}: {2}".format(
-                                best, in_line, regels[in_line - 1].rstrip()))
-                        last_in_line = in_line
-                    from_line = lineno
-                    break
+        if self.use_complex:
+            result_list = self.complex_search(data, lines)
+            for lineno in result_list:
+                self.rpt.append("{0} r. {1}: {2}".format(best, lineno,
+                    regels[lineno - 1].rstrip()))
+
+        else:
+            result_list = self.re.finditer(data)
+            for vind in result_list:
+                found = True
+                ## print(vind, vind.span(), sep = " ")
+                for lineno, linestart in enumerate(lines[from_line:]):
+                    ## print(from_line,lineno,linestart)
+                    if vind.start() < linestart:
+                        if not self.p['wijzig']:
+                            in_line = lineno + from_line
+                            if in_line != last_in_line:
+                                self.rpt.append("{0} r. {1}: {2}".format(
+                                    best, in_line, regels[in_line - 1].rstrip()))
+                            last_in_line = in_line
+                        from_line = lineno
+                        break
         if found and self.p['wijzig']:
             ndata, aant = self.re.subn(self.p["vervang"], data)
             self.rpt.append("%s: %s times" % (best, aant))
@@ -210,25 +283,38 @@ class Finder(object):
             with open(best,"w") as f_out:
                 f_out.write(ndata)
 
-def test():
-    "test routine"
-    import logging
-    logging.basicConfig(filename='findr_files.log')
-    logger = logging.getLogger(__name__)
-    h = Finder(
-        zoek="logging",
-        vervang=None, # "voor",
-        pad='/home/albert',
-        #filelist=['test.py.txt',],
-        extlist = ['py'], # [".txt",".ini"],
-        subdirs=True, # zoeken in subdirectories
-        ## case=True, # case-sensitive ja/nee
-        woord=True, # woord/woorddeel
-        #regexp=True,  # zoekstring is regexp
-        #backup=True
-        )
-    for x in h.rpt:
-        logger.info("%s\n" % x)
+    def complex_search(self, data, lines):
+        # maak een lijst van alle locaties waar een string gevonden is
+        # (plus de index van de  regexp die er bij hoort)
+        found_in_lines = []
+        for ix, re_ in enumerate(self.re):
+            new_lines = [(x.start(), ix) for x in re_.finditer(data)]
+            found_in_lines += new_lines
 
-if __name__ == '__main__':
-    test()
+        # vul de lijst aan met alle locaties waar gevonden is wat we niet willen vinden
+        # (gemarkeerd met index -1)
+        if self.ignore:
+            donotwant = [(x.start(), -1) for x in self.ignore.finditer(data)]
+            found_in_lines += donotwant
+
+        # loop de lijst langs om hiervan een dictionary te maken op regelnummer
+        # met alle regexp indexen waar deze bij gevonden is
+        # zodat we kunnen zien welke we wel en niet willen hebben
+        lines_found = collections.defaultdict(set)
+        from_line = 0 # houdt bij vanaf welke regel het zin heeft om de inhoud te controleren
+        for itemstart, number in sorted(found_in_lines):
+            for lineno, linestart in enumerate(lines[from_line:]):
+                if itemstart < linestart:
+                    in_line = lineno + from_line    #  bereken het actuele regelnummer
+                    from_line = lineno
+                    break
+            lines_found[in_line].add(number)
+
+        # uitfilteren welke regel niet in alle zoekacties voorkomt of juist weggelaten met worden
+        all_searches = set(range(len(self.re)))
+        lines_left_over = []
+        for line, values in lines_found.items():
+            if -1 in values: continue
+            if values == all_searches:
+                lines_left_over.append(line)
+        return lines_left_over

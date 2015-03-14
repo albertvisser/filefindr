@@ -1,0 +1,27 @@
+def
+test
+class
+other
+def test
+def,test
+def, test
+def ,test
+def , test
+def+test
+def+ test
+def +test
+def + test
+def-test
+def- test
+def -test
+def - test
+def class
+def other
+test class
+other test
+other class
+def test class
+def test other
+def class other
+test class other
+def test other class

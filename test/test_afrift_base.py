@@ -2,12 +2,15 @@
 
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import pathlib
+HERE = pathlib.Path(__file__).parent.resolve()
+ROOT = HERE.parent
+sys.path.append(str(ROOT))
 import pickle
 import pprint
 import logging
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.FileHandler('test_abase.log', mode="w"))
+logger.addHandler(logging.FileHandler(str(HERE / 'test_abase.log'), mode="w"))
 logger.setLevel(logging.DEBUG)
 
 from afrift_base import ABase
