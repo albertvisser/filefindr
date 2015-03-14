@@ -434,7 +434,7 @@ class MainFrame(gui.QWidget, ABase):
             return
 
         self.schrijfini()
-        self.zoekvervang = Finder(use_complex=True, **self.p)
+        self.zoekvervang = Finder(**self.p)
         if not self.zoekvervang.filenames:
             gui.QMessageBox.information(self, self.resulttitel,
                 "Geen bestanden gevonden", gui.QMessageBox.Ok)

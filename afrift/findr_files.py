@@ -29,18 +29,16 @@ class Finder(object):
             "follow_symlinks": False,
             "maxdepth": 5,
             }
-        self.use_complex = False    # temporary switch for using the new way to search
         for x in parms:
             if x in self.p:
                 self.p[x] = parms[x]
-            elif x == 'use_complex':
-                self.use_complex = x
             else:
                 raise TypeError('Onbekende optie ' + x)
         ## print self.p
         ## sys.exit()
         self.ok = True
         self.rpt = [] # verslag van wat er gebeurd is
+        self.use_complex = True
         self.re, self.ignore = '', ''
         if not self.p['filelist'] and not self.p['pad']:
             self.rpt.append("Fout: geen lijst bestanden en geen directory opgegeven")
@@ -59,10 +57,11 @@ class Finder(object):
                     x = "." + x
                 self.extlistUpper.append(x.upper())
             # moet hier nog iets mee doen m.h.o.o. woorddelen of niet
-            if self.use_complex:
-                self.re, self.ignore = self.build_regexes_new()
+            if self.p['wijzig'] or self.p['regexp']:
+                self.use_complex = False
+                self.re = self.build_regexp_simple()
             else:
-                self.re = self.build_regexes()
+                self.re, self.ignore = self.build_regexes()
             specs = ["Gezocht naar '{0}'".format(self.p['zoek'])]
             if self.p['wijzig']:
                 specs.append(" en dit vervangen door '{0}'".format(self.p['vervang']))
@@ -130,7 +129,7 @@ class Finder(object):
                 if len(self.p['extlist']) == 0 or ext.upper() in self.extlistUpper:
                     self.filenames.append(entry)
 
-    def build_regexes(self):
+    def build_regexp_simple(self):
         """build the search regexp(s)
         this original version returns one compiled expression
         """
@@ -149,7 +148,7 @@ class Finder(object):
         else:
             return re.compile(unicode(zoek), flags)
 
-    def build_regexes_new(self):
+    def build_regexes(self):
         """build the search regexp(s)
         this version makes a complex search possible by looking for special
         separators
@@ -167,14 +166,17 @@ class Finder(object):
             return zoek
 
         negeer = ''
+        flags = re.MULTILINE
+        if not self.p['case']:
+            flags |= re.IGNORECASE
         if self.p['regexp'] or self.p['wijzig']: # in these cases: always take literally
-            zoek = [re.compile(escape(self.p['zoek']))]
+            zoek = [re.compile(escape(self.p['zoek']), flags)]
         else:
             zoek_naar, zoek_ook, zoek_niet = self.parse_zoek()
-            zoek = [re.compile('|'.join([escape(x) for x in zoek_naar]))]
-            zoek += [re.compile(escape(x)) for x in zoek_ook]
+            zoek = [re.compile('|'.join([escape(x) for x in zoek_naar]), flags)]
+            zoek += [re.compile(escape(x), flags) for x in zoek_ook]
             if zoek_niet:
-                negeer = re.compile('|'.join([escape(x) for x in zoek_niet]))
+                negeer = re.compile('|'.join([escape(x) for x in zoek_niet]), flags)
         return zoek, negeer
 
     def parse_zoek(self):
@@ -252,28 +254,31 @@ class Finder(object):
         found = False
         from_line = 0
         last_in_line = 0
+        print(self.re)
         if self.use_complex:
             result_list = self.complex_search(data, lines)
             for lineno in result_list:
+                found = True
                 self.rpt.append("{0} r. {1}: {2}".format(best, lineno,
                     regels[lineno - 1].rstrip()))
+            return
 
-        else:
-            result_list = self.re.finditer(data)
-            for vind in result_list:
-                found = True
-                ## print(vind, vind.span(), sep = " ")
-                for lineno, linestart in enumerate(lines[from_line:]):
-                    ## print(from_line,lineno,linestart)
-                    if vind.start() < linestart:
-                        if not self.p['wijzig']:
-                            in_line = lineno + from_line
-                            if in_line != last_in_line:
-                                self.rpt.append("{0} r. {1}: {2}".format(
-                                    best, in_line, regels[in_line - 1].rstrip()))
-                            last_in_line = in_line
-                        from_line = lineno
-                        break
+        # gebruik de oude manier van zoeken bij vervangen of bij regexp zoekstring
+        result_list = self.re.finditer(data)
+        for vind in result_list:
+            found = True
+            ## print(vind, vind.span(), sep = " ")
+            for lineno, linestart in enumerate(lines[from_line:]):
+                ## print(from_line,lineno,linestart)
+                if vind.start() < linestart:
+                    if not self.p['wijzig']:
+                        in_line = lineno + from_line
+                        if in_line != last_in_line:
+                            self.rpt.append("{0} r. {1}: {2}".format(
+                                best, in_line, regels[in_line - 1].rstrip()))
+                        last_in_line = in_line
+                    from_line = lineno
+                    break
         if found and self.p['wijzig']:
             ndata, aant = self.re.subn(self.p["vervang"], data)
             self.rpt.append("%s: %s times" % (best, aant))

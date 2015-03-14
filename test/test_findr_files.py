@@ -38,8 +38,7 @@ def test_findr_complex():
             zoek=data,
             vervang=None,
             filelist=[str(HERE / 'sample.txt'),], # '/home/albert/projects/filefindr/sample.txt'
-            regexp=regexp,
-            use_complex=True)
+            regexp=regexp)
         for item in ('zoek', 'wijzig', 'regexp'):
             if item in h.p:
                 logger.info("%s: %s" % (item, h.p[item]))
