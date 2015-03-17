@@ -322,4 +322,5 @@ class Finder(object):
             if -1 in values: continue
             if values == all_searches:
                 lines_left_over.append(line)
+        lines_left_over.sort()
         return lines_left_over
