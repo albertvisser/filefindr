@@ -4,22 +4,22 @@ het meeste hiervan bevind zich in een class die als mixin gebruikt wordt"""
 
 import os
 import sys
+import pathlib
+BASE = pathlib.Path(os.environ['HOME']) / '.afrift'
 HERE = os.path.dirname(__file__)
 iconame = os.path.join(HERE,"find.ico")
-import pickle
-import pathlib
+## import pickle
 import json
 
 def get_iniloc():
-    base = pathlib.Path(os.environ['HOME']) / '.afrift'
     here = str(pathlib.Path.cwd()).replace(os.environ['HOME'] + '/', '~').replace(
         '/', '_')
     if here[0] == '_':
         here = here[1:]
-    iniloc = base / here
-    mruname = str(iniloc / 'mru_items.json')
-    optsname = str(iniloc / 'options.json')
-    return iniloc, mruname, optsname
+    iniloc = BASE / here
+    mrufile = iniloc / 'mru_items.json'
+    optsfile = iniloc / 'options.json'
+    return iniloc, mrufile, optsfile
 
 class ABase(object):
     """
@@ -96,7 +96,10 @@ class ABase(object):
         for key in self._optkeys:
             self.p[key] = False
         self._options = ("matchcase", "matchwords", "searchsubdirs")
-        self.pickled = self.readini()
+        self.readini()
+        encfile = BASE / 'fallback_encoding'
+        with encfile.open() as _in:
+            self._fallback_encoding = _in.read().strip()
         self._vervleeg = False
         self._backup = True
         self._exit_when_ready = False
@@ -106,26 +109,23 @@ class ABase(object):
 
         geen settings file of niet te lezen dan initieel laten
         """
-        loc, mname, oname = get_iniloc()
-        print(loc, mname, oname)
+        loc, mfile, ofile = get_iniloc()
         if loc.exists():
-            print('reading settings')
-            with open(mname) as _in:
+            with mfile.open() as _in:
                 self._mru_items = json.load(_in)
-            with open(oname) as _in:
+            with ofile.open() as _in:
                 opts = json.load(_in)
             self.p.update(opts)
 
     def schrijfini(self):
         """huidige settings toevoegen dan wel vervangen in ini file"""
-        print(self._mru_items, self.p)
-        loc, mname, oname = get_iniloc()
+        loc, mfile, ofile = get_iniloc()
         if not loc.exists():
             loc.mkdir()
-        with open(mname, "w") as _out:
+        with mfile.open("w") as _out:
             json.dump(self._mru_items, _out, indent=4)
         opts = {key: self.p[key] for key in self._optkeys}
-        with open(oname, "w") as _out:
+        with ofile.open("w") as _out:
             json.dump(opts, _out, indent=4)
 
     def checkzoek(self, item):

@@ -428,6 +428,7 @@ class MainFrame(gui.QWidget, ABase):
             elif self.apptype == "single" and os.path.islink(self.fnames[0]):
                 self.p["follow_symlinks"] = True
         self.p["backup"] = self.vraagBackup.isChecked()
+        self.p["fallback_encoding"] = self._fallback_encoding
 
         if mld:
             gui.QMessageBox.critical(self, self.fouttitel, mld, gui.QMessageBox.Ok)

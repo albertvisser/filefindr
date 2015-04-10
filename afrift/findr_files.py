@@ -28,6 +28,7 @@ class Finder(object):
             "backup": False,
             "follow_symlinks": False,
             "maxdepth": 5,
+            "fallback_encoding": 'ascii',
             }
         for x in parms:
             if x in self.p:
@@ -143,10 +144,7 @@ class Finder(object):
         flags = re.MULTILINE
         if not self.p['case']:
             flags |= re.IGNORECASE
-        if sys.version[0] >= "3":
-            return re.compile(str(zoek), flags)
-        else:
-            return re.compile(unicode(zoek), flags)
+        return re.compile(str(zoek), flags)
 
     def build_regexes(self):
         """build the search regexp(s)
@@ -233,11 +231,8 @@ class Finder(object):
         lines = []
         regels = []
         msg = ""
-        if sys.version < "3":
-            f_in = open(best, "r")
-        else:
-            f_in = open(best, "r", encoding="iso-8859-1")
-        with f_in: # truc om niet-utf tekstfiles toch te kunnen lezen
+        try_again = False
+        with open(best, "r") as f_in:
             try:
                 for x in f_in:
                     lines.append(pos)
@@ -245,7 +240,17 @@ class Finder(object):
                     regels.append(x)
                     pos += len(x)
             except UnicodeDecodeError:
-                msg = best + ": overgeslagen, waarschijnlijk geen tekstbestand"
+                try_again = true
+        if try_again:
+            with open(best, "r", encoding=self.p['fallback_encoding']) as f_in:
+                try:
+                    for x in f_in:
+                        lines.append(pos)
+                        x = x.rstrip() + os.linesep
+                        regels.append(x)
+                        pos += len(x)
+                except UnicodeDecodeError:
+                    msg = best + ": overgeslagen, waarschijnlijk geen tekstbestand"
         if msg:
             self.rpt.append(msg)
             return
@@ -254,7 +259,6 @@ class Finder(object):
         found = False
         from_line = 0
         last_in_line = 0
-        print(self.re)
         if self.use_complex:
             result_list = self.complex_search(data, lines)
             for lineno in result_list:
