@@ -7,6 +7,19 @@ import sys
 HERE = os.path.dirname(__file__)
 iconame = os.path.join(HERE,"find.ico")
 import pickle
+import pathlib
+import json
+
+def get_iniloc():
+    base = pathlib.Path(os.environ['HOME']) / '.afrift'
+    here = str(pathlib.Path.cwd()).replace(os.environ['HOME'] + '/', '~').replace(
+        '/', '_')
+    if here[0] == '_':
+        here = here[1:]
+    iniloc = base / here
+    mruname = str(iniloc / 'mru_items.json')
+    optsname = str(iniloc / 'options.json')
+    return iniloc, mruname, optsname
 
 class ABase(object):
     """
@@ -73,10 +86,6 @@ class ABase(object):
         for ix, name in enumerate(self.fnames):
             if name.endswith("\\") or name.endswith("/"):
                 self.fnames[ix] = name[:-1]
-        if os.access(self.hier, os.W_OK):
-            self._inifile = os.path.join(self.hier, "afrift.ini")
-        else:
-            self._inifile = os.path.join(os.path.dirname(__file__), "afrift.ini")
         self._keys = ("zoek", "verv", "types", "dirs")
         for key in self._keys:
             self._mru_items[key] = []
@@ -97,26 +106,27 @@ class ABase(object):
 
         geen settings file of niet te lezen dan initieel laten
         """
-        pickled = True
-        try:
-            with open(self._inifile, 'rb') as f_in:
-                try:
-                    self._mru_items = pickle.load(f_in)
-                except pickle.PickleError:
-                    pickled = False
-                if pickled:
-                    for opt in self._optkeys:
-                        self.p[opt] = pickle.load(f_in)
-        except IOError:
-            pass
-        return pickled # voor als je wilt terugmelden dat het settings ophalen mislukt is
+        loc, mname, oname = get_iniloc()
+        print(loc, mname, oname)
+        if loc.exists():
+            print('reading settings')
+            with open(mname) as _in:
+                self._mru_items = json.load(_in)
+            with open(oname) as _in:
+                opts = json.load(_in)
+            self.p.update(opts)
 
     def schrijfini(self):
         """huidige settings toevoegen dan wel vervangen in ini file"""
-        with open(self._inifile, "wb") as f_out:
-            pickle.dump(self._mru_items, f_out, protocol=2)
-            for opt in self._optkeys:
-                pickle.dump(self.p[opt], f_out, protocol=2)
+        print(self._mru_items, self.p)
+        loc, mname, oname = get_iniloc()
+        if not loc.exists():
+            loc.mkdir()
+        with open(mname, "w") as _out:
+            json.dump(self._mru_items, _out, indent=4)
+        opts = {key: self.p[key] for key in self._optkeys}
+        with open(oname, "w") as _out:
+            json.dump(opts, _out, indent=4)
 
     def checkzoek(self, item):
         "controleer zoekargument"
