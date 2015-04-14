@@ -240,7 +240,7 @@ class Finder(object):
                     regels.append(x)
                     pos += len(x)
             except UnicodeDecodeError:
-                try_again = true
+                try_again = True
         if try_again:
             with open(best, "r", encoding=self.p['fallback_encoding']) as f_in:
                 try:
