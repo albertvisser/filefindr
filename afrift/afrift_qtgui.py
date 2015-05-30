@@ -108,7 +108,8 @@ class Results(gui.QDialog):
         b3 = gui.QPushButton("Copy to &Clipboard", self)
         self.connect(b3, core.SIGNAL('clicked()'), self.to_clipboard)
         self.cb = gui.QCheckBox("toon directorypad in uitvoer", self)
-
+        if self.parent.apptype == "single":
+            self.cb.setEnabled(False)
         vbox = gui.QVBoxLayout()
 
         hbox = gui.QHBoxLayout()

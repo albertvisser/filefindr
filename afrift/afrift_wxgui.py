@@ -44,6 +44,8 @@ class Results(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.kopie, b1)
         cb = wx.CheckBox(self, -1, label="toon directorypad in uitvoer")
         cb.SetValue(False)
+        if self.parent.apptype != "single":
+            cb.Enable(False)
         self.cb = cb
 
         vsizer = wx.BoxSizer(wx.VERTICAL)
