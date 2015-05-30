@@ -227,9 +227,7 @@ class Finder(object):
 
     def zoek(self, best):
         "het daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
-        pos = 0
-        lines = []
-        regels = []
+        pos, lines, regels = 0, [], []
         msg = ""
         try_again = False
         with open(best, "r") as f_in:
@@ -242,6 +240,7 @@ class Finder(object):
             except UnicodeDecodeError:
                 try_again = True
         if try_again:
+            pos, lines, regels = 0, [], []
             with open(best, "r", encoding=self.p['fallback_encoding']) as f_in:
                 try:
                     for x in f_in:
