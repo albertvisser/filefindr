@@ -4,8 +4,10 @@ import os
 import sys
 import wx
 from findr_files import Finder
+## from findr_files_py2 import Finder # !! swap with previous statement before committing
 from afrift_base import iconame, ABase
 
+# TODO: add "copy to clipboard" button and functionality
 class Results(wx.Dialog):
     """Resultaten scherm"""
 
@@ -42,9 +44,11 @@ class Results(wx.Dialog):
         ## self.Bind(wx.EVT_BUTTON, self.einde,  b2)
         b1 = wx.Button(self, -1, "&Copy to File")
         self.Bind(wx.EVT_BUTTON, self.kopie, b1)
+        b3 = wx.Button(self, -1, "Copy to &Clipboard")
+        self.Bind(wx.EVT_BUTTON, self.to_clipboard, b3)
         cb = wx.CheckBox(self, -1, label="toon directorypad in uitvoer")
         cb.SetValue(False)
-        if self.parent.apptype != "single":
+        if self.parent.apptype == "single":
             cb.Enable(False)
         self.cb = cb
 
@@ -58,6 +62,7 @@ class Results(wx.Dialog):
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         bsizer = wx.BoxSizer(wx.HORIZONTAL)
         bsizer.Add(b1, 0, wx.ALL, 5)
+        bsizer.Add(b3, 0, wx.ALL, 5)
         bsizer.Add(b2, 0, wx.ALL, 5)
         bsizer.Add(cb, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
         hsizer.Add(bsizer, 0)
@@ -98,6 +103,17 @@ class Results(wx.Dialog):
                 self.results.append((where, what))
         self.results.insert(0, kop)
 
+    def get_results(self, toonpad):
+        """apply switch to show complete path to results
+        """
+        text = ["{0}".format(self.results[0])]
+        for r1, r2 in self.results[1:]:
+            if toonpad:
+                text.append("{0} {1}".format(r1, r2))
+            else:
+                text.append("{0} {1}".format(r1.split(os.sep)[-1], r2))
+        return text
+
     def kopie(self, event=None):
         "callback for button 'Copy to file'"
         toonpad = self.cb.GetValue()
@@ -115,13 +131,22 @@ class Results(wx.Dialog):
         if dlg.ShowModal() == wx.ID_OK:
             fn = dlg.GetPath()
             with open(fn, "w") as f_out:
-                f_out.write("{0}\n".format(self.results[0]))
-                for r1, r2 in self.results[1:]:
-                    if toonpad:
-                        f_out.write("{0} {1}\n".format(r1, r2))
-                    else:
-                        f_out.write("{0} {1}\n".format(r1.split(os.sep)[-1], r2))
+                for line in self.get_results(toonpad):
+                    f_out.write(line + "\n")
         dlg.Destroy()
+
+    def to_clipboard(self):
+        """callback for button 'Copy to clipboard'
+        """
+        toonpad = True if self.cb.isChecked() else False
+        do = wx.TextDataObject()
+        do.SetText('\n'.join([str(x) for x in self.get_results(toonpad)]))
+        try:
+            with wx.Clipboard.Get() as clipboard:
+                clipboard.SetData(do)
+        except TypeError as e:
+            print e
+            wx.MessageBox("Unable to open the clipboard", "Error")
 
     ## def einde(self, event=None):
         ## "End screen"
@@ -149,18 +174,20 @@ class MainFrame(wx.Frame, ABase):
         ## box = wx.StaticBox(self.pnl, -1)
         t1 = wx.StaticText(self.pnl, -1, "Zoek naar:")
         c1 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1),
-            choices=self._mruItems["zoek"],
+            choices=self._mru_items["zoek"],
             style=wx.CB_DROPDOWN
             )
         self.vraagZoek = c1
 
         t2 = wx.StaticText(self.pnl, -1, "Vervang door:")
         c2 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1),
-            choices=self._mruItems["verv"],
+            choices=self._mru_items["verv"],
             style=wx.CB_DROPDOWN
             )
         self.vraagVerv = c2
 
+        c3a = wx.CheckBox(self.pnl, -1, label="regular expression (Python format)")
+        self.vraag_regex = c3a
         c3 = wx.CheckBox(self.pnl, -1, label="lege vervangtekst = weghalen")
         c3.SetValue(self._vervleeg)
         self.cVervang = c3
@@ -175,7 +202,7 @@ class MainFrame(wx.Frame, ABase):
         if self.apptype == "":
             t6 =  wx.StaticText(self.pnl, -1, "In directory:")
             c6 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1),
-                choices=self._mruItems["dirs"],
+                choices=self._mru_items["dirs"],
                 style=wx.CB_DROPDOWN
                 )
             self.vraagDir = c6
@@ -194,10 +221,16 @@ class MainFrame(wx.Frame, ABase):
                 )
             c7.SetValue(self.p["subdirs"])
             self.vraagSubs = c7
+            c7a = wx.CheckBox(self.pnl, -1, label="symlinks volgen")
+            self.vraag_links = c7a
+            t7b = wx.StaticText(self.pnl, -1, label =
+                "    max. diepte (-1 is alles): ")
+            c7b = wx.SpinCtrl(self.pnl, -1, size=(50, -1), min=-1, initial=5)
+            self.vraag_diepte = c7b
 
             t8 =  wx.StaticText(self.pnl, -1, "alleen files van type:")
             c8 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1),
-                choices=self._mruItems["types"],
+                choices=self._mru_items["types"],
                 style=wx.CB_DROPDOWN
                 )
             self.vraagTypes = c8
@@ -226,11 +259,17 @@ class MainFrame(wx.Frame, ABase):
         row = 0
         gbsizer.Add(t1, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
         gbsizer.Add(c1, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
+        gbsizer.Add(wx.StaticText(self.pnl, -1,"", size=(20, -1)), (row, 2))
         row += 1
         gbsizer.Add(t2, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
         gbsizer.Add(c2, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
         row += 1
         vsizer = wx.BoxSizer(wx.VERTICAL)
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        hbsizer = wx.BoxSizer(wx.HORIZONTAL)
+        hbsizer.Add(c3a, 0)
+        hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
+        vsizer.Add(hsizer, 0, wx.EXPAND)
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hbsizer = wx.BoxSizer(wx.HORIZONTAL)
         hbsizer.Add(c3, 0)
@@ -250,8 +289,11 @@ class MainFrame(wx.Frame, ABase):
         if self.apptype == "":
             row += 1
             gbsizer.Add(t6, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
-            gbsizer.Add(c6, (row, 1), flag=wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
-            gbsizer.Add(self.Zoek, (row, 2), flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=4 )
+            hsizer = wx.BoxSizer(wx.HORIZONTAL)
+            hsizer.Add(c6, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
+            hsizer.Add(self.Zoek, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 4 )
+            gbsizer.Add(hsizer, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM,
+                border=2)
         elif self.apptype == "single":
             row += 1
             gbsizer.Add(t6t, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
@@ -260,6 +302,13 @@ class MainFrame(wx.Frame, ABase):
         if self.apptype != "single" or os.path.isdir(self.fnames[0]):
             row += 1
             gbsizer.Add(c7, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
+            row += 1
+            hsizer = wx.BoxSizer(wx.HORIZONTAL)
+            hsizer.Add(c7a, 0, wx.ALIGN_CENTER_VERTICAL) # wx.TOP | wx.BOTTOM, 4)
+            hsizer.Add(t7b, 0, wx.ALIGN_CENTER_VERTICAL) # wx.TOP | wx.BOTTOM, 4)
+            hsizer.Add(c7b, 0, wx.ALIGN_CENTER_VERTICAL) #, 4)
+            gbsizer.Add(hsizer, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM,
+                border=2)
             row += 1
             gbsizer.Add(t8, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
             gbsizer.Add(c8, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
@@ -314,7 +363,8 @@ class MainFrame(wx.Frame, ABase):
         mld = self.checkzoek(self.vraagZoek.GetValue())
         if not mld:
             self.checkverv(self.vraagVerv.GetValue(), self.cVervang.GetValue())
-            self.checkattr(self.vraagCase.GetValue(), self.vraagWoord.GetValue())
+            self.checkattr(self.vraag_regex.GetValue(), self.vraagCase.GetValue(),
+                self.vraagWoord.GetValue())
             try:
                 b = self.vraagTypes.GetValue()
             except AttributeError:
@@ -325,10 +375,12 @@ class MainFrame(wx.Frame, ABase):
                 mld = self.checkpath(self.vraagDir.GetValue())
         if not mld:
             try:
-                self.checksubs(self.vraagSubs.GetValue())
+                self.checksubs(self.vraagSubs.GetValue(),
+                    self.vraag_links.GetValue(), self.vraag_diepte.GetValue())
             except AttributeError:
                 pass
         self.p["backup"] = self.vraagBackup.GetValue()
+        self.p["fallback_encoding"] = self._fallback_encoding
 
         if mld:
             dlg = wx.MessageDialog(self, mld, self.fouttitel, wx.OK | wx.ICON_ERROR)
@@ -336,8 +388,42 @@ class MainFrame(wx.Frame, ABase):
             dlg.Destroy()
             return
 
-        self.schrijfini()
+        # TODO: find out why json.dump doesn't work in Py 2 and fix it
+        ## self.schrijfini()
+        print "initializing zoekvervang class"
         self.zoekvervang = Finder(**self.p)
+        print self.zoekvervang.filenames
+        if not self.zoekvervang.filenames:
+            dlg = wx.MessageDialog(self, "Geen bestanden gevonden", self.resulttitel,
+                wx.OK | wx.ICON_ERROR)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        # TODO: implement SelectNames dialog and activate this part
+        ## if self.apptype == "single" or (
+                ## len(self.fnames) == 1 and os.path.isfile(self.fnames[0])):
+            ## pass
+        ## else:
+            ## # ## print(self.skipdirs_overslaan, self.skipfiles_overslaan)
+            ## if self.ask_skipdirs.isChecked():
+                ## # eerste ronde: toon directories
+                ## if self.zoekvervang.dirnames:
+                    ## self.names = sorted(self.zoekvervang.dirnames)
+                    ## dlg = SelectNames(self, files=False)
+                    ## # tweede ronde: toon de files die overblijven
+                    ## fnames = self.zoekvervang.filenames[:]
+                    ## for name in self.names:
+                        ## for fname in fnames:
+                            ## if fname.startswith(name + '/'):
+                                ## self.zoekvervang.filenames.remove(fname)
+            ## if self.ask_skipfiles.isChecked():
+                ## self.names = self.zoekvervang.filenames
+                ## dlg = SelectNames(self)
+                ## self.zoekvervang.filenames = self.names
+        print "start action"
+        print self.zoekvervang.do_action
+        self.zoekvervang.do_action()
 
         self.noescape = True
         if len(self.zoekvervang.rpt) == 1:
