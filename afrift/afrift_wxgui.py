@@ -3,11 +3,67 @@
 import os
 import sys
 import wx
+import contextlib
 from findr_files import Finder
 ## from findr_files_py2 import Finder # !! swap with previous statement before committing
 from afrift_base import iconame, ABase
 
-# TODO: add "copy to clipboard" button and functionality
+class SelectNames(wx.Dialog):
+    """Tussenscherm om te verwerken files te kiezen"""
+
+    def __init__(self, parent, ID,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+            files=True):
+        self.dofiles = files
+        self.parent = parent
+        self.results = []
+        title = self.parent.title + " - file list"
+        wx.Dialog.__init__(self, parent, ID, title, style = style)
+        self.SetIcon(wx.Icon(iconame, wx.BITMAP_TYPE_ICO))
+        vbox = wx.BoxSizer(wx.VERTICAL)
+
+        if files:
+            text = "Selecteer de bestanden die je *niet* wilt verwerken"
+        else:
+            text = "Selecteer de directories die je *niet* wilt verwerken"
+        txt = wx.StaticText(self, -1, text)
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(txt, 0, wx.EXPAND | wx.ALL, 5)
+        vbox.Add(hbox, 0)
+
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        self.frm = wx.CheckListBox(self, -1, choices=self.parent.names)
+        hbox.Add(self.frm, 0)
+        vbox.Add(hbox, 0)
+
+        id_ = wx.NewId()
+        b1 = wx.Button(self, id_, "&Klaar")
+        ## self.Bind(wx.EVT_BUTTON, self.klaar, b1)
+        b1.Bind(wx.EVT_BUTTON, self.klaar)
+        self.SetAffirmativeId(id_)
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(b1, 0)
+        vbox.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL)
+
+        self.SetAutoLayout(True)
+        self.SetSizer(vbox)
+        vbox.Fit(self)
+        ## vsizer.SetSizeHints(self)
+        self.Layout()
+
+    def klaar(self, event):
+        "dialoog afsluiten"
+        dirs = []
+        for checked in self.frm.CheckedStrings:
+            print(checked)
+            if self.dofiles:
+                self.parent.names.remove(checked)
+            else:
+                dirs.append(checked)
+        if not self.dofiles:
+            self.parent.names = dirs
+        self.EndModal(0)
+
 class Results(wx.Dialog):
     """Resultaten scherm"""
 
@@ -18,7 +74,6 @@ class Results(wx.Dialog):
             ):
         self.parent = parent
         self.results = []
-        print self.parent.apptype
         if self.parent.apptype == "": # breedte linkerkolom
             breedte, titel = 300, 'File/Regel'
         elif self.parent.apptype == "single":
@@ -135,22 +190,18 @@ class Results(wx.Dialog):
                     f_out.write(line + "\n")
         dlg.Destroy()
 
-    def to_clipboard(self):
+    def to_clipboard(self, event=None):
         """callback for button 'Copy to clipboard'
         """
-        toonpad = True if self.cb.isChecked() else False
+        toonpad = True if self.cb.IsChecked() else False
         do = wx.TextDataObject()
         do.SetText('\n'.join([str(x) for x in self.get_results(toonpad)]))
-        try:
-            with wx.Clipboard.Get() as clipboard:
-                clipboard.SetData(do)
-        except TypeError as e:
-            print e
+        clp = wx.Clipboard.Get()
+        if clp.Open():
+            clp.SetData(do)
+            clp.Close()
+        else:
             wx.MessageBox("Unable to open the clipboard", "Error")
-
-    ## def einde(self, event=None):
-        ## "End screen"
-        ## self.destroy()
 
 class MainFrame(wx.Frame, ABase):
     """Hoofdscherm van de applicatie"""
@@ -240,6 +291,12 @@ class MainFrame(wx.Frame, ABase):
             c9 = wx.ListBox(self.pnl, -1, size=(TXTW, -1), choices=self.fnames)
             self.lb = c9
 
+        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+            self.ask_skipdirs = wx.CheckBox(self.pnl, -1,
+                label="selecteer (sub)directories om over te slaan")
+            self.ask_skipfiles = wx.CheckBox(self.pnl, -1,
+                label="selecteer bestanden om over te slaan")
+
         ## t10 =  wx.StaticText(self.pnl, -1,"", size=wid)
         c10 = wx.CheckBox(self.pnl, -1, label="gewijzigde bestanden backuppen")
         c10.SetValue(self._backup)
@@ -314,9 +371,16 @@ class MainFrame(wx.Frame, ABase):
             gbsizer.Add(c8, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
         if self.apptype == "multi":
             row += 1
-            gbsizer.Add(t9, (row, 0), (1, 2), flag=wx.EXPAND | wx.LEFT | wx.TOP, border=4)
+            gbsizer.Add(t9, (row, 0), (1, 2),
+                flag=wx.EXPAND | wx.LEFT | wx.TOP, border=4)
             row += 1
-            gbsizer.Add(c9, (row, 0), (1, 2), flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=4)
+            gbsizer.Add(c9, (row, 0), (1, 2),
+                flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=4)
+        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+            row += 1
+            gbsizer.Add(self.ask_skipdirs, (row, 1), flag=wx.EXPAND)
+            row += 1
+            gbsizer.Add(self.ask_skipfiles, (row, 1), flag=wx.EXPAND)
         row += 1
         gbsizer.Add(c10, (row, 1), flag = wx.EXPAND)
         row += 1
@@ -390,9 +454,8 @@ class MainFrame(wx.Frame, ABase):
 
         # TODO: find out why json.dump doesn't work in Py 2 and fix it
         ## self.schrijfini()
-        print "initializing zoekvervang class"
+        print "\ninitializing zoekvervang class"
         self.zoekvervang = Finder(**self.p)
-        print self.zoekvervang.filenames
         if not self.zoekvervang.filenames:
             dlg = wx.MessageDialog(self, "Geen bestanden gevonden", self.resulttitel,
                 wx.OK | wx.ICON_ERROR)
@@ -400,29 +463,31 @@ class MainFrame(wx.Frame, ABase):
             dlg.Destroy()
             return
 
-        # TODO: implement SelectNames dialog and activate this part
-        ## if self.apptype == "single" or (
-                ## len(self.fnames) == 1 and os.path.isfile(self.fnames[0])):
-            ## pass
-        ## else:
-            ## # ## print(self.skipdirs_overslaan, self.skipfiles_overslaan)
-            ## if self.ask_skipdirs.isChecked():
-                ## # eerste ronde: toon directories
-                ## if self.zoekvervang.dirnames:
-                    ## self.names = sorted(self.zoekvervang.dirnames)
-                    ## dlg = SelectNames(self, files=False)
-                    ## # tweede ronde: toon de files die overblijven
-                    ## fnames = self.zoekvervang.filenames[:]
-                    ## for name in self.names:
-                        ## for fname in fnames:
-                            ## if fname.startswith(name + '/'):
-                                ## self.zoekvervang.filenames.remove(fname)
-            ## if self.ask_skipfiles.isChecked():
-                ## self.names = self.zoekvervang.filenames
-                ## dlg = SelectNames(self)
-                ## self.zoekvervang.filenames = self.names
-        print "start action"
-        print self.zoekvervang.do_action
+        if self.apptype == "single" or (
+                len(self.fnames) == 1 and os.path.isfile(self.fnames[0])):
+            pass
+        else:
+            ## print(self.skipdirs_overslaan, self.skipfiles_overslaan)
+            if self.ask_skipdirs.IsChecked():
+                # eerste ronde: toon directories
+                if self.zoekvervang.dirnames:
+                    self.names = sorted(self.zoekvervang.dirnames)
+                    dlg = SelectNames(self, -1, files=False)
+                    dlg.ShowModal()
+                    dlg.Destroy()
+                    # tweede ronde: toon de files die overblijven
+                    fnames = self.zoekvervang.filenames[:]
+                    for name in self.names:
+                        for fname in fnames:
+                            if fname.startswith(name + '/'):
+                                self.zoekvervang.filenames.remove(fname)
+            if self.ask_skipfiles.IsChecked():
+                self.names = self.zoekvervang.filenames
+                dlg = SelectNames(self, -1)
+                dlg.ShowModal()
+                dlg.Destroy()
+                self.zoekvervang.filenames = self.names
+
         self.zoekvervang.do_action()
 
         self.noescape = True
