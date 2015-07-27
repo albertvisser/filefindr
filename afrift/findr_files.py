@@ -10,6 +10,43 @@ import re
 import shutil
 import collections
 
+def pyread(fname):
+    with open(fname) as f_in:
+        constructs = []
+        in_construct = []
+        indentpos = 0
+        for ix, line in enumerate(f_in):
+            if line.strip() == "":
+                continue
+            lineno = ix + 1
+            test = line.lstrip()
+            indentpos = line.index(test)
+            while in_construct and indentpos <= in_construct[-1][0]:
+                construct = list(in_construct.pop())
+                construct.append(prev_lineno)
+                constructs.append(in_construct + [construct])
+            if test.startswith('def ') or test.startswith('class '):
+                words = test.split()
+                construct = (indentpos, words[0],
+                    words[1].split(':')[0].split('(')[0], lineno)
+                in_construct.append(construct)
+            prev_lineno = lineno
+        itemlist = []
+        for item in constructs:
+            _, _, _, start, end = item[-1]
+            construct = []
+            in_class = in_method = False
+            for part in item:
+                type_, name = part[1:3]
+                if type_ == "def":
+                    if construct and construct[-2] == "class":
+                        type_ = "method"
+                    else:
+                        type_ = "function"
+                construct.extend([type_, name])
+            itemlist.append((start, end, " ".join(construct)))
+        return sorted(itemlist)
+
 class Finder(object):
     """interpreteren van de parameters en aansturen van de zoek/vervang routine
     """
@@ -221,9 +258,35 @@ class Finder(object):
         add_to_matches()
         return possible_matches, required_matches, forbidden_matches
 
-    def do_action(self):
+    def do_action(self, search_python=False):
         for name in self.filenames:
             self.zoek(name)
+        if not search_python: return
+        results, self.rpt = self.rpt, []
+        locations = {}
+        for name in self.filenames:
+            locations[name] = pyread(name)
+        for item in results:
+            test = item.split(' r. ', 1)
+            if len(test) == 1:
+                self.rpt.append(item)
+                continue
+            best = test[0]
+            test = test[1].split(' : ', 1)
+            if len(test) == 1:
+                self.rpt.append(item)
+                continue
+            lineno, text = test
+            for loc in locations[best]:
+                contains = 'module level'
+                lineno = int(lineno)
+                if loc[0] <= lineno <= loc[1]:
+                    contains = item[2]
+                if loc[0] > lineno:
+                    break
+            self.rpt.append('{} r. {} ({}): {}'.format(best, lineno, contains, text))
+
+
 
     def zoek(self, best):
         "het daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
