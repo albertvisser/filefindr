@@ -412,7 +412,8 @@ class MainFrame(gui.QWidget, ABase):
 
     def doe(self):
         """Zoekactie uitvoeren en resultaatscherm tonen"""
-        mld = self.checkzoek(str(self.vraagZoek.currentText()))
+        item = str(self.vraagZoek.currentText())
+        mld = self.checkzoek(item)
         if not mld:
             self.checkverv(str(self.vraagVerv.currentText()),
                 self.cVervang.isChecked())
@@ -435,6 +436,7 @@ class MainFrame(gui.QWidget, ABase):
             gui.QMessageBox.critical(self, self.fouttitel, mld, gui.QMessageBox.Ok)
             return
 
+        self.vraagZoek.insertItem(0, item)
         self.schrijfini()
         self.zoekvervang = Finder(**self.p)
         if not self.zoekvervang.filenames:
