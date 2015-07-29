@@ -31,6 +31,26 @@ def test_findr():
     for x in h.rpt:
         logger.info("%s" % x)
 
+def test_findr_pyzoek():
+    "test routine"
+    h = Finder(
+        zoek="if",
+        vervang=None, # "voor",
+        pad=str(ROOT), # '/home/albert/projects/filefindr',
+        #filelist=['test.py.txt',],
+        extlist = ['py'], # [".txt",".ini"],
+        ## subdirs=True, # zoeken in subdirectories
+        ## case=True, # case-sensitive ja/nee
+        woord=True, # woord/woorddeel
+        regexp=True,  # zoekstring is regexp
+        #backup=True
+        )
+    for x, y in sorted(h.p.items()):
+        logger.info("%s: %s" % (x, y))
+    h.do_action(search_python=True)
+    for x in h.rpt:
+        logger.info("%s" % x)
+
 def test_findr_complex():
     def do_stuff(data, regexp=False):
         logger.info('')
@@ -69,4 +89,5 @@ def test_findr_complex():
 
 if __name__ == '__main__':
     ## test_findr()
-    test_findr_complex()
+    ## test_findr_complex()
+    test_findr_pyzoek()
