@@ -77,6 +77,7 @@ class Results(gui.QDialog):
 
     def __init__(self, parent):
         self.parent = parent
+        self.show_context = self.parent.p["context"]
         self.results = []
         if self.parent.apptype == "":
             breedte, titel = 300, 'File/Regel'
@@ -91,13 +92,19 @@ class Results(gui.QDialog):
         txt = gui.QLabel("{0} ({1} items)".format(self.parent.zoekvervang.rpt[0],
             len(self.parent.zoekvervang.rpt)-1), self)
         self.lijst = gui.QTableWidget(self)
-        self.lijst.setColumnCount(2)
-        self.lijst.setHorizontalHeaderLabels((titel, 'Data'))
         self.lijst.verticalHeader().setVisible(False)
         ## self.lijst.setShowGrid(False) # hierbij komt de tweede kolom top- ipv middle-aligned
         self.lijst.setGridStyle(core.Qt.NoPen)# hierbij niet
         self.lijst.setColumnWidth(0, breedte)
-        self.lijst.setColumnWidth(1, 520)
+        if self.show_context:
+            self.lijst.setColumnCount(3)
+            self.lijst.setColumnWidth(1,170)
+            self.lijst.setColumnWidth(2,350)
+            self.lijst.setHorizontalHeaderLabels((titel, 'Context', 'Tekst'))
+        else:
+            self.lijst.setColumnCount(2)
+            self.lijst.setColumnWidth(1, 520)
+            self.lijst.setHorizontalHeaderLabels((titel, 'Tekst'))
         self.populate_list()
         ## self.lijst.resizeRowsToContents()
 
@@ -138,7 +145,6 @@ class Results(gui.QDialog):
     def populate_list(self):
         """copy results to listbox
         """
-        # table.setItem(row, column, QtGui.QWidget(self))
         ## headers = []
         for ix, line in enumerate(self.parent.zoekvervang.rpt):
             if ix == 0:
@@ -153,16 +159,30 @@ class Results(gui.QDialog):
                         where = lineno
                     else:
                         where = ""
+                if self.show_context:
+                    where, rest = where.split(' (')
+                    context = rest.split(')')[0]
                 self.lijst.insertRow(ix - 1)
                 self.lijst.setRowHeight(ix - 1, 18)
                 ## headers.append('')
+                col = 0
+                rowitem = []
                 item = gui.QTableWidgetItem(where)
                 item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
-                self.lijst.setItem(ix - 1, 0, item)
+                self.lijst.setItem(ix - 1, col, item)
+                rowitem.append(where)
+                if self.show_context:
+                    col += 1
+                    item = gui.QTableWidgetItem(context)
+                    item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
+                    self.lijst.setItem(ix - 1, col, item)
+                    rowitem.append(context)
+                col += 1
                 item = gui.QTableWidgetItem(what)
                 item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
-                self.lijst.setItem(ix - 1, 1, item)
-                self.results.append((where, what))
+                self.lijst.setItem(ix - 1, col, item)
+                rowitem.append(what)
+                self.results.append(tuple(rowitem))
         ## self.lijst.setVerticalHeaderLabels(headers)
         self.results.insert(0, kop)
 
@@ -175,11 +195,11 @@ class Results(gui.QDialog):
         """apply switch to show complete path to results
         """
         text = ["{0}".format(self.results[0])]
-        for r1, r2 in self.results[1:]:
-            if toonpad:
-                text.append("{0} {1}".format(r1, r2))
-            else:
-                text.append("{0} {1}".format(r1.split(os.sep)[-1], r2))
+        for item in self.results[1:]:
+            result = list(item)
+            if not toonpad:
+                result[0] = result[0].split(os.sep)[-1]
+            text.append(" ".join(result))
         return text
 
     def kopie(self):
@@ -317,10 +337,10 @@ class MainFrame(gui.QWidget, ABase):
             choice.setMinimum(-1)
             choice.setValue(5)
             box2.addWidget(choice)
+            self.vraag_diepte = choice
             box2.addStretch()
             box.addLayout(box2)
             grid.addLayout(box, row, 1)
-            self.vraag_diepte = choice
 
             row += 1
             grid.addWidget(gui.QLabel("alleen files van type:"), row, 0)
@@ -331,6 +351,13 @@ class MainFrame(gui.QWidget, ABase):
             cb.clearEditText()
             grid.addWidget(cb, row, 1)
             self.vraagTypes = cb
+
+        row += 1
+        choice = gui.QCheckBox("context tonen (python source files)")
+        box = gui.QHBoxLayout()
+        box.addWidget(choice)
+        self.vraag_context = choice
+        grid.addLayout(box, row, 1)
 
         if self.apptype == "multi":
             row += 1
@@ -430,6 +457,7 @@ class MainFrame(gui.QWidget, ABase):
             elif self.apptype == "single" and os.path.islink(self.fnames[0]):
                 self.p["follow_symlinks"] = True
         self.p["backup"] = self.vraagBackup.isChecked()
+        self.p["context"] = self.vraag_context.isChecked()
         self.p["fallback_encoding"] = self._fallback_encoding
 
         if mld:
@@ -468,7 +496,7 @@ class MainFrame(gui.QWidget, ABase):
                 dlg = SelectNames(self)
                 self.zoekvervang.filenames = self.names
 
-        self.zoekvervang.do_action()
+        self.zoekvervang.do_action(search_python=self.p["context"])
         if len(self.zoekvervang.rpt) == 1:
             gui.QMessageBox.information(self, self.resulttitel, "Niks gevonden",
                 gui.QMessageBox.Ok)

@@ -67,6 +67,7 @@ class Finder(object):
             "follow_symlinks": False,
             "maxdepth": 5,
             "fallback_encoding": 'ascii',
+            "context": False,
             }
         for x in parms:
             if x in self.p:
