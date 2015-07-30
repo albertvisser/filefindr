@@ -117,6 +117,7 @@ class Results(gui.QDialog):
         self.cb = gui.QCheckBox("toon directorypad in uitvoer", self)
         if self.parent.apptype == "single":
             self.cb.setEnabled(False)
+        self.cb2 = gui.QCheckBox("comma-delimited", self)
         vbox = gui.QVBoxLayout()
 
         hbox = gui.QHBoxLayout()
@@ -133,6 +134,7 @@ class Results(gui.QDialog):
         hbox.addWidget(b2)
         hbox.addWidget(b3)
         hbox.addWidget(self.cb)
+        hbox.addWidget(self.cb2)
         hbox.insertStretch(0, 1)
         hbox.addStretch(1)
         hboks.addLayout(hbox)
@@ -191,21 +193,33 @@ class Results(gui.QDialog):
         """
         gui.QDialog.done(self, 0)
 
-    def get_results(self, toonpad):
+    def get_results(self): # , toonpad):
         """apply switch to show complete path to results
         """
+        toonpad = True if self.cb.isChecked() else False
+        comma = True if self.cb2.isChecked() else False
         text = ["{0}".format(self.results[0])]
+        if comma:
+            import io
+            import csv
+            textbuf = io.StringIO()
+            writer = csv.writer(textbuf, dialect='unix')
         for item in self.results[1:]:
             result = list(item)
             if not toonpad:
                 result[0] = result[0].split(os.sep)[-1]
-            text.append(" ".join(result))
+            if comma:
+                writer.writerow(result)
+            else:
+                text.append(" ".join(result))
+        if comma:
+            text = textbuf.getvalue().split("\n")
+            textbuf.close()
         return text
 
     def kopie(self):
         """callback for button 'Copy to file'
         """
-        toonpad = True if self.cb.isChecked() else False
         f = self.parent.p["zoek"]
         for char in '/\\?%*:|"><.':
             if char in f:
@@ -219,15 +233,14 @@ class Results(gui.QDialog):
         if not dlg:
             return
         with open(dlg, "w") as f_out:
-            for line in self.get_results(toonpad):
+            for line in self.get_results(): # toonpad):
                 f_out.write(line + "\n")
 
     def to_clipboard(self):
         """callback for button 'Copy to clipboard'
         """
-        toonpad = True if self.cb.isChecked() else False
         clp = gui.QApplication.clipboard()
-        clp.setText('\n'.join(self.get_results(toonpad)))
+        clp.setText('\n'.join(self.get_results())) # toonpad)))
 
 class MainFrame(gui.QWidget, ABase):
     """Hoofdscherm van de applicatie
