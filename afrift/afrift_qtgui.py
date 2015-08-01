@@ -98,7 +98,7 @@ class Results(gui.QDialog):
         self.lijst.setColumnWidth(0, breedte)
         if self.show_context:
             self.lijst.setColumnCount(3)
-            self.lijst.setColumnWidth(1,170)
+            self.lijst.setColumnWidth(1,270)
             self.lijst.setColumnWidth(2,350)
             self.lijst.setHorizontalHeaderLabels((titel, 'Context', 'Tekst'))
         else:
