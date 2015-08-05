@@ -6,7 +6,7 @@ import sys
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 from .findr_files import Finder
-from .afrift_base import iconame, ABase
+from .afrift_base import iconame, ABase, log
 
 class SelectNames(gui.QDialog):
     """Tussenscherm om te verwerken files te kiezen"""
@@ -497,13 +497,12 @@ class MainFrame(gui.QWidget, ABase):
                     dlg = SelectNames(self, files=False)
                     # tweede ronde: toon de files die overblijven
                     fnames = self.zoekvervang.filenames[:]
-                    for name in self.names:
-                        for fname in fnames:
+                    for fname in fnames:
+                        for name in self.names:
                             if fname.startswith(name + '/'):
-                                ## try:
                                 self.zoekvervang.filenames.remove(fname)
-                                ## except ValueError:
-                                    ## pass # may already be removed
+                                break
+                log(self.zoekvervang.filenames)
             if self.ask_skipfiles.isChecked():
                 self.names = self.zoekvervang.filenames
                 dlg = SelectNames(self)

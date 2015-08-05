@@ -10,6 +10,13 @@ HERE = os.path.dirname(__file__)
 iconame = os.path.join(HERE,"find.ico")
 ## import pickle
 import json
+import logging
+logging.basicConfig(filename=os.path.join(os.path.dirname(HERE), 'logs',
+    'afrift.log'), level=logging.DEBUG, format='%(asctime)s %(message)s')
+
+def log(message):
+    if 'DEBUG' in os.environ and os.environ["DEBUG"] != "0":
+        logging.info(message)
 
 def get_iniloc():
     here = str(pathlib.Path.cwd()).replace(os.environ['HOME'] + '/', '~').replace(
