@@ -4,9 +4,9 @@ import os
 import sys
 import wx
 import contextlib
-from findr_files import Finder
-## from findr_files_py2 import Finder # !! swap with previous statement before committing
-from afrift_base import iconame, ABase
+## from findr_files import Finder        # !! swap with next statement before testing
+from findr_files_py2 import Finder # !! swap with previous statement before committing
+from afrift_base import iconame, ABase, HERE
 
 class SelectNames(wx.Dialog):
     """Tussenscherm om te verwerken files te kiezen"""
@@ -207,7 +207,8 @@ class MainFrame(wx.Frame, ABase):
     """Hoofdscherm van de applicatie"""
 
     def __init__(self, parent=None, apptype="", fnaam=""):
-        app = wx.PySimpleApp(redirect=True, filename="afrift.log")
+        app = wx.PySimpleApp(redirect=True, filename=os.path.join(
+            os.path.dirname(HERE), 'logs', "afrift_wx.log"))
         ABase.__init__(self, parent, apptype, fnaam)
         wx.Frame.__init__(self, parent, wx.ID_ANY, self.title,
             style=wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE
