@@ -32,7 +32,12 @@ def pyread(fname):
                 words[1].split(':')[0].split('(')[0], lineno)
             in_construct.append(construct)
         prev_lineno = lineno
-    itemlist = [(1, len(lines) - 1, "module level code")]
+    indentpos = 0
+    while in_construct and indentpos <= in_construct[-1][0]:
+        construct = list(in_construct.pop())
+        construct.append(prev_lineno)
+        constructs.append(in_construct + [construct])
+    itemlist = [(1, len(lines), "module level code")]
     for item in constructs:
         _, _, _, start, end = item[-1]
         construct = []
@@ -281,13 +286,11 @@ class Finder(object):
             lineno, text = test
             for loc in locations[best]:
                 lineno = int(lineno)
-                if loc[0] <= lineno <= loc[1]:
+                if loc[0] < lineno <= loc[1]:
                     contains = loc[2]
                 if loc[0] > lineno:
                     break
             self.rpt.append('{} r. {} ({}): {}'.format(best, lineno, contains, text))
-
-
 
     def zoek(self, best):
         "het daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
