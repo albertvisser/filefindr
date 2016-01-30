@@ -166,7 +166,7 @@ class Results(gui.QDialog):
                         where = lineno
                     else:
                         where = ""
-                elif self.parent.apptype == "multi" and self.common:
+                if self.common:
                     where = where.replace(self.common, "")
                 if self.show_context:
                     where, rest = where.split(' (')
@@ -464,7 +464,6 @@ class MainFrame(gui.QWidget, ABase):
             self.close()
 
     def determine_common(self):
-        print(self.apptype, self.fnames)
         if self.apptype == 'single':
             test = self.fnames[0]
         elif self.apptype == 'multi':
@@ -474,11 +473,8 @@ class MainFrame(gui.QWidget, ABase):
             else:
                 while test and not os.path.exists(test):
                     test = test[:-1]
-                if test[-1] == os.pathsep:
-                    test = test[:-1]
         else:
-            test = self.p["pad"]
-        print(test)
+            test = self.p["pad"] + os.sep
         return test
 
     def doe(self):
