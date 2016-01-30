@@ -99,10 +99,10 @@ class ABase(object):
         self._optionskey = "options"
         self._sections = ('zoek', 'vervang', 'filetypes', 'dirs')
         self._words = ('woord', 'woord', 'spec', 'pad', )
-        self._optkeys = ("case", "woord", "subdirs")
+        self._optkeys = ("case", "woord", "subdirs", "context")
         for key in self._optkeys:
             self.p[key] = False
-        self._options = ("matchcase", "matchwords", "searchsubdirs")
+        self._options = ("matchcase", "matchwords", "searchsubdirs", "showcontext")
         self.readini()
         encfile = BASE / 'fallback_encoding'
         with encfile.open() as _in:

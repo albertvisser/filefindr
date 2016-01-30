@@ -7,6 +7,7 @@ import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 from .findr_files import Finder
 from .afrift_base import iconame, ABase, log
+common_path_txt = 'De bestanden staan allemaal in of onder de directory "{}"'
 
 class SelectNames(gui.QDialog):
     """Tussenscherm om te verwerken files te kiezen"""
@@ -75,8 +76,9 @@ class Results(gui.QDialog):
     """Show results on screen
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent, common_path=''):
         self.parent = parent
+        self.common = common_path
         self.show_context = self.parent.p["context"]
         self.results = []
         if self.parent.apptype == "":
@@ -89,8 +91,11 @@ class Results(gui.QDialog):
         self.setWindowTitle(self.parent.resulttitel)
         self.setWindowIcon(gui.QIcon(iconame))
 
-        txt = gui.QLabel("{0} ({1} items)".format(self.parent.zoekvervang.rpt[0],
-            len(self.parent.zoekvervang.rpt)-1), self)
+        label_txt = "{0} ({1} items)".format(self.parent.zoekvervang.rpt[0],
+                len(self.parent.zoekvervang.rpt) - 1)
+        if self.parent.apptype == "multi":
+            label_txt += '\n' + common_path_txt.format(self.common)
+        txt = gui.QLabel(label_txt, self)
         self.lijst = gui.QTableWidget(self)
         self.lijst.verticalHeader().setVisible(False)
         ## self.lijst.setShowGrid(False) # hierbij komt de tweede kolom top- ipv middle-aligned
@@ -161,6 +166,8 @@ class Results(gui.QDialog):
                         where = lineno
                     else:
                         where = ""
+                elif self.parent.apptype == "multi" and self.common:
+                    where = where.replace(self.common, "")
                 if self.show_context:
                     where, rest = where.split(' (')
                     context = rest.split(')')[0]
@@ -198,7 +205,9 @@ class Results(gui.QDialog):
         """
         toonpad = True if self.cb.isChecked() else False
         comma = True if self.cb2.isChecked() else False
-        text = ["{0}".format(self.results[0])]
+        text = ["{}".format(self.results[0])]
+        if self.parent.apptype == "multi" and not toonpad:
+            text.append(common_path_txt.format(self.common) + '\n')
         if comma:
             import io
             import csv
@@ -206,7 +215,9 @@ class Results(gui.QDialog):
             writer = csv.writer(textbuf, dialect='unix')
         for item in self.results[1:]:
             result = list(item)
-            if not toonpad:
+            if toonpad and self.parent.apptype == 'multi':
+                result[0] = self.common + result[0]
+            elif not toonpad and self.parent.apptype != 'multi':
                 result[0] = result[0].split(os.sep)[-1]
             if comma:
                 writer.writerow(result)
@@ -367,6 +378,8 @@ class MainFrame(gui.QWidget, ABase):
 
         row += 1
         choice = gui.QCheckBox("context tonen (python source files)")
+        if self.p["context"]:
+            choice.toggle()
         box = gui.QHBoxLayout()
         box.addWidget(choice)
         self.vraag_context = choice
@@ -450,6 +463,24 @@ class MainFrame(gui.QWidget, ABase):
         if event.key() == core.Qt.Key_Escape:
             self.close()
 
+    def determine_common(self):
+        print(self.apptype, self.fnames)
+        if self.apptype == 'single':
+            test = self.fnames[0]
+        elif self.apptype == 'multi':
+            test = os.path.commonprefix(self.fnames)
+            if test in self.fnames:
+                pass
+            else:
+                while test and not os.path.exists(test):
+                    test = test[:-1]
+                if test[-1] == os.pathsep:
+                    test = test[:-1]
+        else:
+            test = self.p["pad"]
+        print(test)
+        return test
+
     def doe(self):
         """Zoekactie uitvoeren en resultaatscherm tonen"""
         item = str(self.vraagZoek.currentText())
@@ -485,6 +516,7 @@ class MainFrame(gui.QWidget, ABase):
                 "Geen bestanden gevonden", gui.QMessageBox.Ok)
             return
 
+        common_part = self.determine_common()
         if self.apptype == "single" or (
                 len(self.fnames) == 1 and os.path.isfile(self.fnames[0])):
             pass
@@ -508,12 +540,12 @@ class MainFrame(gui.QWidget, ABase):
                 dlg = SelectNames(self)
                 self.zoekvervang.filenames = self.names
 
-        self.zoekvervang.do_action(search_python=self.p["context"])
+        self.zoekvervang.do_action(search_python = self.p["context"])
         if len(self.zoekvervang.rpt) == 1:
             gui.QMessageBox.information(self, self.resulttitel, "Niks gevonden",
                 gui.QMessageBox.Ok)
         else:
-            dlg = Results(self)
+            dlg = Results(self, common_part)
         if self.vraag_exit.isChecked() and self.p["vervang"] is not None:
             self.close()
 
