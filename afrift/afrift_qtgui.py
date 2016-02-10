@@ -81,12 +81,14 @@ class Results(gui.QDialog):
         self.common = common_path
         self.show_context = self.parent.p["context"]
         self.results = []
-        if self.parent.apptype == "":
-            breedte, titel = 300, 'File/Regel'
-        elif self.parent.apptype == "single":
-            breedte, titel = 50, 'Regel'
-        elif self.parent.apptype == "multi":
-            breedte, titel = 200, 'File/Regel'
+        titel = 'Regel' if self.parent.apptype == "single" else 'File/Regel'
+        breedte = 50 if self.parent.apptype == "single" else 150
+        ## if self.parent.apptype == "":
+            ## breedte, titel = 300, 'File/Regel'
+        ## elif self.parent.apptype == "single":
+            ## breedte, titel = 50, 'Regel'
+        ## elif self.parent.apptype == "multi":
+            ## breedte, titel = 200, 'File/Regel'
         gui.QDialog.__init__(self, parent)
         self.setWindowTitle(self.parent.resulttitel)
         self.setWindowIcon(gui.QIcon(iconame))
@@ -100,16 +102,16 @@ class Results(gui.QDialog):
         self.lijst.verticalHeader().setVisible(False)
         ## self.lijst.setShowGrid(False) # hierbij komt de tweede kolom top- ipv middle-aligned
         self.lijst.setGridStyle(core.Qt.NoPen)# hierbij niet
-        self.lijst.setColumnWidth(0, breedte)
         if self.show_context:
             self.lijst.setColumnCount(3)
-            self.lijst.setColumnWidth(1,270)
-            self.lijst.setColumnWidth(2,350)
+            self.lijst.setColumnWidth(1,200)
+            self.lijst.setColumnWidth(2,340)
             self.lijst.setHorizontalHeaderLabels((titel, 'Context', 'Tekst'))
         else:
             self.lijst.setColumnCount(2)
             self.lijst.setColumnWidth(1, 520)
             self.lijst.setHorizontalHeaderLabels((titel, 'Tekst'))
+        self.lijst.setColumnWidth(0, breedte)
         self.populate_list()
         ## self.lijst.resizeRowsToContents()
 
