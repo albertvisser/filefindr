@@ -13,6 +13,7 @@ as well as the location(s) and type(s) of the file to process.
 
 The search results are shown in a dialog box and they can also be saved to a file.
 
+
 Usage
 -----
 
@@ -26,17 +27,18 @@ it from within the file I'm currently editing.
 The multiple file version I've set up to be called on the file(s) and/or directories
 I mark in my file manager .
 
+
 Dependencies
 ------------
 
 - Python
 - wxPython for the current GUI version
-- Tkinter, PyQt4 for older GUI versions and Python3 GUI versions
+- Tkinter, PyQt4 for older GUI versions and current Python3 GUI versions
 - PocketPyGUI for a PocketPC version
 
 Note that for saving previousy entered values between sessions, the previous
-implementation usesd *pickle*. The most up-to-date version uses *json* and *pathlib*
-for this, to keep things simple I've decided to drop Python 2 support.
+implementation used *pickle*. The most up-to-date version uses *json* and *pathlib*
+for this; to keep things simple I've decided to drop Python 2 support.
 Maybe I'll reinstate it by reviving and older version and backport the latest
 changes, but not for the time being.
 
