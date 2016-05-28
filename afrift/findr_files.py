@@ -9,6 +9,7 @@ import os
 import re
 import shutil
 import collections
+contains_default = 'module level code'
 
 def pyread(fname):
     with open(fname) as f_in:
@@ -37,7 +38,7 @@ def pyread(fname):
         construct = list(in_construct.pop())
         construct.append(prev_lineno)
         constructs.append(in_construct + [construct])
-    itemlist = [(1, len(lines), "module level code")]
+    itemlist = [(1, len(lines), contains_default)]
     for item in constructs:
         _, _, _, start, end = item[-1]
         construct = []
@@ -284,6 +285,7 @@ class Finder(object):
                 self.rpt.append(item)
                 continue
             lineno, text = test
+            contains = contains_default
             for loc in locations[best]:
                 lineno = int(lineno)
                 if loc[0] < lineno <= loc[1]:
