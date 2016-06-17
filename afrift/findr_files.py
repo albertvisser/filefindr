@@ -142,6 +142,7 @@ class Finder(object):
             if self.p['subdirs']:
                 specs.append(" en onderliggende directories")
             self.rpt.insert(0, "".join(specs))
+            self.specs = specs
         ## self.rpt.append("")
 
     def subdirs(self, pad, is_list=True, level=0):

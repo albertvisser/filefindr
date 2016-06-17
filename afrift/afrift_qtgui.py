@@ -92,12 +92,18 @@ class Results(gui.QDialog):
         gui.QDialog.__init__(self, parent)
         self.setWindowTitle(self.parent.resulttitel)
         self.setWindowIcon(gui.QIcon(iconame))
+        vbox = gui.QVBoxLayout()
 
+        hbox = gui.QHBoxLayout()
         label_txt = "{0} ({1} items)".format(self.parent.zoekvervang.rpt[0],
                 len(self.parent.zoekvervang.rpt) - 1)
         if self.parent.apptype == "multi":
             label_txt += '\n' + common_path_txt.format(self.common)
-        txt = gui.QLabel(label_txt, self)
+        self.txt = gui.QLabel(label_txt, self)
+        hbox.addWidget(self.txt)
+        vbox.addLayout(hbox)
+
+        hbox = gui.QHBoxLayout()
         self.lijst = gui.QTableWidget(self)
         self.lijst.verticalHeader().setVisible(False)
         ## self.lijst.setShowGrid(False) # hierbij komt de tweede kolom top- ipv middle-aligned
@@ -114,38 +120,33 @@ class Results(gui.QDialog):
         self.lijst.setColumnWidth(0, breedte)
         self.populate_list()
         ## self.lijst.resizeRowsToContents()
-
-        b1 = gui.QPushButton("&Klaar", self)
-        self.connect(b1, core.SIGNAL('clicked()'), self.klaar)
-        b2 = gui.QPushButton("Copy to &File", self)
-        self.connect(b2, core.SIGNAL('clicked()'), self.kopie)
-        b3 = gui.QPushButton("Copy to &Clipboard", self)
-        self.connect(b3, core.SIGNAL('clicked()'), self.to_clipboard)
-        self.cb = gui.QCheckBox("toon directorypad in uitvoer", self)
-        if self.parent.apptype == "single":
-            self.cb.setEnabled(False)
-        self.cb2 = gui.QCheckBox("comma-delimited", self)
-        vbox = gui.QVBoxLayout()
-
-        hbox = gui.QHBoxLayout()
-        hbox.addWidget(txt)
-        vbox.addLayout(hbox)
-
-        hbox = gui.QHBoxLayout()
         hbox.addWidget(self.lijst)
         vbox.addLayout(hbox)
 
-        hboks = gui.QHBoxLayout()
         hbox = gui.QHBoxLayout()
-        hbox.addWidget(b1)
-        hbox.addWidget(b2)
-        hbox.addWidget(b3)
-        hbox.addWidget(self.cb)
-        hbox.addWidget(self.cb2)
-        hbox.insertStretch(0, 1)
         hbox.addStretch(1)
-        hboks.addLayout(hbox)
-        vbox.addLayout(hboks)
+        btn = gui.QPushButton("&Klaar", self)
+        btn.clicked.connect(self.klaar)
+        hbox.addWidget(btn)
+        btn = gui.QPushButton("Repeat &Search", self)
+        btn.clicked.connect(self.refresh)
+        if self.parent.p['vervang']:
+            btn.setEnabled(False)
+        hbox.addWidget(btn)
+        btn = gui.QPushButton("Copy to &File", self)
+        btn.clicked.connect( self.kopie)
+        hbox.addWidget(btn)
+        btn = gui.QPushButton("Copy to &Clipboard", self)
+        btn.clicked.connect(self.to_clipboard)
+        hbox.addWidget(btn)
+        self.cb = gui.QCheckBox("toon directorypad in uitvoer", self)
+        if self.parent.apptype == "single":
+            self.cb.setEnabled(False)
+        hbox.addWidget(self.cb)
+        self.cb2 = gui.QCheckBox("comma-delimited", self)
+        hbox.addWidget(self.cb2)
+        hbox.addStretch(1)
+        vbox.addLayout(hbox)
 
         self.setLayout(vbox)
         self.resize(574 + breedte, 480)
@@ -229,6 +230,22 @@ class Results(gui.QDialog):
             text = textbuf.getvalue().split("\n")
             textbuf.close()
         return text
+
+    def refresh(self):
+        self.results = []
+        self.lijst.clearContents()
+        self.parent.zoekvervang.rpt = ["".join(self.parent.zoekvervang.specs)]
+        self.parent.zoekvervang.do_action(search_python=self.parent.p["context"])
+        if len(self.parent.zoekvervang.rpt) == 1:
+            gui.QMessageBox.information(self, self.resulttitel, "Niks gevonden",
+                gui.QMessageBox.Ok)
+            gui.QDialog.done(self, 0)
+        label_txt = "{0} ({1} items)".format(self.parent.zoekvervang.rpt[0],
+                len(self.parent.zoekvervang.rpt) - 1)
+        if self.parent.apptype == "multi":
+            label_txt += '\n' + common_path_txt.format(self.common)
+        self.txt.setText(label_txt)
+        self.populate_list()
 
     def kopie(self):
         """callback for button 'Copy to file'
