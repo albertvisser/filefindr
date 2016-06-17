@@ -56,6 +56,18 @@ class ABase(object):
         if apptype == "":
             self.fnames = []
             self.hier = os.getcwd()
+            if fnaam.startswith('...'):
+                pass
+            elif fnaam.startswith('..'):
+                fnaam = fnaam.replace('..', os.path.dirname(self.hier), 1)
+            elif fnaam.startswith('.'):
+                fnaam = fnaam.replace('.', self.hier, 1)
+            elif fnaam.startswith('~'):
+                fnaam = os.path.expanduser(fnaam)
+            if fnaam:
+                ## if os.path.exists(fnaam) and not os.path.isdir(fnaam):
+                    ## fnaam = os.path.dirname(fnaam)
+                self.fnames = [fnaam,]
         elif self.apptype == "single": # data is file om te verwerken
             self.title += " - single file version"
             if not fnaam:
@@ -218,6 +230,7 @@ class ABase(object):
             self._mru_items["dirs"].insert(0, item)
             self.s += "\nin {0}".format(item)
             self.p["pad"] = item
+            self.p['filelist'] = ''
         return mld
 
     def checksubs(self, *items):

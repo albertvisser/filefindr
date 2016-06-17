@@ -321,10 +321,13 @@ class MainFrame(gui.QWidget, ABase):
             grid.addWidget(gui.QLabel("In directory:"), row, 0)
             box = gui.QHBoxLayout()
             cb = gui.QComboBox(self)
-            cb.setMaximumWidth(TXTW)
+            ## cb.setMaximumWidth(TXTW)
+            cb.setMinimumWidth(TXTW)
             cb.insertItems(0, self._mru_items["dirs"])
             cb.setEditable(True)
             cb.clearEditText()
+            if self.fnames:
+                cb.setEditText(self.fnames[0])
             box.addWidget(cb)
             self.vraagDir = cb
             self.zoek = gui.QPushButton("&Zoek")
@@ -509,6 +512,12 @@ class MainFrame(gui.QWidget, ABase):
         self.vraagZoek.insertItem(0, item)
         self.schrijfini()
         self.zoekvervang = Finder(**self.p)
+        if not self.zoekvervang.ok:
+            msg = '\n'.join(self.zoekvervang.rpt)
+            gui.QMessageBox.information(self, self.resulttitel,
+                msg, gui.QMessageBox.Ok)
+            return
+
         if not self.zoekvervang.filenames:
             gui.QMessageBox.information(self, self.resulttitel,
                 "Geen bestanden gevonden", gui.QMessageBox.Ok)
