@@ -8,6 +8,7 @@ import PyQt4.QtCore as core
 from .findr_files import Finder
 from .afrift_base import iconame, ABase, log
 common_path_txt = 'De bestanden staan allemaal in of onder de directory "{}"'
+TXTW = 200
 
 class SelectNames(gui.QDialog):
     """Tussenscherm om te verwerken files te kiezen"""
@@ -285,189 +286,126 @@ class MainFrame(gui.QWidget, ABase):
         self.setWindowTitle(self.title)
         self.setWindowIcon(gui.QIcon(iconame))
 
-        TXTW = 200
-        grid = gui.QGridLayout()
+        self.grid = gui.QGridLayout()
+        self.row = -1
+        self.vraag_zoek = self.add_combobox_row('Zoek naar:',
+            self._mru_items["zoek"])
+        self.vraag_regex = self.add_checkbox_row("regular expression "
+            "(Python format)")
+        self.vraag_case = self.add_checkbox_row("hoofd/kleine letters gelijk",
+            self.p["case"])
+        self.vraag_woord = self.add_checkbox_row("hele woorden", self.p["woord"])
 
-        row = 0
-        grid.addWidget(gui.QLabel('Zoek naar:'), row, 0)
-        cb = gui.QComboBox(self)
-        cb.setMaximumWidth(TXTW)
-        cb.insertItems(0, self._mru_items["zoek"])
-        cb.setEditable(True)
-        cb.clearEditText()
-        grid.addWidget(cb, row, 1)
-        self.vraagZoek = cb
+        self.vraag_verv = self.add_combobox_row('Vervang door:',
+            self._mru_items["verv"])
+        self.vraag_verv.setAutoCompletionCaseSensitivity(core.Qt.CaseSensitive)
+        self.vraag_leeg = self.add_checkbox_row("lege vervangtekst = weghalen",
+            self._vervleeg)
 
-        row += 1
-        cb = gui.QCheckBox("regular expression (Python format)", self)
-        grid.addWidget(cb, row, 1)
-        self.vraag_regex = cb
-
-        row += 1
-        cb = gui.QCheckBox("hoofd/kleine letters gelijk", self)
-        cb.stateChanged[int].connect(self.check_case)
-        if self.p["case"]:
-            cb.toggle()
-        grid.addWidget(cb, row, 1)
-        self.vraagCase = cb
-
-        row += 1
-        cb = gui.QCheckBox("hele woorden", self)
-        if self.p["woord"]:
-            cb.toggle()
-        grid.addWidget(cb, row, 1)
-        self.vraagWoord = cb
-
-        row += 1
-        grid.addWidget(gui.QLabel('Vervang door:'), row, 0)
-        cb = gui.QComboBox(self)
-        cb.setMaximumWidth(TXTW)
-        cb.insertItems(0, self._mru_items["verv"])
-        cb.setEditable(True)
-        cb.clearEditText()
-        cb.setAutoCompletionCaseSensitivity(core.Qt.CaseSensitive)
-        grid.addWidget(cb, row, 1)
-        self.vraagVerv = cb
-
-        row += 1
-        cb = gui.QCheckBox("lege vervangtekst = weghalen", self)
-        if self._vervleeg:
-            cb.toggle()
-        grid.addWidget(cb, row, 1)
-        self.cVervang = cb
-
-        t = ""
         if self.apptype == "":
-            row += 1
-            grid.addWidget(gui.QLabel("In directory:"), row, 0)
-            box = gui.QHBoxLayout()
-            cb = gui.QComboBox(self)
-            ## cb.setMaximumWidth(TXTW)
-            cb.setMinimumWidth(TXTW)
-            cb.insertItems(0, self._mru_items["dirs"])
-            cb.setEditable(True)
-            cb.clearEditText()
-            if self.fnames:
-                cb.setEditText(self.fnames[0])
-            box.addWidget(cb)
-            self.vraagDir = cb
+            initial = self.fnames[0] if self.fnames else ''
             self.zoek = gui.QPushButton("&Zoek")
-            self.connect(self.zoek, core.SIGNAL('clicked()'), self.zoekdir)
-            box.addWidget(self.zoek)
-            box.addStretch()
-            grid.addLayout(box, row, 1)
+            self.zoek.clicked.connect(self.zoekdir)
+            self.vraag_dir = self.add_combobox_row("In directory:",
+                self._mru_items["dirs"], initial=initial, button=self.zoek)
 
         elif self.apptype == "single":
-            row += 1
-            grid.addWidget(gui.QLabel("In file/directory:"), row, 0)
+            self.row += 1
+            self.grid.addWidget(gui.QLabel("In file/directory:"), self.row, 0)
             box = gui.QHBoxLayout()
             box.addWidget(gui.QLabel(self.fnames[0]))
             box.addStretch()
-            grid.addLayout(box, row, 1)
+            self.grid.addLayout(box, self.row, 1)
 
         elif self.apptype == "multi":
-            row += 1
-            grid.addWidget(gui.QLabel("In de volgende files/directories:"), row, 0,
-                1, 2)
-            row += 1
-            cb = gui.QListWidget(self)
-            ## cb.setMaximumWidth(TXTW)
-            cb.insertItems(0, self.fnames)
-            grid.addWidget(cb, row, 0, 1, 2)
-            self.lb = cb
-
-            t = "van geselecteerde directories "
+            self.row += 1
+            self.grid.addWidget(gui.QLabel("In de volgende files/directories:"),
+                self.row, 0, 1, 2)
+            self.row += 1
+            self.lb = gui.QListWidget(self)
+            self.lb.insertItems(0, self.fnames)
+            self.grid.addWidget(self.lb, self.row, 0, 1, 2)
 
         if self.apptype != "single" or os.path.isdir(self.fnames[0]):
-            row += 1
-            cb = gui.QCheckBox(t + "ook subdirectories doorzoeken")
-            if self.p["subdirs"]:
-                cb.toggle()
-            grid.addWidget(cb, row, 1)
-            self.vraagSubs = cb
+            t = "van geselecteerde directories " if self.apptype == "multi" else ""
+            self.vraag_subs = self.add_checkbox_row(t + "ook subdirectories "
+                "doorzoeken", self.p["subdirs"])
+            self.vraag_diepte = gui.QSpinBox(self)
+            self.vraag_diepte.setMinimum(-1)
+            self.vraag_diepte.setValue(5)
+            self.vraag_links = self.add_checkbox_row("symlinks volgen - max. diepte "
+                "(-1 is alles):", spinner=self.vraag_diepte)
+            self.ask_skipdirs = self.add_checkbox_row("selecteer (sub)directories "
+                "om over te slaan")
+            self.ask_skipfiles = self.add_checkbox_row("selecteer bestanden "
+                "om over te slaan")
+            self.vraag_types = self.add_combobox_row("Alleen files van type:",
+                self._mru_items["types"])
 
-            row += 1
-            choice = gui.QCheckBox("symlinks volgen - max. diepte (-1 is alles):")
-            box = gui.QHBoxLayout()
-            box.addWidget(choice)
-            self.vraag_links = choice
-            choice = gui.QSpinBox(self)
-            choice.setMinimum(-1)
-            choice.setValue(5)
-            box.addWidget(choice)
-            self.vraag_diepte = choice
-            box.addStretch()
-            grid.addLayout(box, row, 1)
+        self.vraag_context = self.add_checkbox_row("context tonen (python source "
+            "files)", self.p["context"])
+        self.vraag_backup = self.add_checkbox_row("gewijzigd(e) bestand(en) "
+            "backuppen", self._backup)
+        self.vraag_exit = self.add_checkbox_row("direct afsluiten na vervangen",
+            self._exit_when_ready)
 
-            row += 1
-            choice = gui.QCheckBox("selecteer (sub)directories om over te slaan")
-            ## choice.toggle()
-            box = gui.QHBoxLayout()
-            box.addWidget(choice)
-            self.ask_skipdirs = choice
-            grid.addLayout(box, row, 1)
-
-            row += 1
-            choice = gui.QCheckBox("selecteer bestanden om over te slaan")
-            ## choice.toggle()
-            box = gui.QHBoxLayout()
-            box.addWidget(choice)
-            self.ask_skipfiles = choice
-            grid.addLayout(box, row, 1)
-
-            row += 1
-            grid.addWidget(gui.QLabel("Alleen files van type:"), row, 0)
-            cb = gui.QComboBox(self)
-            cb.setMaximumWidth(TXTW)
-            cb.insertItems(0, self._mru_items["types"])
-            cb.setEditable(True)
-            cb.clearEditText()
-            grid.addWidget(cb, row, 1)
-            self.vraagTypes = cb
-
-        row += 1
-        cb = gui.QCheckBox("context tonen (python source files)")
-        if self.p["context"]:
-            cb.toggle()
-        grid.addWidget(cb, row, 1)
-        self.vraag_context = cb
-
-        row += 1
-        cb = gui.QCheckBox("gewijzigd(e) bestand(en) backuppen")
-        if self._backup:
-            cb.toggle()
-        grid.addWidget(cb, row, 1)
-        self.vraagBackup = cb
-
-        row += 1
-        cb = gui.QCheckBox("direct afsluiten na vervangen")
-        if self._exit_when_ready:
-            cb.toggle()
-        grid.addWidget(cb, row, 1)
-        self.vraag_exit = cb
-
-        row += 1
+        self.row += 1
         hbox = gui.QHBoxLayout()
         hbox.addStretch(1)
-        self.DoIt = gui.QPushButton('&Uitvoeren', self)
-        self.connect(self.DoIt, core.SIGNAL('clicked()'), self.doe)
-        hbox.addWidget(self.DoIt)
-        self.Cancel = gui.QPushButton('&Einde', self)
-        self.connect(self.Cancel, core.SIGNAL('clicked()'),
-            self.close)
-        hbox.addWidget(self.Cancel)
+        self.b_doit = gui.QPushButton('&Uitvoeren', self)
+        self.b_doit.clicked.connect(self.doe)
+        hbox.addWidget(self.b_doit)
+        self.b_cancel = gui.QPushButton('&Einde', self)
+        self.b_cancel.clicked.connect(self.close)
+        hbox.addWidget(self.b_cancel)
         hbox.addStretch(1)
-        grid.addLayout(hbox, row, 0, 1, 2)
+        self.grid.addLayout(hbox, self.row, 0, 1, 2)
 
         vbox = gui.QVBoxLayout()
-        vbox.addLayout(grid)
+        vbox.addLayout(self.grid)
 
         self.setLayout(vbox)
         ## self.resize(250, 150)
-        self.vraagZoek.setFocus()
+        self.vraag_zoek.setFocus()
 
         self.show()
         sys.exit(app.exec_())
+
+    def add_combobox_row(self, labeltext, itemlist, initial='', button=None):
+        self.row += 1
+        self.grid.addWidget(gui.QLabel(labeltext), self.row, 0)
+        cb = gui.QComboBox(self)
+        cb.setMaximumWidth(TXTW)
+        cb.setMinimumWidth(TXTW)
+        cb.insertItems(0, itemlist)
+        cb.setEditable(True)
+        cb.clearEditText()
+        if initial:
+            cb.setEditText(initial)
+        if button:
+            box = gui.QHBoxLayout()
+            box.addWidget(cb)
+            box.addWidget(button)
+            box.addStretch()
+            self.grid.addLayout(box, self.row, 1)
+        else:
+            self.grid.addWidget(cb, self.row, 1)
+        return cb
+
+    def add_checkbox_row(self, text, toggler=None, spinner=None):
+        self.row += 1
+        cb = gui.QCheckBox(text, self)
+        if toggler:
+            cb.toggle()
+        if spinner:
+            box = gui.QHBoxLayout()
+            box.addWidget(cb)
+            box.addWidget(spinner)
+            box.addStretch()
+            self.grid.addLayout(box, self.row, 1)
+        else:
+            self.grid.addWidget(cb, self.row, 1)
+        return cb
 
     def check_case(self, int):
         """autocompletion voor zoektekst in overeenstemming brengen met case
@@ -476,7 +414,7 @@ class MainFrame(gui.QWidget, ABase):
             new_value = core.Qt.CaseSensitive
         else:
             new_value = core.Qt.CaseInSensitive
-        self.vraagZoek.setAutoCompletionCaseSensitivity(new_value)
+        self.vraag_zoek.setAutoCompletionCaseSensitivity(new_value)
 
     def keyPressEvent(self, event):
         """event handler voor toetsaanslagen"""
@@ -499,24 +437,24 @@ class MainFrame(gui.QWidget, ABase):
 
     def doe(self):
         """Zoekactie uitvoeren en resultaatscherm tonen"""
-        item = str(self.vraagZoek.currentText())
+        item = str(self.vraag_zoek.currentText())
         mld = self.checkzoek(item)
         if not mld:
-            self.checkverv(str(self.vraagVerv.currentText()),
-                self.cVervang.isChecked())
-            self.checkattr(self.vraag_regex.isChecked(), self.vraagCase.isChecked(),
-                self.vraagWoord.isChecked())
+            self.checkverv(str(self.vraag_verv.currentText()),
+                self.vraag_leeg.isChecked())
+            self.checkattr(self.vraag_regex.isChecked(), self.vraag_case.isChecked(),
+                self.vraag_woord.isChecked())
             if self.apptype != "single" or os.path.isdir(self.fnames[0]):
-                self.checktype(str(self.vraagTypes.currentText()))
+                self.checktype(str(self.vraag_types.currentText()))
             if not self.apptype:
-                mld = self.checkpath(str(self.vraagDir.currentText()))
+                mld = self.checkpath(str(self.vraag_dir.currentText()))
         if not mld:
             if self.apptype != "single" or os.path.isdir(self.fnames[0]):
-                self.checksubs(self.vraagSubs.isChecked(), self.vraag_links.isChecked(),
-                    self.vraag_diepte.value())
+                self.checksubs(self.vraag_subs.isChecked(),
+                    self.vraag_links.isChecked(), self.vraag_diepte.value())
             elif self.apptype == "single" and os.path.islink(self.fnames[0]):
                 self.p["follow_symlinks"] = True
-        self.p["backup"] = self.vraagBackup.isChecked()
+        self.p["backup"] = self.vraag_backup.isChecked()
         self.p["context"] = self.vraag_context.isChecked()
         self.p["fallback_encoding"] = self._fallback_encoding
 
@@ -524,7 +462,7 @@ class MainFrame(gui.QWidget, ABase):
             gui.QMessageBox.critical(self, self.fouttitel, mld, gui.QMessageBox.Ok)
             return
 
-        self.vraagZoek.insertItem(0, item)
+        self.vraag_zoek.insertItem(0, item)
         self.schrijfini()
         self.zoekvervang = Finder(**self.p)
         if not self.zoekvervang.ok:
