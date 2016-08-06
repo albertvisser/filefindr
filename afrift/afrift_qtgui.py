@@ -119,6 +119,7 @@ class Results(gui.QDialog):
             self.lijst.setColumnWidth(1, 520)
             self.lijst.setHorizontalHeaderLabels((titel, 'Tekst'))
         self.lijst.setColumnWidth(0, breedte)
+        self.lijst.horizontalHeader().setStretchLastSection(True)
         self.populate_list()
         ## self.lijst.resizeRowsToContents()
         hbox.addWidget(self.lijst)
