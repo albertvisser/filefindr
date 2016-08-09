@@ -41,6 +41,7 @@ class SelectNames(gui.QDialog):
         ## hbox.addSpacing(10)
         hbox.addStretch()
         hbox.addWidget(self.flip_sel)
+        hbox.addSpacing(20)
         vbox.addLayout(hbox)
 
         frm = gui.QFrame(self)
