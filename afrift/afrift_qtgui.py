@@ -16,7 +16,6 @@ class SelectNames(gui.QDialog):
     def __init__(self, parent, files=True):
         self.dofiles = files
         self.parent = parent
-        self.results = []
         gui.QDialog.__init__(self, parent)
         self.setWindowTitle(self.parent.title + " - file list")
         self.setWindowIcon(gui.QIcon(iconame))
@@ -29,6 +28,19 @@ class SelectNames(gui.QDialog):
         txt = gui.QLabel(text, self)
         hbox = gui.QHBoxLayout()
         hbox.addWidget(txt)
+        vbox.addLayout(hbox)
+        self.sel_all = gui.QCheckBox('Select/Unselect All', self)
+        self.sel_all.clicked.connect(self.select_all)
+        hbox = gui.QHBoxLayout()
+        hbox.addSpacing(10)
+        hbox.addWidget(self.sel_all)
+        ## vbox.addLayout(hbox)
+        self.flip_sel = gui.QPushButton('Invert selection', self)
+        self.flip_sel.clicked.connect(self.invert_selection)
+        ## hbox = gui.QHBoxLayout()
+        ## hbox.addSpacing(10)
+        hbox.addStretch()
+        hbox.addWidget(self.flip_sel)
         vbox.addLayout(hbox)
 
         frm = gui.QFrame(self)
@@ -48,7 +60,7 @@ class SelectNames(gui.QDialog):
         vbox.addLayout(hbox)
 
         b1 = gui.QPushButton("&Klaar", self)
-        self.connect(b1, core.SIGNAL('clicked()'), self.klaar)
+        b1.clicked.connect(self.klaar)
         hboks = gui.QHBoxLayout()
         hbox = gui.QHBoxLayout()
         hbox.addStretch(1)
@@ -59,6 +71,15 @@ class SelectNames(gui.QDialog):
 
         self.setLayout(vbox)
         self.exec_()
+
+    def select_all(self):
+        state = self.sel_all.isChecked()
+        for cb in self.checklist:
+            cb.setChecked(state)
+
+    def invert_selection(self):
+        for cb in self.checklist:
+            cb.setChecked(not cb.isChecked())
 
     def klaar(self):
         "dialoog afsluiten"
@@ -343,8 +364,8 @@ class MainFrame(gui.QWidget, ABase):
             self.vraag_types = self.add_combobox_row("Alleen files van type:",
                 self._mru_items["types"])
 
-        self.vraag_context = self.add_checkbox_row("context tonen (python source "
-            "files)", self.p["context"])
+        self.vraag_context = self.add_checkbox_row("context tonen (waar mogelijk, "
+            "anders overslaan)", self.p["context"])
         self.vraag_backup = self.add_checkbox_row("gewijzigd(e) bestand(en) "
             "backuppen", self._backup)
         self.vraag_exit = self.add_checkbox_row("direct afsluiten na vervangen",
