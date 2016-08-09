@@ -11,9 +11,16 @@ import shutil
 import collections
 contains_default = 'module level code'
 
-def pyread(fname):
-    with open(fname) as f_in:
-        lines = f_in.readlines()
+def pyread(fname, fallback_encoding):
+    try:
+        with open(fname) as f_in:
+            lines = f_in.readlines()
+    except UnicodeDecodeError:
+        try:
+            with open(fname, "r", encoding=fallback_encoding) as f_in:
+                lines = f_in.readlines()
+        except UnicodeDecodeError:
+            return
     constructs = []
     in_construct = []
     indentpos = 0
@@ -274,13 +281,18 @@ class Finder(object):
         results, self.rpt = self.rpt, []
         locations = {}
         for name in self.filenames:
-            locations[name] = pyread(name)
+            if os.path.splitext(name)[1] in ('.py', '.pyw'):
+                locations[name] = pyread(name, self.p['fallback_encoding'])
+            else:
+                locations[name] = []
         for item in results:
             test = item.split(' r. ', 1)
             if len(test) == 1:
                 self.rpt.append(item)
                 continue
             best = test[0]
+            if not locations[best]:
+                continue
             test = test[1].split(': ', 1)
             if len(test) == 1:
                 self.rpt.append(item)
