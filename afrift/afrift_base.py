@@ -6,6 +6,8 @@ import os
 import sys
 import pathlib
 BASE = pathlib.Path(os.environ['HOME']) / '.afrift'
+if not BASE.exists():
+    BASE.mkdir()
 HERE = os.path.dirname(__file__)
 iconame = os.path.join(HERE,"find.ico")
 ## import pickle
@@ -117,8 +119,12 @@ class ABase(object):
         self._options = ("matchcase", "matchwords", "searchsubdirs", "showcontext")
         self.readini()
         encfile = BASE / 'fallback_encoding'
-        with encfile.open() as _in:
-            self._fallback_encoding = _in.read().strip()
+        try:
+            test = encfile.read_text()
+        except FileNotFoundError:
+            test = 'latin-1\n'
+            encfile.write_text(test)
+        self._fallback_encoding = test.strip()
         self._vervleeg = False
         self._backup = True
         self._exit_when_ready = False
