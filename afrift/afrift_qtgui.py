@@ -34,11 +34,8 @@ class SelectNames(gui.QDialog):
         hbox = gui.QHBoxLayout()
         hbox.addSpacing(10)
         hbox.addWidget(self.sel_all)
-        ## vbox.addLayout(hbox)
         self.flip_sel = gui.QPushButton('Invert selection', self)
         self.flip_sel.clicked.connect(self.invert_selection)
-        ## hbox = gui.QHBoxLayout()
-        ## hbox.addSpacing(10)
         hbox.addStretch()
         hbox.addWidget(self.flip_sel)
         hbox.addSpacing(20)
@@ -60,18 +57,20 @@ class SelectNames(gui.QDialog):
         hbox.addWidget(scrl)
         vbox.addLayout(hbox)
 
-        b1 = gui.QPushButton("&Klaar", self)
-        b1.clicked.connect(self.klaar)
+        b_can = gui.QPushButton("&Terug", self)
+        b_can.clicked.connect(self.reject)
+        b_ok = gui.QPushButton("&Klaar", self)
+        b_ok.clicked.connect(self.accept)
         hboks = gui.QHBoxLayout()
         hbox = gui.QHBoxLayout()
         hbox.addStretch(1)
-        hbox.addWidget(b1)
+        hbox.addWidget(b_can)
+        hbox.addWidget(b_ok)
         hbox.addStretch(1)
         hboks.addLayout(hbox)
         vbox.addLayout(hboks)
 
         self.setLayout(vbox)
-        self.exec_()
 
     def select_all(self):
         state = self.sel_all.isChecked()
@@ -82,7 +81,7 @@ class SelectNames(gui.QDialog):
         for cb in self.checklist:
             cb.setChecked(not cb.isChecked())
 
-    def klaar(self):
+    def accept(self):
         "dialoog afsluiten"
         dirs = []
         for cb in self.checklist:
@@ -93,7 +92,7 @@ class SelectNames(gui.QDialog):
                     dirs.append(cb.text())
         if not self.dofiles:
             self.parent.names = dirs
-        gui.QDialog.done(self, 0)
+        gui.QDialog.accept(self)
 
 class Results(gui.QDialog):
     """Show results on screen
@@ -505,23 +504,32 @@ class MainFrame(gui.QWidget, ABase):
             pass
         else:
             ## print(self.skipdirs_overslaan, self.skipfiles_overslaan)
-            if self.ask_skipdirs.isChecked():
-                # eerste ronde: toon directories
-                if self.zoekvervang.dirnames:
-                    self.names = sorted(self.zoekvervang.dirnames)
-                    dlg = SelectNames(self, files=False)
-                    # tweede ronde: toon de files die overblijven
-                    fnames = self.zoekvervang.filenames[:]
-                    for fname in fnames:
-                        for name in self.names:
-                            if fname.startswith(name + '/'):
-                                self.zoekvervang.filenames.remove(fname)
-                                break
-                log(self.zoekvervang.filenames)
-            if self.ask_skipfiles.isChecked():
-                self.names = self.zoekvervang.filenames
-                dlg = SelectNames(self)
-                self.zoekvervang.filenames = self.names
+            canceled = False
+            while True:
+                if self.ask_skipdirs.isChecked():
+                    # eerste ronde: toon directories
+                    if self.zoekvervang.dirnames:
+                        self.names = sorted(self.zoekvervang.dirnames)
+                        dlg = SelectNames(self, files=False).exec_()
+                        if dlg == gui.QDialog.Rejected:
+                            canceled = True
+                            break
+                        # tweede ronde: toon de files die overblijven
+                        fnames = self.zoekvervang.filenames[:]
+                        for fname in fnames:
+                            for name in self.names:
+                                if fname.startswith(name + '/'):
+                                    self.zoekvervang.filenames.remove(fname)
+                                    break
+                    log(self.zoekvervang.filenames)
+                if self.ask_skipfiles.isChecked():
+                    self.names = self.zoekvervang.filenames
+                    dlg = SelectNames(self).exec_()
+                    if dlg == gui.QDialog.Accepted:
+                        self.zoekvervang.filenames = self.names
+                        break
+            if canceled:
+                return
 
         self.zoekvervang.do_action(search_python = self.p["context"])
         if len(self.zoekvervang.rpt) == 1:
