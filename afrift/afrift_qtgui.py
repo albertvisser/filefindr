@@ -302,7 +302,7 @@ class MainFrame(gui.QWidget, ABase):
     """
     def __init__(self, parent = None, apptype = "", fnaam = ""):
         app = gui.QApplication(sys.argv)
-        ABase.__init__(self, parent, apptype, fnaam)
+        ABase.__init__(self, apptype, fnaam)
         gui.QWidget.__init__(self, parent)
 
         self.setWindowTitle(self.title)
@@ -504,8 +504,9 @@ class MainFrame(gui.QWidget, ABase):
             pass
         else:
             ## print(self.skipdirs_overslaan, self.skipfiles_overslaan)
+            go_on = self.ask_skipdirs.isChecked() or self.ask_skipfiles.isChecked()
             canceled = False
-            while True:
+            while go_on:
                 if self.ask_skipdirs.isChecked():
                     # eerste ronde: toon directories
                     if self.zoekvervang.dirnames:
@@ -521,13 +522,15 @@ class MainFrame(gui.QWidget, ABase):
                                 if fname.startswith(name + '/'):
                                     self.zoekvervang.filenames.remove(fname)
                                     break
+                        if not self.ask_skipfiles.isChecked():
+                            go_on = False
                     log(self.zoekvervang.filenames)
                 if self.ask_skipfiles.isChecked():
                     self.names = self.zoekvervang.filenames
                     dlg = SelectNames(self).exec_()
                     if dlg == gui.QDialog.Accepted:
                         self.zoekvervang.filenames = self.names
-                        break
+                        go_on = False
             if canceled:
                 return
 
@@ -542,8 +545,8 @@ class MainFrame(gui.QWidget, ABase):
 
     def zoekdir(self):
         """event handler voor 'zoek in directory'"""
-        oupad = self.vraagDir.currentText()
+        oupad = self.vraag_dir.currentText()
         dlg = gui.QFileDialog.getExistingDirectory(self, "Choose a directory:",
             oupad)
         if dlg:
-            self.vraagDir.setEditText(dlg)
+            self.vraag_dir.setEditText(dlg)

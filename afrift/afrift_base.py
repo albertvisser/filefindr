@@ -37,7 +37,8 @@ class ABase(object):
     deze class bevat methoden die onafhankelijk zijn van de gekozen
     GUI-toolkit"""
 
-    def __init__(self, parent, apptype="", fnaam="", flist=None):
+    ## def __init__(self, parent, apptype="", fnaam="", flist=None):
+    def __init__(self, apptype="", fnaam="", flist=None):
         """attributen die altijd nodig zijn
 
         self.pickled geeft aan of bij het op de nieuwe manier (met pickle) lezen
@@ -45,10 +46,10 @@ class ABase(object):
         """
         ## if len(data) > 1:
             ## prognaam, fnaam = data
-        try:
-            self.parent = parent
-        except AttributeError: # ppygui doet dit zelf al
-            pass
+        ## try:
+            ## self.parent = parent
+        ## except AttributeError: # ppygui doet dit zelf al
+            ## pass
         self.title = "Albert's find-replace in files tool"
         self.fouttitel = self.title + "- fout"
         self.resulttitel = self.title + " - Resultaten"
