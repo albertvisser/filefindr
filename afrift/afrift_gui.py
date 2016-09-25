@@ -2,11 +2,12 @@
 """imports the gui from a toolkit-specific module
 so that the starters need not know about which one is used
 """
-## import sys
-## import os
-## sys.path.insert(0, os.path.dirname(__file__))
-## import afrift_qtgui
-from .afrift_qtgui import MainFrame
+## from .afrift_ppgui import MainFrame
+## from .afrift_tkgui import MainFrame
+## from .afrift_tk3gui import MainFrame
+## from .afrift_wxgui import MainFrame
+## from .afrift_qtgui import MainFrame
+from .afrift_qt5gui import MainFrame
 MainFrame = MainFrame
 
 def test():
