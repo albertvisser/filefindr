@@ -3,6 +3,7 @@
 
 import os
 import sys
+import subprocess
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
@@ -129,7 +130,6 @@ class Results(qtw.QDialog):
         hbox = qtw.QHBoxLayout()
         self.lijst = qtw.QTableWidget(self)
         self.lijst.verticalHeader().setVisible(False)
-        ## self.lijst.setShowGrid(False) # hierbij komt de tweede kolom top- ipv middle-aligned
         self.lijst.setGridStyle(core.Qt.NoPen)# hierbij niet
         if self.show_context:
             self.lijst.setColumnCount(3)
@@ -143,7 +143,15 @@ class Results(qtw.QDialog):
         self.lijst.setColumnWidth(0, breedte)
         self.lijst.horizontalHeader().setStretchLastSection(True)
         self.populate_list()
-        ## self.lijst.resizeRowsToContents()
+        self.lijst.cellDoubleClicked[int, int].connect(self.goto_result)
+        act = qtw.QAction('Help', self)
+        act.setShortcut('F1')
+        act.triggered.connect(self.help)
+        self.addAction(act)
+        act = qtw.QAction('Goto Result', self)
+        act.setShortcut('Ctrl+G')
+        act.triggered.connect(self.to_result)
+        self.addAction(act)
         hbox.addWidget(self.lijst)
         vbox.addLayout(hbox)
 
@@ -158,7 +166,7 @@ class Results(qtw.QDialog):
             btn.setEnabled(False)
         hbox.addWidget(btn)
         btn = qtw.QPushButton("Copy to &File", self)
-        btn.clicked.connect( self.kopie)
+        btn.clicked.connect(self.kopie)
         hbox.addWidget(btn)
         btn = qtw.QPushButton("Copy to &Clipboard", self)
         btn.clicked.connect(self.to_clipboard)
@@ -196,7 +204,7 @@ class Results(qtw.QDialog):
                 if self.common:
                     where = where.replace(self.common, "")
                 if self.show_context:
-                    where, rest = where.split(' (')
+                    where, rest = where.rsplit(' (', 1)
                     context = rest.split(')')[0]
                 self.lijst.insertRow(ix - 1)
                 self.lijst.setRowHeight(ix - 1, 18)
@@ -290,11 +298,32 @@ class Results(qtw.QDialog):
             for line in self.get_results(): # toonpad):
                 f_out.write(line + "\n")
 
+
+    def help(self):
+        qtw.QMessageBox.information(self, 'info', ("Select a line and "
+            "doubleclick or press Ctrl-G to open the indicated file\n"
+            "at the indicated line (not in single file mode)"))
+
     def to_clipboard(self):
         """callback for button 'Copy to clipboard'
         """
         clp = qtw.QApplication.clipboard()
-        clp.setText('\n'.join(self.get_results())) # toonpad)))
+
+    def to_result(self):
+        print('shortcut pressed')
+        self.goto_result(self.lijst.currentRow(), self.lijst.currentColumn())
+
+    def goto_result(self, row, col):
+        """open the file containing the selected item
+        """
+        if self.parent.apptype == 'single':
+            qtw.QMessageBox.information(self, 'ahem', 'Not in single file mode')
+            return
+        selected = self.results[row + 1]
+        target, line = selected[0].split(' r. ')
+        target = self.common + target
+        prog, fileopt, lineopt = self.parent._editor_option
+        subprocess.run([prog, fileopt.format(target), lineopt.format(line)])
 
 class MainFrame(qtw.QWidget, ABase):
     """Hoofdscherm van de applicatie

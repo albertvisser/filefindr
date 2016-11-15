@@ -126,6 +126,17 @@ class ABase(object):
             test = 'latin-1\n'
             encfile.write_text(test)
         self._fallback_encoding = test.strip()
+        edfile = BASE / 'open_result'
+        try:
+            test = edfile.read_text()
+        except FileNotFoundError:
+            test = '\n'.join(("program = 'SciTE'",
+                "file-option = '-open:{}'",
+                "line-option = '-goto:{}'",
+                ""))
+            edfile.write_text(test)
+        self._editor_option = [x.split(' = ')[1].strip("'")
+            for x in test.strip().split('\n')]
         self._vervleeg = False
         self._backup = True
         self._exit_when_ready = False
