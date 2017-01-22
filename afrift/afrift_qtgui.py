@@ -252,8 +252,8 @@ class Results(qtw.QDialog):
             result = list(item)
             if toonpad and self.parent.apptype == 'multi':
                 result[0] = self.common + result[0]
-            elif not toonpad and self.parent.apptype != 'multi':
-                result[0] = result[0].split(os.sep)[-1]
+            ## elif not toonpad and self.parent.apptype != 'multi':
+                ## result[0] = result[0].split(os.sep)[-1]
             if comma:
                 writer.writerow(result)
             else:
@@ -269,8 +269,8 @@ class Results(qtw.QDialog):
         self.parent.zoekvervang.rpt = ["".join(self.parent.zoekvervang.specs)]
         self.parent.zoekvervang.do_action(search_python=self.parent.p["context"])
         if len(self.parent.zoekvervang.rpt) == 1:
-            qtw.QMessageBox.information(self, self.resulttitel, "Niks gevonden",
-                qtw.QMessageBox.Ok)
+            qtw.QMessageBox.information(self, self.parent.resulttitel,
+                "Niks gevonden", qtw.QMessageBox.Ok)
             super().done(0)
         label_txt = "{0} ({1} items)".format(self.parent.zoekvervang.rpt[0],
                 len(self.parent.zoekvervang.rpt) - 1)
