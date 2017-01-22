@@ -9,8 +9,8 @@ import tkinter.ttk as ttk
 import tkinter.messagebox as tkMessageBox
 import tkinter.filedialog as tkFileDialog
 
-from findr_files import findr
-from afrift_base import iconame, ABase
+from .findr_files import Finder
+from .afrift_base import iconame, ABase
 
 class Results(tk.Toplevel):
     "Resultatenscherm"
@@ -160,8 +160,10 @@ class Results(tk.Toplevel):
 class MainFrame(ABase):
     """Hoofdscherm van de applicatie"""
 
-    def __init__(self, parent=None, apptype="", data=""):
-        ABase.__init__(self, parent, apptype, data)
+    def __init__(self, apptype="", fnaam=""):
+        root = tk.Tk()
+        ABase.__init__(self, apptype=apptype, fnaam=fnaam) #, data)
+        ## super().__init__(self, apptype=apptype, fnaam=fnaam) #, data)
 
         self.zoekstr = tk.StringVar()
         self.zoekstr.set('')
@@ -182,15 +184,15 @@ class MainFrame(ABase):
         self.backup = tk.IntVar()
         self.backup.set(self._backup)
 
-        self.parent.title(self.title)
+        root.title(self.title)
         ## self.parent.wm_iconbitmap("@"+iconame)
-        self.master = tk.Frame(self.parent)
+        self.master = tk.Frame(root)
         self.master.pack()
         frm = tk.Frame(self.master)
         frm.pack(fill=tk.BOTH, expand=True)
         tk.Label(frm, text = "Zoek naar:", width=17).pack(side=tk.LEFT)
         self.vraagZoek = ttk.Combobox(frm,
-            values = self._mruItems["zoek"],
+            values = self._mru_items["zoek"],
             width = 40,
             textvariable = self.zoekstr,
             )
@@ -199,7 +201,7 @@ class MainFrame(ABase):
         frm.pack(fill=tk.BOTH, expand=True)
         tk.Label(frm, text = "Vervang door:", width=17).pack(side=tk.LEFT)
         self.vraagVerv = ttk.Combobox(frm,
-            values = self._mruItems["verv"],
+            values = self._mru_items["verv"],
             width = 40,
             textvariable = self.vervstr,
             )
@@ -233,7 +235,7 @@ class MainFrame(ABase):
             frm.pack(fill=tk.BOTH, expand=True)
             tk.Label(frm, text="In directory:", width=17).pack(side=tk.LEFT)
             self.vraagDir = ttk.Combobox(frm,
-                values = self._mruItems["dirs"],
+                values = self._mru_items["dirs"],
                 width = 40,
                 textvariable = self.dirnaam,
                 )
@@ -262,7 +264,7 @@ class MainFrame(ABase):
             frm.pack(fill=tk.BOTH, expand=True)
             tk.Label(frm, text = "alleen files van type:", width=17).pack(side=tk.LEFT)
             self.vraagTypes = ttk.Combobox(frm,
-                values = self._mruItems["types"],
+                values = self._mru_items["types"],
                 width = 40,
                 textvariable = self.typestr,
                 )
@@ -316,6 +318,7 @@ class MainFrame(ABase):
                ## }
            ## }
         ## })
+        root.mainloop()
 
     def einde(self, event):
         """applicatie afsluiten"""
@@ -351,7 +354,7 @@ class MainFrame(ABase):
             return
 
         self.schrijfini()
-        self.zoekvervang = findr(**self.p)
+        self.zoekvervang = Finder(**self.p)
 
         if len(self.zoekvervang.rpt) == 2:
             tkMessageBox.showinfo(self.resulttitel, "Niks gevonden")
@@ -373,11 +376,9 @@ class MainFrame(ABase):
 
 def test():
     "test routine"
-    root = tk.Tk()
-    ## MainFrame(root)
-    MainFrame(root, "single", '/home/albert/filefindr/afrift/afrift_gui.py')
-    ## MainFrame(root, 'multi', 'CMDAE.tmp')
-    root.mainloop()
+    ## MainFrame()
+    MainFrame("single", '/home/albert/filefindr/afrift/afrift_gui.py')
+    ## MainFrame('multi', 'CMDAE.tmp')
 
 if __name__ == "__main__":
     test()
