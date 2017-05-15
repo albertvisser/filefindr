@@ -556,8 +556,11 @@ class MainFrame(qtw.QWidget, ABase):
                             go_on = False
                     log(self.zoekvervang.filenames)
                 if self.ask_skipfiles.isChecked():
-                    self.names = self.zoekvervang.filenames
+                    self.names = sorted(self.zoekvervang.filenames)
                     dlg = SelectNames(self).exec_()
+                    if dlg == qtw.QDialog.Rejected and not self.ask_skipdirs.isChecked():
+                        canceled = True
+                        break
                     if dlg == qtw.QDialog.Accepted:
                         self.zoekvervang.filenames = self.names
                         go_on = False
