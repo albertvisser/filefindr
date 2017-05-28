@@ -308,6 +308,7 @@ class Results(qtw.QDialog):
         """callback for button 'Copy to clipboard'
         """
         clp = qtw.QApplication.clipboard()
+        clp.setText('\n'.join(self.get_results()))
 
     def to_result(self):
         print('shortcut pressed')
