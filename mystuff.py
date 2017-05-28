@@ -40,8 +40,8 @@ def test_splitjoin():
     zoek = "is"
     vervang = "was"
     news = splitjoin(orig,zoek,vervang)
-    print orig
-    print news
+    print(orig)
+    print(news)
 
 if __name__ == "__main__":
     ## raise FoundItem
