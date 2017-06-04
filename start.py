@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#! /usr/bin/env python3
 import sys
 from afrift.afrift_gui import MainFrame
 if len(sys.argv) > 1:
