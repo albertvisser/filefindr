@@ -5,4 +5,4 @@ from afrift.afrift_gui import MainFrame
 if len(sys.argv) > 1:
     MainFrame(apptype="multi", fnaam=sys.argv[1])
 else:
-    MainFrame(apptype="multi")
+    print('wrong number of arguments')

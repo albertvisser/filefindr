@@ -331,7 +331,7 @@ class MainFrame(qtw.QWidget, ABase):
 
     QMainWindow is een beetje overkill, daarom maar een QWidget
     """
-    def __init__(self, parent = None, apptype = "", fnaam = ""):
+    def __init__(self, parent=None, apptype="", fnaam=""):
         app = qtw.QApplication(sys.argv)
         super().__init__(parent, apptype=apptype, fnaam=fnaam)
 

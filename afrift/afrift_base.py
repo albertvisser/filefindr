@@ -50,6 +50,7 @@ class ABase(object):
             ## self.parent = parent
         ## except AttributeError: # ppygui doet dit zelf al
             ## pass
+        print(apptype, fnaam, flist)
         self.title = "Albert's find-replace in files tool"
         self.fouttitel = self.title + "- fout"
         self.resulttitel = self.title + " - Resultaten"
@@ -107,7 +108,9 @@ class ABase(object):
             self.p["filelist"] = self.fnames
         for ix, name in enumerate(self.fnames):
             if name.endswith("\\") or name.endswith("/"):
-                self.fnames[ix] = name[:-1]
+                ## self.fnames[ix] = name[:-1]
+                name = name[:-1]
+            self.fnames[ix] = os.path.abspath(name)
         self._keys = ("zoek", "verv", "types", "dirs")
         for key in self._keys:
             self._mru_items[key] = []

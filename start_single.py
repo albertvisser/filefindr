@@ -3,7 +3,7 @@
 import sys
 from afrift.afrift_gui import MainFrame
 
-if len(sys.argv) > 1:
+if len(sys.argv) == 2:
     MainFrame(apptype="single", fnaam=sys.argv[1])
 else:
-    MainFrame(apptype="single")
+    print('wrong number of arguments')
