@@ -29,7 +29,9 @@ def pyread(fname, fallback_encoding):
             continue
         lineno = ix + 1
         test = line.lstrip()
-        indentpos = line.index(test)
+        ## indentpos = line.index(test)
+        if test[0] != '#':
+            indentpos = line.index(test)
         while in_construct and indentpos <= in_construct[-1][0]:
             construct = list(in_construct.pop())
             construct.append(prev_lineno)
