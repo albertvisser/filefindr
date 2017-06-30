@@ -267,7 +267,9 @@ class Results(qtw.QDialog):
         self.results = []
         self.lijst.clearContents()
         self.parent.zoekvervang.rpt = ["".join(self.parent.zoekvervang.specs)]
+        self.app.setOverrideCursor(gui.QCursor(core.Qt.WaitCursor))
         self.parent.zoekvervang.do_action(search_python=self.parent.p["context"])
+        self.app.restoreOverrideCursor()
         if len(self.parent.zoekvervang.rpt) == 1:
             qtw.QMessageBox.information(self, self.parent.resulttitel,
                 "Niks gevonden", qtw.QMessageBox.Ok)
@@ -332,7 +334,7 @@ class MainFrame(qtw.QWidget, ABase):
     QMainWindow is een beetje overkill, daarom maar een QWidget
     """
     def __init__(self, parent=None, apptype="", fnaam=""):
-        app = qtw.QApplication(sys.argv)
+        self.app = qtw.QApplication(sys.argv)
         super().__init__(parent, apptype=apptype, fnaam=fnaam)
 
         self.setWindowTitle(self.title)
@@ -422,7 +424,7 @@ class MainFrame(qtw.QWidget, ABase):
         self.vraag_zoek.setFocus()
 
         self.show()
-        sys.exit(app.exec_())
+        sys.exit(self.app.exec_())
 
     def add_combobox_row(self, labeltext, itemlist, initial='', button=None):
         self.row += 1
@@ -568,7 +570,9 @@ class MainFrame(qtw.QWidget, ABase):
             if canceled:
                 return
 
+        self.app.setOverrideCursor(gui.QCursor(core.Qt.WaitCursor))
         self.zoekvervang.do_action(search_python = self.p["context"])
+        self.app.restoreOverrideCursor()
         if len(self.zoekvervang.rpt) == 1:
             qtw.QMessageBox.information(self, self.resulttitel, "Niks gevonden",
                 qtw.QMessageBox.Ok)
