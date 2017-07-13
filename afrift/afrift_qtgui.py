@@ -267,9 +267,9 @@ class Results(qtw.QDialog):
         self.results = []
         self.lijst.clearContents()
         self.parent.zoekvervang.rpt = ["".join(self.parent.zoekvervang.specs)]
-        self.app.setOverrideCursor(gui.QCursor(core.Qt.WaitCursor))
+        self.parent.app.setOverrideCursor(gui.QCursor(core.Qt.WaitCursor))
         self.parent.zoekvervang.do_action(search_python=self.parent.p["context"])
-        self.app.restoreOverrideCursor()
+        self.parent.app.restoreOverrideCursor()
         if len(self.parent.zoekvervang.rpt) == 1:
             qtw.QMessageBox.information(self, self.parent.resulttitel,
                 "Niks gevonden", qtw.QMessageBox.Ok)
@@ -520,6 +520,7 @@ class MainFrame(qtw.QWidget, ABase):
         self.vraag_zoek.insertItem(0, item)
         self.schrijfini()
         self.zoekvervang = Finder(**self.p)
+
         if not self.zoekvervang.ok:
             msg = '\n'.join(self.zoekvervang.rpt)
             qtw.QMessageBox.information(self, self.resulttitel,
@@ -578,7 +579,7 @@ class MainFrame(qtw.QWidget, ABase):
                 qtw.QMessageBox.Ok)
         else:
             dlg = Results(self, common_part)
-        if self.vraag_exit.isChecked() and self.p["vervang"] is not None:
+        if self.self.vraag_exit.isChecked() and self.p["vervang"] is not None:
             self.close()
 
     def zoekdir(self):
