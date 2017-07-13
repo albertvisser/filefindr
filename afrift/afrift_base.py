@@ -50,14 +50,15 @@ class ABase(object):
             ## self.parent = parent
         ## except AttributeError: # ppygui doet dit zelf al
             ## pass
-        print(apptype, fnaam, flist)
         self.title = "Albert's find-replace in files tool"
         self.fouttitel = self.title + "- fout"
         self.resulttitel = self.title + " - Resultaten"
         self.apptype = apptype
         self.hier = ""
         self._mru_items = {}
-        if apptype == "":
+        if self.apptype == "" and os.path.exists(fnaam) and not os.path.isdir(fnaam):
+            self.apptype = 'single'
+        if self.apptype == "":
             self.fnames = []
             self.hier = os.getcwd()
             if fnaam.startswith('...'):
@@ -82,19 +83,17 @@ class ABase(object):
             self.title += " - file list version"
             self.fnames = []
             if fnaam:
-                with open(fnaam) as f_in:
-                    for line in f_in:
-                        line = line.strip()
-                        if not self.hier:
-                            if line.endswith("\\") or line.endswith("/"):
-                                line = line[:-1]
-                            self.hier = os.path.dirname(line)
-                        ## if line.endswith("\\") or line.endswith("/"):
-                            ## # directory afwandelen en onderliggende files verzamelen
-                            ## pass
-                        ## else:
-                            ## self.fnames.append(line)
-                        self.fnames.append(line)
+                try:
+                    with open(fnaam) as f_in:
+                        for line in f_in:
+                            line = line.strip()
+                            if not self.hier:
+                                if line.endswith("\\") or line.endswith("/"):
+                                    line = line[:-1]
+                                self.hier = os.path.dirname(line)
+                            self.fnames.append(line)
+                except IsADirectoryError:
+                    self.fnames = [fnaam]
             elif flist:
                 self.fnames = flist
             else:
