@@ -4,21 +4,23 @@ het meeste hiervan bevind zich in een class die als mixin gebruikt wordt"""
 
 import os
 import sys
+import collections
+import json
+import logging
 import pathlib
 BASE = pathlib.Path(os.environ['HOME']) / '.afrift'
 if not BASE.exists():
     BASE.mkdir()
 HERE = os.path.dirname(__file__)
 iconame = os.path.join(HERE,"find.ico")
-## import pickle
-import json
-import logging
 logging.basicConfig(filename=os.path.join(os.path.dirname(HERE), 'logs',
     'afrift.log'), level=logging.DEBUG, format='%(asctime)s %(message)s')
+
 
 def log(message):
     if 'DEBUG' in os.environ and os.environ["DEBUG"] != "0":
         logging.info(message)
+
 
 def get_iniloc():
     here = str(pathlib.Path.cwd()).replace(os.environ['HOME'] + '/', '~').replace(
@@ -30,6 +32,7 @@ def get_iniloc():
     optsfile = iniloc / 'options.json'
     return iniloc, mrufile, optsfile
 
+
 class ABase(object):
     """
     mixin base class voor de Application classes
@@ -37,19 +40,15 @@ class ABase(object):
     deze class bevat methoden die onafhankelijk zijn van de gekozen
     GUI-toolkit"""
 
-    ## def __init__(self, parent, apptype="", fnaam="", flist=None):
-    def __init__(self, apptype="", fnaam="", flist=None):
+    def __init__(self, **kwargs):
         """attributen die altijd nodig zijn
 
         self.pickled geeft aan of bij het op de nieuwe manier (met pickle) lezen
         van de mru-settings gelukt is of niet.
         """
-        ## if len(data) > 1:
-            ## prognaam, fnaam = data
-        ## try:
-            ## self.parent = parent
-        ## except AttributeError: # ppygui doet dit zelf al
-            ## pass
+        apptype = kwargs.pop('apptype', '')
+        fnaam = kwargs.pop('fnaam', '')
+        flist = kwargs.pop('flist', None)
         self.title = "Albert's find-replace in files tool"
         self.fouttitel = self.title + "- fout"
         self.resulttitel = self.title + " - Resultaten"
@@ -70,8 +69,6 @@ class ABase(object):
             elif fnaam.startswith('~'):
                 fnaam = os.path.expanduser(fnaam)
             if fnaam:
-                ## if os.path.exists(fnaam) and not os.path.isdir(fnaam):
-                    ## fnaam = os.path.dirname(fnaam)
                 self.fnames = [fnaam,]
         elif self.apptype == "single": # data is file om te verwerken
             self.title += " - single file version"
@@ -107,7 +104,6 @@ class ABase(object):
             self.p["filelist"] = self.fnames
         for ix, name in enumerate(self.fnames):
             if name.endswith("\\") or name.endswith("/"):
-                ## self.fnames[ix] = name[:-1]
                 name = name[:-1]
             self.fnames[ix] = os.path.abspath(name)
         self._keys = ("zoek", "verv", "types", "dirs")
@@ -142,6 +138,8 @@ class ABase(object):
         self._vervleeg = False
         self._backup = True
         self._exit_when_ready = False
+        self.extraopts = collections.defaultdict(lambda: False)
+        self.read_kwargs(kwargs)
 
     def readini(self):
         """lees ini file (met eerder gebruikte zoekinstellingen)
@@ -155,6 +153,40 @@ class ABase(object):
             with ofile.open() as _in:
                 opts = json.load(_in)
             self.p.update(opts)
+
+    def read_kwargs(self, kwargs):
+        """lees settings opties vanuit invoer; override waar opgegeven
+        """
+        # TODO: als een optie is ingesteld weet je zeker dat je een eventuele saved setting
+        # (niet  ingesteld) wilt overrulen, maar als een optie niet is ingesteld weet je dat niet
+        # dus als je wel instelt kun je dat gewoon zo laten maar als je niet instelt
+        # moet je nog kijken of de saved settings misschien `wel ingesteld` is
+        self.p['zoek'] = kwargs.pop('search', '')
+        test = kwargs.pop('replace', None)
+        if test is not None:
+            self.p['vervang'] = test
+            if test == '':
+                self._vervleeg = True
+        self.p["extlist"] = kwargs.pop('extensions', '')
+        if self.p["extlist"] is None:
+            self.p["extlist"] = []
+        for arg in ('regex',
+                    'follow_symlinks',
+                    'select_subdirs',
+                    'select_files',
+                    'use_saved',
+                    'dont_save',
+                    'no_gui',
+                    'output_file'):
+            self.extraopts[arg] = kwargs.pop(arg)
+        if not self.extraopts['use_saved']:
+            for arg, key in (('case_sensitive', "case"),
+                             ('whole_words', "woord"),
+                             ('recursive', "subdirs"),
+                             ('python_context', "context"), ):
+                self.p[key] = kwargs.pop(arg)
+        self._backup = kwargs.pop('backup_originals')
+        self._exit_when_ready = True
 
     def schrijfini(self):
         """huidige settings toevoegen dan wel vervangen in ini file"""

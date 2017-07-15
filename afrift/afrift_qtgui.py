@@ -12,6 +12,7 @@ from .afrift_base import iconame, ABase, log
 common_path_txt = 'De bestanden staan allemaal in of onder de directory "{}"'
 TXTW = 200
 
+
 class SelectNames(qtw.QDialog):
     """Tussenscherm om te verwerken files te kiezen"""
 
@@ -95,6 +96,7 @@ class SelectNames(qtw.QDialog):
         if not self.dofiles:
             self.parent.names = dirs
         super().accept()
+
 
 class Results(qtw.QDialog):
     """Show results on screen
@@ -182,12 +184,10 @@ class Results(qtw.QDialog):
 
         self.setLayout(vbox)
         self.resize(574 + breedte, 480)
-        self.exec_()
 
     def populate_list(self):
         """copy results to listbox
         """
-        ## headers = []
         for ix, line in enumerate(self.parent.zoekvervang.rpt):
             if ix == 0:
                 kop = line
@@ -195,10 +195,7 @@ class Results(qtw.QDialog):
                 where, what = line.split(": ", 1)
                 if self.parent.apptype == "single":
                     if "r. " in where:
-                        fname, lineno = where.split("r. ", 1)
-                        ## if ix == 1:
-                            ## kop += " in {0}".format(fname)
-                        where = lineno
+                        fname, where = where.split("r. ", 1)
                     else:
                         where = ""
                 if self.common:
@@ -208,7 +205,6 @@ class Results(qtw.QDialog):
                     context = rest.split(')')[0]
                 self.lijst.insertRow(ix - 1)
                 self.lijst.setRowHeight(ix - 1, 18)
-                ## headers.append('')
                 col = 0
                 rowitem = []
                 item = qtw.QTableWidgetItem(where)
@@ -227,7 +223,6 @@ class Results(qtw.QDialog):
                 self.lijst.setItem(ix - 1, col, item)
                 rowitem.append(what)
                 self.results.append(tuple(rowitem))
-        ## self.lijst.setVerticalHeaderLabels(headers)
         self.results.insert(0, kop)
 
     def klaar(self):
@@ -252,8 +247,6 @@ class Results(qtw.QDialog):
             result = list(item)
             if toonpad and self.parent.apptype == 'multi':
                 result[0] = self.common + result[0]
-            ## elif not toonpad and self.parent.apptype != 'multi':
-                ## result[0] = result[0].split(os.sep)[-1]
             if comma:
                 writer.writerow(result)
             else:
@@ -328,14 +321,16 @@ class Results(qtw.QDialog):
         prog, fileopt, lineopt = self.parent._editor_option
         subprocess.run([prog, fileopt.format(target), lineopt.format(line)])
 
+
 class MainFrame(qtw.QWidget, ABase):
     """Hoofdscherm van de applicatie
 
     QMainWindow is een beetje overkill, daarom maar een QWidget
     """
-    def __init__(self, parent=None, apptype="", fnaam=""):
+    def __init__(self, **kwargs):
         self.app = qtw.QApplication(sys.argv)
-        super().__init__(parent, apptype=apptype, fnaam=fnaam)
+        parent = None
+        super().__init__(parent, **kwargs)
 
         self.setWindowTitle(self.title)
         self.setWindowIcon(gui.QIcon(iconame))
@@ -344,15 +339,19 @@ class MainFrame(qtw.QWidget, ABase):
         self.row = -1
         self.vraag_zoek = self.add_combobox_row('Zoek naar:',
             self._mru_items["zoek"])
+        if self.p.get("zoek", ''):
+            self.vraag_zoek.setEditText(self.p['zoek'])
         self.vraag_regex = self.add_checkbox_row("regular expression "
-            "(Python format)")
+            "(Python format)", self.extraopts['regex'])
+
         self.vraag_case = self.add_checkbox_row("hoofd/kleine letters gelijk",
             self.p["case"])
         self.vraag_woord = self.add_checkbox_row("hele woorden", self.p["woord"])
 
         self.vraag_verv = self.add_combobox_row('Vervang door:',
             self._mru_items["verv"])
-        ## self.vraag_verv.setAutoCompletionCaseSensitivity(core.Qt.CaseSensitive)
+        if self.p.get("verv", ''):
+            self.vraag_verv.setEditText(self.p['verv'])
         self.vraag_verv.completer().setCaseSensitivity(core.Qt.CaseSensitive)
         self.vraag_leeg = self.add_checkbox_row("lege vervangtekst = weghalen",
             self._vervleeg)
@@ -389,13 +388,16 @@ class MainFrame(qtw.QWidget, ABase):
             self.vraag_diepte.setMinimum(-1)
             self.vraag_diepte.setValue(5)
             self.vraag_links = self.add_checkbox_row("symlinks volgen - max. diepte "
-                "(-1 is alles):", spinner=self.vraag_diepte)
+                "(-1 is alles):", toggler=self.extraopts['follow_symlinks'],
+                spinner=self.vraag_diepte)
             self.ask_skipdirs = self.add_checkbox_row("selecteer (sub)directories "
-                "om over te slaan")
+                "om over te slaan", self.extraopts['select_subdirs'])
             self.ask_skipfiles = self.add_checkbox_row("selecteer bestanden "
-                "om over te slaan")
+                "om over te slaan", self.extraopts['select_files'])
             self.vraag_types = self.add_combobox_row("Alleen files van type:",
                 self._mru_items["types"])
+            if self.p.get("extlist", ''):
+                self.vraag_types.setEditText(self.p['extlist'])
 
         self.vraag_context = self.add_checkbox_row("context tonen (waar mogelijk, "
             "anders overslaan)", self.p["context"])
@@ -420,11 +422,13 @@ class MainFrame(qtw.QWidget, ABase):
         vbox.addLayout(self.grid)
 
         self.setLayout(vbox)
-        ## self.resize(250, 150)
         self.vraag_zoek.setFocus()
 
-        self.show()
-        sys.exit(self.app.exec_())
+        if self.extraopts['no_gui']:
+            self.doe()
+        else:
+            self.show()
+            sys.exit(self.app.exec_())
 
     def add_combobox_row(self, labeltext, itemlist, initial='', button=None):
         self.row += 1
@@ -518,7 +522,8 @@ class MainFrame(qtw.QWidget, ABase):
             return
 
         self.vraag_zoek.insertItem(0, item)
-        self.schrijfini()
+        if not self.extraopts['dont_save']:
+            self.schrijfini()
         self.zoekvervang = Finder(**self.p)
 
         if not self.zoekvervang.ok:
@@ -537,7 +542,6 @@ class MainFrame(qtw.QWidget, ABase):
                 len(self.fnames) == 1 and os.path.isfile(self.fnames[0])):
             pass
         else:
-            ## print(self.skipdirs_overslaan, self.skipfiles_overslaan)
             go_on = self.ask_skipdirs.isChecked() or self.ask_skipfiles.isChecked()
             canceled = False
             while go_on:
@@ -575,11 +579,21 @@ class MainFrame(qtw.QWidget, ABase):
         self.zoekvervang.do_action(search_python = self.p["context"])
         self.app.restoreOverrideCursor()
         if len(self.zoekvervang.rpt) == 1:
-            qtw.QMessageBox.information(self, self.resulttitel, "Niks gevonden",
-                qtw.QMessageBox.Ok)
+            if self.extraopts['output_file']:
+                print('No results')
+            else:
+                qtw.QMessageBox.information(self, self.resulttitel, "Niks gevonden",
+                    qtw.QMessageBox.Ok)
         else:
             dlg = Results(self, common_part)
-        if self.self.vraag_exit.isChecked() and self.p["vervang"] is not None:
+            if self.extraopts['output_file']:
+                with self.extraopts['output_file'] as f_out:
+                    for line in dlg.get_results():
+                        f_out.write(line + "\n")
+            else:
+                dlg.exec_()
+        if (self.extraopts['no_gui'] and self.extraopts['output_file']) or (
+                self.vraag_exit.isChecked() and self.p["vervang"] is not None):
             self.close()
 
     def zoekdir(self):
