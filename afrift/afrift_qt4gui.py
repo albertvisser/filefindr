@@ -1,6 +1,6 @@
 #! /usr/bin/env python
-"AFRIFT PyQt versie"
-
+"""AFRIFT PyQt4 versie   - currently unmaintained
+"""
 import os
 import sys
 import PyQt4.QtGui as gui

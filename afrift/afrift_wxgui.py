@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
-"""AFRIFT wxPython versie"""
+"""AFRIFT wxPython versie   - currently unmaintained
+"""
 import os
 import sys
 import wx

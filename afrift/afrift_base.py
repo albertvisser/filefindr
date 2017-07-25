@@ -3,7 +3,6 @@
 het meeste hiervan bevind zich in een class die als mixin gebruikt wordt"""
 
 import os
-import sys
 import collections
 import json
 import logging
@@ -12,17 +11,22 @@ BASE = pathlib.Path(os.environ['HOME']) / '.afrift'
 if not BASE.exists():
     BASE.mkdir()
 HERE = os.path.dirname(__file__)
-iconame = os.path.join(HERE,"find.ico")
-logging.basicConfig(filename=os.path.join(os.path.dirname(HERE), 'logs',
-    'afrift.log'), level=logging.DEBUG, format='%(asctime)s %(message)s')
+iconame = os.path.join(HERE, "find.ico")
+logging.basicConfig(
+    filename=os.path.join(os.path.dirname(HERE), 'logs', 'afrift.log'),
+    level=logging.DEBUG,
+    format='%(asctime)s %(message)s')
 
 
 def log(message):
+    "output to log"
     if 'DEBUG' in os.environ and os.environ["DEBUG"] != "0":
         logging.info(message)
 
 
 def get_iniloc():
+    """determine location & filenames for stored settings
+    """
     here = str(pathlib.Path.cwd()).replace(os.environ['HOME'] + '/', '~').replace(
         '/', '_')
     if here[0] == '_':
@@ -69,14 +73,14 @@ class ABase(object):
             elif fnaam.startswith('~'):
                 fnaam = os.path.expanduser(fnaam)
             if fnaam:
-                self.fnames = [fnaam,]
-        elif self.apptype == "single": # data is file om te verwerken
+                self.fnames = [fnaam]
+        elif self.apptype == "single":
             self.title += " - single file version"
             if not fnaam:
                 raise ValueError('Need filename for application type "single"')
-            self.fnames = [fnaam,]
+            self.fnames = [fnaam]
             self.hier = os.path.dirname(fnaam)
-        elif self.apptype == "multi": # data is file met namen om te verwerken
+        elif self.apptype == "multi":
             self.title += " - file list version"
             self.fnames = []
             if fnaam:
@@ -94,8 +98,8 @@ class ABase(object):
             elif flist:
                 self.fnames = flist
             else:
-                raise ValueError('Need filename or list of files for application'
-                    ' type "multi"')
+                raise ValueError('Need filename or list of files for application '
+                                 'type "multi"')
         else:
             raise ValueError('application type should be empty, "single" or "multi"')
         self.s = ""
@@ -129,12 +133,12 @@ class ABase(object):
             test = edfile.read_text()
         except FileNotFoundError:
             test = '\n'.join(("program = 'SciTE'",
-                "file-option = '-open:{}'",
-                "line-option = '-goto:{}'",
-                ""))
+                              "file-option = '-open:{}'",
+                              "line-option = '-goto:{}'",
+                              ""))
             edfile.write_text(test)
-        self._editor_option = [x.split(' = ')[1].strip("'")
-            for x in test.strip().split('\n')]
+        self.editor_option = [x.split(' = ')[1].strip("'")
+                              for x in test.strip().split('\n')]
         self._vervleeg = False
         self._backup = True
         self._exit_when_ready = False
@@ -157,10 +161,6 @@ class ABase(object):
     def read_kwargs(self, kwargs):
         """lees settings opties vanuit invoer; override waar opgegeven
         """
-        # TODO: als een optie is ingesteld weet je zeker dat je een eventuele saved setting
-        # (niet  ingesteld) wilt overrulen, maar als een optie niet is ingesteld weet je dat niet
-        # dus als je wel instelt kun je dat gewoon zo laten maar als je niet instelt
-        # moet je nog kijken of de saved settings misschien `wel ingesteld` is
         self.p['zoek'] = kwargs.pop('search', '')
         test = kwargs.pop('replace', None)
         if test is not None:
@@ -236,18 +236,18 @@ class ABase(object):
         "controleer extra opties"
         mld = ""
         regex, case, words = items
-        ss = []
+        opts = []
         if regex:
-            ss.append("regular expression")
+            opts.append("regular expression")
         self.p["regexp"] = regex
         if case:
-            ss.append("case-sensitive")
+            opts.append("case-sensitive")
         self.p["case"] = case
         if words:
-            ss.append("hele woorden")
+            opts.append("hele woorden")
         self.p["woord"] = words
-        if ss:
-            self.s += " ({0})".format(', '.join(ss))
+        if opts:
+            self.s += " ({})".format(', '.join(opts))
         return mld
 
     def checktype(self, item):
@@ -260,8 +260,8 @@ class ABase(object):
                 pass
             self._mru_items["types"].insert(0, item)
             self.s += "\nin bestanden van type {0}".format(item)
-            h = item.split(",")
-            self.p["extlist"] = [x.lstrip().strip() for x in h]
+            exts = item.split(",")
+            self.p["extlist"] = [x.lstrip().strip() for x in exts]
         else:
             self.p["extlist"] = []
         return mld
@@ -293,4 +293,3 @@ class ABase(object):
         self.p["subdirs"] = subdirs
         self.p["follow_symlinks"] = links
         self.p["maxdepth"] = depth
-

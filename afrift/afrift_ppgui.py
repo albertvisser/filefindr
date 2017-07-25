@@ -1,3 +1,5 @@
+"""Arift PocketPyGui versie   - currently unmaintained
+"""
 import os
 if os.name == 'ce':
     DESKTOP = False

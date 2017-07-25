@@ -4,14 +4,17 @@
 de uitvoering wordt gestuurd door in een dictionary verzamelde parameters"""
 
 from __future__ import print_function
-import sys
 import os
 import re
 import shutil
 import collections
 contains_default = 'module level code'
+special_chars = ('.', '^', '$', '*', '+', '?', '{', '}', '[', ']', '(', ')', '|', '\\')
+
 
 def pyread(fname, fallback_encoding):
+    """context-aware search in Python files
+    """
     try:
         with open(fname) as f_in:
             lines = f_in.readlines()
@@ -23,7 +26,7 @@ def pyread(fname, fallback_encoding):
             return
     constructs = []
     in_construct = []
-    indentpos = 0
+    indentpos = prev_lineno = 0
     for ix, line in enumerate(lines):
         if line.strip() == "":
             continue
@@ -38,8 +41,7 @@ def pyread(fname, fallback_encoding):
             constructs.append(in_construct + [construct])
         if test.startswith('def ') or test.startswith('class '):
             words = test.split()
-            construct = (indentpos, words[0],
-                words[1].split(':')[0].split('(')[0], lineno)
+            construct = (indentpos, words[0], words[1].split(':')[0].split('(')[0], lineno)
             in_construct.append(construct)
         prev_lineno = lineno
     indentpos = 0
@@ -51,7 +53,6 @@ def pyread(fname, fallback_encoding):
     for item in constructs:
         _, _, _, start, end = item[-1]
         construct = []
-        in_class = in_method = False
         for part in item:
             type_, name = part[1:3]
             if type_ == "def":
@@ -62,6 +63,7 @@ def pyread(fname, fallback_encoding):
             construct.extend([type_, name])
         itemlist.append((start, end, " ".join(construct)))
     return sorted(itemlist)
+
 
 class Finder(object):
     """interpreteren van de parameters en aansturen van de zoek/vervang routine
@@ -82,8 +84,7 @@ class Finder(object):
             "follow_symlinks": False,
             "maxdepth": 5,
             "fallback_encoding": 'ascii',
-            "context": False,
-            }
+            "context": False, }
         for x in parms:
             if x in self.p:
                 self.p[x] = parms[x]
@@ -92,9 +93,9 @@ class Finder(object):
         ## print self.p
         ## sys.exit()
         self.ok = True
-        self.rpt = [] # verslag van wat er gebeurd is
+        self.rpt = []  # oorspronkelijk: verslag van wat er gebeurd is
         self.use_complex = True
-        self.re, self.ignore = '', ''
+        self.rgx, self.ignore = '', ''
         if not self.p['filelist'] and not self.p['pad']:
             self.rpt.append("Fout: geen lijst bestanden en geen directory opgegeven")
         elif self.p['filelist'] and self.p['pad']:
@@ -106,53 +107,43 @@ class Finder(object):
             specs = "Zoekactie niet mogelijk"
         else:
             self.p['wijzig'] = True if self.p['vervang'] is not None else False
-            self.extlistUpper = []
+            self.extlist_upper = []
             for x in self.p['extlist']:
                 if not x.startswith("."):
                     x = "." + x
-                self.extlistUpper.append(x.upper())
+                self.extlist_upper.append(x.upper())
             # moet hier nog iets mee doen m.h.o.o. woorddelen of niet
             if self.p['wijzig'] or self.p['regexp']:
                 self.use_complex = False
-                self.re = self.build_regexp_simple()
+                self.rgx = self.build_regexp_simple()
             else:
-                self.re, self.ignore = self.build_regexes()
-            specs = ["Gezocht naar '{0}'".format(self.p['zoek'])]
+                self.rgx, self.ignore = self.build_regexes()
+            specs = ["Gezocht naar '{}'".format(self.p['zoek'])]
             if self.p['wijzig']:
-                specs.append(" en dit vervangen door '{0}'".format(self.p['vervang']))
+                specs.append(" en dit vervangen door '{}'".format(self.p['vervang']))
             if self.p['extlist']:
                 if len(self.p['extlist']) > 1:
-                     s = " en ".join((", ".join(self.p['extlist'][:-1]),
-                                                self.p['extlist'][-1]))
+                    typs = " en ".join((", ".join(self.p['extlist'][:-1]),
+                                        self.p['extlist'][-1]))
                 else:
-                     s = self.p['extlist'][0]
-                specs.append(" in bestanden van type {0}".format(s))
+                    typs = self.p['extlist'][0]
+                specs.append(" in bestanden van type {}".format(typs))
             self.filenames = []
             self.dirnames = set()
             if self.p['pad']:
-                specs.append(" in {0}".format(self.p['pad']))
+                specs.append(" in {}".format(self.p['pad']))
                 self.subdirs(self.p['pad'])
             else:
                 if len(self.p['filelist']) == 1:
-                    specs.append(" in {0}".format(self.p['filelist'][0]))
+                    specs.append(" in {}".format(self.p['filelist'][0]))
                 else:
                     specs.append(" in opgegeven bestanden/directories")
                 for entry in self.p['filelist']:
                     self.subdirs(entry, is_list=False)
-                    ## if os.path.isdir(entry):
-                        ## self.subdirs(entry)
-                    ## elif os.path.islink(entry) and not self.p['follow_symlinks']:
-                        ## pass
-                    ## else:
-                        ## d, ext = os.path.splitext(entry)
-                        ## if ext.upper() in self.extlistUpper or not self.p['extlist']:
-                            ## self.zoek(entry)
-                    #~ self.zoek(entry)
             if self.p['subdirs']:
                 specs.append(" en onderliggende directories")
             self.rpt.insert(0, "".join(specs))
             self.specs = specs
-        ## self.rpt.append("")
 
     def subdirs(self, pad, is_list=True, level=0):
         """recursieve routine voor zoek/vervang in subdirectories
@@ -181,8 +172,8 @@ class Finder(object):
             elif os.path.islink(entry) and not self.p['follow_symlinks']:
                 pass
             else:
-                h, ext = os.path.splitext(entry)
-                if len(self.p['extlist']) == 0 or ext.upper() in self.extlistUpper:
+                _, ext = os.path.splitext(entry)
+                if len(self.p['extlist']) == 0 or ext.upper() in self.extlist_upper:
                     self.filenames.append(entry)
 
     def build_regexp_simple(self):
@@ -190,12 +181,11 @@ class Finder(object):
         this original version returns one compiled expression
         """
         zoek = ''
-        for ch in self.p['zoek']:
+        for char in self.p['zoek']:
             if not self.p['regexp']:
-                if ch in ('.', '^','$','*','+','?','{','}','[',']','(',')','|',
-                            '\\'):
+                if char in special_chars:
                     zoek += "\\"
-            zoek += ch
+            zoek += char
         flags = re.MULTILINE
         if not self.p['case']:
             flags |= re.IGNORECASE
@@ -211,18 +201,17 @@ class Finder(object):
             """escape special characters when they are not to be interpreted
             """
             zoek = ''
-            for ch in data:
-                if ch in ('.', '^','$','*','+','?','{','}','[',']','(',')','|',
-                        '\\'):
+            for char in data:
+                if char in special_chars:
                     zoek += "\\"
-                zoek += ch
+                zoek += char
             return zoek
 
         negeer = ''
         flags = re.MULTILINE
         if not self.p['case']:
             flags |= re.IGNORECASE
-        if self.p['regexp'] or self.p['wijzig']: # in these cases: always take literally
+        if self.p['regexp'] or self.p['wijzig']:  # in these cases: always take literally
             zoek = [re.compile(escape(self.p['zoek']), flags)]
         else:
             zoek_naar, zoek_ook, zoek_niet = self.parse_zoek()
@@ -239,12 +228,9 @@ class Finder(object):
             - een lijst met frasen die daarnaast ook moeten voorkomen
             - een lijst met frasen die niet mag voorkomen
         """
-        in_quotes = also_required = forbidden = False
-        zoekitem = ''
-        possible_matches = []
-        required_matches = []
-        forbidden_matches = []
         def add_to_matches():
+            """add phrase to the correct phrase list
+            """
             nonlocal zoekitem, also_required, forbidden
             ## print('add_to_matches called with zoekitem', zoekitem, also_required)
             zoekitem = zoekitem.strip()
@@ -258,6 +244,11 @@ class Finder(object):
                 possible_matches.append(zoekitem)
             zoekitem = ''
             also_required = forbidden = False
+        in_quotes = also_required = forbidden = False
+        zoekitem = ''
+        possible_matches = []
+        required_matches = []
+        forbidden_matches = []
         for char in self.p['zoek']:
             if char == '"':
                 if in_quotes:
@@ -270,16 +261,19 @@ class Finder(object):
                 also_required = True
             elif char == '-' and not in_quotes:
                 add_to_matches()
-                forbidden=True
+                forbidden = True
             else:
                 zoekitem += char
         add_to_matches()
         return possible_matches, required_matches, forbidden_matches
 
     def do_action(self, search_python=False):
+        """start the search
+        """
         for name in self.filenames:
             self.zoek(name)
-        if not search_python: return
+        if not search_python:
+            return
         results, self.rpt = self.rpt, []
         locations = {}
         for name in self.filenames:
@@ -346,12 +340,12 @@ class Finder(object):
             result_list = self.complex_search(data, lines)
             for lineno in result_list:
                 found = True
-                self.rpt.append("{0} r. {1}: {2}".format(best, lineno,
-                    regels[lineno - 1].rstrip()))
+                self.rpt.append("{} r. {}: {}".format(
+                    best, lineno, regels[lineno - 1].rstrip()))
             return
 
         # gebruik de oude manier van zoeken bij vervangen of bij regexp zoekstring
-        result_list = self.re.finditer(data)
+        result_list = self.rgx.finditer(data)
         for vind in result_list:
             found = True
             ## print(vind, vind.span(), sep = " ")
@@ -367,20 +361,22 @@ class Finder(object):
                     from_line = lineno
                     break
         if found and self.p['wijzig']:
-            ndata, aant = self.re.subn(self.p["vervang"], data)
+            ndata, aant = self.rgx.subn(self.p["vervang"], data)
             self.rpt.append("%s: %s times" % (best, aant))
             if self.p['backup']:
                 bestnw = best + ".bak"
                 shutil.copyfile(best, bestnw)
-            with open(best,"w") as f_out:
+            with open(best, "w") as f_out:
                 f_out.write(ndata)
 
     def complex_search(self, data, lines):
+        """extended serch using phrases we want to find and phrases we don't want to find
+        """
         # maak een lijst van alle locaties waar een string gevonden is
         # (plus de index van de  regexp die er bij hoort)
         found_in_lines = []
-        for ix, re_ in enumerate(self.re):
-            new_lines = [(x.start(), ix) for x in re_.finditer(data)]
+        for ix, rgx in enumerate(self.rgx):
+            new_lines = [(x.start(), ix) for x in rgx.finditer(data)]
             found_in_lines += new_lines
 
         # vul de lijst aan met alle locaties waar gevonden is wat we niet willen vinden
@@ -393,20 +389,21 @@ class Finder(object):
         # met alle regexp indexen waar deze bij gevonden is
         # zodat we kunnen zien welke we wel en niet willen hebben
         lines_found = collections.defaultdict(set)
-        from_line = 0 # houdt bij vanaf welke regel het zin heeft om de inhoud te controleren
+        from_line = 0  # houdt bij vanaf welke regel het zin heeft om de inhoud te controleren
         for itemstart, number in sorted(found_in_lines):
             for lineno, linestart in enumerate(lines[from_line:]):
                 if itemstart < linestart:
-                    in_line = lineno + from_line    #  bereken het actuele regelnummer
+                    in_line = lineno + from_line    # bereken het actuele regelnummer
                     from_line = lineno
                     break
             lines_found[in_line].add(number)
 
         # uitfilteren welke regel niet in alle zoekacties voorkomt of juist weggelaten met worden
-        all_searches = set(range(len(self.re)))
+        all_searches = set(range(len(self.rgx)))
         lines_left_over = []
         for line, values in lines_found.items():
-            if -1 in values: continue
+            if -1 in values:
+                continue
             if values == all_searches:
                 lines_left_over.append(line)
         lines_left_over.sort()

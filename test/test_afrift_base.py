@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-
+"""test routines
+"""
 import sys
-import os
+## import os
 import pathlib
 HERE = pathlib.Path(__file__).parent.resolve()
 ROOT = HERE.parent
@@ -12,10 +13,12 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.FileHandler(str(HERE / 'test_abase.log'), mode="w"))
 logger.setLevel(logging.DEBUG)
-
 from afrift_base import ABase
 
+
 def lees_ini():
+    """test routine
+    """
     p = {}
     with open("afrift.ini", 'rb') as f_in:
         pickled = True
@@ -32,9 +35,11 @@ def lees_ini():
     else:
         logger.info("ini lezen ging mis - geen pickle file?")
 
+
 def test_abase(parent=None, apptype="", fnaam=""):
-    logger.info("\ntesting Abase with apptype = {}, filename = {}".format(apptype,
-        fnaam))
+    """test routine
+    """
+    logger.info("\ntesting Abase with apptype = %s, filename = %s", apptype, fnaam)
     abase = ABase(parent, apptype, fnaam)
     logger.info(pprint.pformat(abase.__dict__))
     if not abase.pickled:
@@ -50,7 +55,7 @@ if __name__ == '__main__':
         except ValueError as err:
             logger.info(str(err))
     for item, naam in (("single", "test_afrift_base.py"),
-            ("multi", "afrift_args")):
+                       ("multi", "afrift_args")):
         try:
             test_abase(apptype=item, fnaam=naam)
         except ValueError as err:

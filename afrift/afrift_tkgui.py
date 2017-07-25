@@ -1,6 +1,6 @@
-#! /usr/bin/env python
 # -*- coding: latin1 -*-
-"""AFRIFT Tkinter versie"""
+"""AFRIFT Tkinter versie   - currently unmaintained
+"""
 
 import os
 import sys
