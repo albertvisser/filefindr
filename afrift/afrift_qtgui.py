@@ -1,5 +1,4 @@
-#! /usr/bin/env python
-"AFRIFT PyQt versie"
+"AFRIFT PyQt5 versie"
 
 import os
 import sys
@@ -120,7 +119,7 @@ class Results(qtw.QDialog):
         label_txt = "{} ({} items)".format(self.parent.zoekvervang.rpt[0],
                                            len(self.parent.zoekvervang.rpt) - 1)
         if self.parent.apptype == "multi":
-            label_txt += '\n' + common_path_txt.format(self.common)
+            label_txt += '\n' + common_path_txt.format(self.common.rstrip(os.sep))
         self.txt = qtw.QLabel(label_txt, self)
         hbox.addWidget(self.txt)
         vbox.addLayout(hbox)
@@ -364,6 +363,8 @@ class MainFrame(qtw.QWidget, ABase):
             self._vervleeg)
 
         if self.apptype == "":
+            log('in init: mru_items={}'.format(self._mru_items))
+            log('in init: p={}'.format(self.p))
             initial = self.fnames[0] if self.fnames else ''
             self.zoek = qtw.QPushButton("&Zoek")
             self.zoek.clicked.connect(self.zoekdir)
@@ -372,6 +373,8 @@ class MainFrame(qtw.QWidget, ABase):
                 self._mru_items["dirs"],
                 initial=initial,
                 button=self.zoek)
+            self.vraag_dir.setCompleter(None)
+            self.vraag_dir.editTextChanged[str].connect(self.check_loc)
 
         elif self.apptype == "single":
             self.row += 1
@@ -494,6 +497,28 @@ class MainFrame(qtw.QWidget, ABase):
             new_value = core.Qt.CaseInsensitive
         self.vraag_zoek.setAutoCompletionCaseSensitivity(new_value)
 
+    def check_loc(self, txt):
+        """update location to get settings from
+        """
+        log('in check_loc: txt={}'.format(txt))
+        if os.path.exists(txt) and not txt.endswith(os.path.sep):
+            self.readini(txt)
+            log('in check_loc: mru_items={}'.format(self._mru_items))
+            log('in check_loc: p={}'.format(self.p))
+            self.vraag_zoek.clear()
+            self.vraag_zoek.addItems(self._mru_items["zoek"])
+            self.vraag_verv.clear()
+            self.vraag_verv.addItems(self._mru_items["verv"])
+            self.vraag_types.clear()
+            self.vraag_types.addItems(self._mru_items["types"])
+            ## self.vraag_dir.clear()
+            ## self.vraag_dir.addItems(self._mru_items["dirs"])
+            self.vraag_case.setChecked(self.p["case"])
+            self.vraag_woord.setChecked(self.p["woord"])
+            self.vraag_subs.setChecked(self.p["subdirs"])
+            self.vraag_context.setChecked(self.p["context"])
+
+
     def keyPressEvent(self, event):
         """event handler voor toetsaanslagen"""
         if event.key() == core.Qt.Key_Escape:
@@ -505,12 +530,17 @@ class MainFrame(qtw.QWidget, ABase):
         if self.apptype == 'single':
             test = self.fnames[0]
         elif self.apptype == 'multi':
-            test = os.path.commonprefix(self.fnames)
-            if test in self.fnames:
-                pass
+            test = os.path.commonpath(self.fnames)
+            ## if test in self.fnames:
+                ## pass
+            ## else:
+                ## while test and not os.path.exists(test):
+                    ## test = test[:-1]
+            # make sure common part is a directory
+            if os.path.isfile(test):
+                test = os.dirname(test) + os.sep
             else:
-                while test and not os.path.exists(test):
-                    test = test[:-1]
+                test += os.sep
         else:
             test = self.p["pad"] + os.sep
         return test

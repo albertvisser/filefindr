@@ -7,13 +7,13 @@ import collections
 import json
 import logging
 import pathlib
-BASE = pathlib.Path(os.environ['HOME']) / '.afrift'
+BASE = pathlib.Path.home() / '.afrift'
 if not BASE.exists():
     BASE.mkdir()
-HERE = os.path.dirname(__file__)
-iconame = os.path.join(HERE, "find.ico")
+HERE = pathlib.Path(__file__).parent  # os.path.dirname(__file__)
+iconame = str(HERE / "find.ico")  # os.path.join(HERE, "find.ico")
 logging.basicConfig(
-    filename=os.path.join(os.path.dirname(HERE), 'logs', 'afrift.log'),
+    filename=str(HERE.parent / 'logs' / 'afrift.log'),
     level=logging.DEBUG,
     format='%(asctime)s %(message)s')
 
@@ -24,14 +24,19 @@ def log(message):
         logging.info(message)
 
 
-def get_iniloc():
+def get_iniloc(path=None):
     """determine location & filenames for stored settings
     """
-    here = str(pathlib.Path.cwd()).replace(os.environ['HOME'] + '/', '~').replace(
-        '/', '_')
-    if here[0] == '_':
-        here = here[1:]
-    iniloc = BASE / here
+    path = pathlib.Path(path) if path else pathlib.Path.cwd()
+    if path == pathlib.Path.home():
+        here = str(path)[1:]
+    else:
+        try:
+            here = '~' + str(path.relative_to(pathlib.Path.home()))
+        except ValueError:
+            here = str(path)[1:]
+    iniloc = BASE / here.replace('/', '_')
+    log('in get_iniloc: iniloc={}'.format(iniloc))
     mrufile = iniloc / 'mru_items.json'
     optsfile = iniloc / 'options.json'
     return iniloc, mrufile, optsfile
@@ -50,6 +55,8 @@ class ABase(object):
         self.pickled geeft aan of bij het op de nieuwe manier (met pickle) lezen
         van de mru-settings gelukt is of niet.
         """
+        log('in init van mixin: cwd is {}'.format(os.getcwd()))
+        log('kwargs is {}'.format(kwargs))
         apptype = kwargs.pop('apptype', '')
         fnaam = kwargs.pop('fnaam', '')
         flist = kwargs.pop('flist', None)
@@ -103,7 +110,7 @@ class ABase(object):
         else:
             raise ValueError('application type should be empty, "single" or "multi"')
         self.s = ""
-        self.p = {}
+        self.p = {'filelist': []}
         if len(self.fnames) > 0:
             self.p["filelist"] = self.fnames
         for ix, name in enumerate(self.fnames):
@@ -120,7 +127,15 @@ class ABase(object):
         for key in self._optkeys:
             self.p[key] = False
         self._options = ("matchcase", "matchwords", "searchsubdirs", "showcontext")
-        self.readini()
+        if self.p['filelist']:
+            if self.apptype == 'single':
+                self.readini(pathlib.Path(self.p['filelist'][0]).parent)
+            elif self.apptype == 'multi':
+                self.readini(os.path.commonpath(self.p['filelist']))
+            else:
+                self.readini(self.p['filelist'][0])
+        else:
+            self.readini()
         encfile = BASE / 'fallback_encoding'
         try:
             test = encfile.read_text()
@@ -145,13 +160,15 @@ class ABase(object):
         self.extraopts = collections.defaultdict(lambda: False)
         self.read_kwargs(kwargs)
 
-    def readini(self):
+    def readini(self, path=None):
         """lees ini file (met eerder gebruikte zoekinstellingen)
 
         geen settings file of niet te lezen dan initieel laten
         """
-        loc, mfile, ofile = get_iniloc()
+        loc, mfile, ofile = get_iniloc(path)
+        log('in readini: {}, {}, {}'.format(loc, mfile, ofile))
         if loc.exists():
+            log('reading files')
             with mfile.open() as _in:
                 self._mru_items = json.load(_in)
             with ofile.open() as _in:
@@ -188,9 +205,9 @@ class ABase(object):
         self._backup = kwargs.pop('backup_originals')
         self._exit_when_ready = True
 
-    def schrijfini(self):
+    def schrijfini(self, path=None):
         """huidige settings toevoegen dan wel vervangen in ini file"""
-        loc, mfile, ofile = get_iniloc()
+        loc, mfile, ofile = get_iniloc(path)
         if not loc.exists():
             loc.mkdir()
         with mfile.open("w") as _out:
