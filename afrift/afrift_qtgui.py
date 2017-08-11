@@ -363,8 +363,6 @@ class MainFrame(qtw.QWidget, ABase):
             self._vervleeg)
 
         if self.apptype == "":
-            log('in init: mru_items={}'.format(self._mru_items))
-            log('in init: p={}'.format(self.p))
             initial = self.fnames[0] if self.fnames else ''
             self.zoek = qtw.QPushButton("&Zoek")
             self.zoek.clicked.connect(self.zoekdir)
@@ -500,11 +498,8 @@ class MainFrame(qtw.QWidget, ABase):
     def check_loc(self, txt):
         """update location to get settings from
         """
-        log('in check_loc: txt={}'.format(txt))
         if os.path.exists(txt) and not txt.endswith(os.path.sep):
             self.readini(txt)
-            log('in check_loc: mru_items={}'.format(self._mru_items))
-            log('in check_loc: p={}'.format(self.p))
             self.vraag_zoek.clear()
             self.vraag_zoek.addItems(self._mru_items["zoek"])
             self.vraag_verv.clear()
@@ -574,7 +569,8 @@ class MainFrame(qtw.QWidget, ABase):
 
         self.vraag_zoek.insertItem(0, item)
         if not self.extraopts['dont_save']:
-            self.schrijfini()
+            loc = self.p.get('pad', '') or os.path.dirname(self.p['filelist'][0])
+            self.schrijfini(loc)
         self.zoekvervang = Finder(**self.p)
 
         if not self.zoekvervang.ok:
@@ -612,7 +608,6 @@ class MainFrame(qtw.QWidget, ABase):
                                     break
                         if not self.ask_skipfiles.isChecked():
                             go_on = False
-                    log(self.zoekvervang.filenames)
                 if self.ask_skipfiles.isChecked():
                     self.names = sorted(self.zoekvervang.filenames)
                     dlg = SelectNames(self).exec_()

@@ -36,7 +36,6 @@ def get_iniloc(path=None):
         except ValueError:
             here = str(path)[1:]
     iniloc = BASE / here.replace('/', '_')
-    log('in get_iniloc: iniloc={}'.format(iniloc))
     mrufile = iniloc / 'mru_items.json'
     optsfile = iniloc / 'options.json'
     return iniloc, mrufile, optsfile
@@ -166,9 +165,7 @@ class ABase(object):
         geen settings file of niet te lezen dan initieel laten
         """
         loc, mfile, ofile = get_iniloc(path)
-        log('in readini: {}, {}, {}'.format(loc, mfile, ofile))
         if loc.exists():
-            log('reading files')
             with mfile.open() as _in:
                 self._mru_items = json.load(_in)
             with ofile.open() as _in:
