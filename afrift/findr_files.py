@@ -159,7 +159,6 @@ class Finder(object):
         (misschien is dat recent veranderd) daarom is deze verwijderd en is de
         except NotADirectoryError toegevoegd
         """
-        log("in subdirs for {} {}".format(pad, is_list))
         if os.path.isdir(pad):
             self.dirnames.add(pad)
         if self.p["maxdepth"] != -1:
@@ -175,7 +174,6 @@ class Finder(object):
             _list = []
         ## else:
             ## _list = (pad,)
-        log("in subdirs, _list is {}".format(_list))
         for entry in _list:
             if os.path.isdir(entry):
                 if self.p['subdirs']:
