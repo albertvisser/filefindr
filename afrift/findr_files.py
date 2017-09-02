@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import collections
+from .afrift_base import log
 contains_default = 'module level code'
 special_chars = ('.', '^', '$', '*', '+', '?', '{', '}', '[', ']', '(', ')', '|', '\\')
 
@@ -139,32 +140,42 @@ class Finder(object):
                 else:
                     specs.append(" in opgegeven bestanden/directories")
                 for entry in self.p['filelist']:
-                    self.subdirs(entry, is_list=False)
+                    ## self.subdirs(entry, is_list=False)
+                    self.subdirs(entry)
             if self.p['subdirs']:
                 specs.append(" en onderliggende directories")
             self.rpt.insert(0, "".join(specs))
             self.specs = specs
 
-    def subdirs(self, pad, is_list=True, level=0):
+    ## def subdirs(self, pad, is_list=True, level=0):
+    def subdirs(self, pad, level=0):
         """recursieve routine voor zoek/vervang in subdirectories
         samenstellen lijst met te verwerken bestanden
 
         als is_list = False dan wordt van de doorgegeven naam eerst een list
         gemaakt. Daardoor hebben we altijd een iterable met directorynamen.
+        Deze parameter lijkt een probleem te veroorzaken als in multi mode een
+        lijst wordt opgegeven (via self.p['filelist']) met directorynamen erin
+        (misschien is dat recent veranderd) daarom is deze verwijderd en is de
+        except NotADirectoryError toegevoegd
         """
+        log("in subdirs for {} {}".format(pad, is_list))
         if os.path.isdir(pad):
             self.dirnames.add(pad)
         if self.p["maxdepth"] != -1:
             level += 1
             if level > self.p["maxdepth"]:
                 return
-        if is_list:
-            try:
-                _list = (os.path.join(pad, fname) for fname in os.listdir(pad))
-            except PermissionError:
-                _list = []
-        else:
-            _list = (pad,)
+        ## if is_list:
+        try:
+            _list = (os.path.join(pad, fname) for fname in os.listdir(pad))
+        except NotADirectoryError:
+            _list = [pad]
+        except PermissionError:
+            _list = []
+        ## else:
+            ## _list = (pad,)
+        log("in subdirs, _list is {}".format(_list))
         for entry in _list:
             if os.path.isdir(entry):
                 if self.p['subdirs']:
