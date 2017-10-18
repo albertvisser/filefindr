@@ -106,46 +106,46 @@ class Finder(object):
         if self.rpt:
             self.ok = False
             specs = "Zoekactie niet mogelijk"
+            return
+        self.p['wijzig'] = True if self.p['vervang'] is not None else False
+        self.extlist_upper = []
+        for x in self.p['extlist']:
+            if not x.startswith("."):
+                x = "." + x
+            self.extlist_upper.append(x.upper())
+        # moet hier nog iets mee doen m.h.o.o. woorddelen of niet
+        if self.p['wijzig'] or self.p['regexp']:
+            self.use_complex = False
+            self.rgx = self.build_regexp_simple()
         else:
-            self.p['wijzig'] = True if self.p['vervang'] is not None else False
-            self.extlist_upper = []
-            for x in self.p['extlist']:
-                if not x.startswith("."):
-                    x = "." + x
-                self.extlist_upper.append(x.upper())
-            # moet hier nog iets mee doen m.h.o.o. woorddelen of niet
-            if self.p['wijzig'] or self.p['regexp']:
-                self.use_complex = False
-                self.rgx = self.build_regexp_simple()
+            self.rgx, self.ignore = self.build_regexes()
+        specs = ["Gezocht naar '{}'".format(self.p['zoek'])]
+        if self.p['wijzig']:
+            specs.append(" en dit vervangen door '{}'".format(self.p['vervang']))
+        if self.p['extlist']:
+            if len(self.p['extlist']) > 1:
+                typs = " en ".join((", ".join(self.p['extlist'][:-1]),
+                                    self.p['extlist'][-1]))
             else:
-                self.rgx, self.ignore = self.build_regexes()
-            specs = ["Gezocht naar '{}'".format(self.p['zoek'])]
-            if self.p['wijzig']:
-                specs.append(" en dit vervangen door '{}'".format(self.p['vervang']))
-            if self.p['extlist']:
-                if len(self.p['extlist']) > 1:
-                    typs = " en ".join((", ".join(self.p['extlist'][:-1]),
-                                        self.p['extlist'][-1]))
-                else:
-                    typs = self.p['extlist'][0]
-                specs.append(" in bestanden van type {}".format(typs))
-            self.filenames = []
-            self.dirnames = set()
-            if self.p['pad']:
-                specs.append(" in {}".format(self.p['pad']))
-                self.subdirs(self.p['pad'])
+                typs = self.p['extlist'][0]
+            specs.append(" in bestanden van type {}".format(typs))
+        self.filenames = []
+        self.dirnames = set()
+        if self.p['pad']:
+            specs.append(" in {}".format(self.p['pad']))
+            self.subdirs(self.p['pad'])
+        else:
+            if len(self.p['filelist']) == 1:
+                specs.append(" in {}".format(self.p['filelist'][0]))
             else:
-                if len(self.p['filelist']) == 1:
-                    specs.append(" in {}".format(self.p['filelist'][0]))
-                else:
-                    specs.append(" in opgegeven bestanden/directories")
-                for entry in self.p['filelist']:
-                    ## self.subdirs(entry, is_list=False)
-                    self.subdirs(entry)
-            if self.p['subdirs']:
-                specs.append(" en onderliggende directories")
-            self.rpt.insert(0, "".join(specs))
-            self.specs = specs
+                specs.append(" in opgegeven bestanden/directories")
+            for entry in self.p['filelist']:
+                ## self.subdirs(entry, is_list=False)
+                self.subdirs(entry)
+        if self.p['subdirs']:
+            specs.append(" en onderliggende directories")
+        self.rpt.insert(0, "".join(specs))
+        self.specs = specs
 
     ## def subdirs(self, pad, is_list=True, level=0):
     def subdirs(self, pad, level=0):
