@@ -167,7 +167,7 @@ class Finder(object):
                 return
         ## if is_list:
         try:
-            _list = (os.path.join(pad, fname) for fname in os.listdir(pad))
+            _list = (fname.path for fname in os.scandir(pad))
         except NotADirectoryError:
             _list = [pad]
         except PermissionError:
