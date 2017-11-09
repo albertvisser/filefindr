@@ -25,6 +25,7 @@ class SelectNames(qtw.QDialog):
 
         if files:
             text = "Selecteer de bestanden die je *niet* wilt verwerken"
+            self.names = {str(x): x for x in self.parent.names}
         else:
             text = "Selecteer de directories die je *niet* wilt verwerken"
         txt = qtw.QLabel(text, self)
@@ -47,7 +48,10 @@ class SelectNames(qtw.QDialog):
         fvbox = qtw.QVBoxLayout()
         self.checklist = []
         for item in self.parent.names:
-            cb = qtw.QCheckBox(item, frm)
+            if files:
+                cb = qtw.QCheckBox(str(item), frm)
+            else:
+                cb = qtw.QCheckBox(item, frm)
             fhbox = qtw.QHBoxLayout()
             fhbox.addWidget(cb)
             self.checklist.append(cb)
@@ -91,10 +95,12 @@ class SelectNames(qtw.QDialog):
         for cb in self.checklist:
             if cb.isChecked():
                 if self.dofiles:
-                    self.parent.names.remove(cb.text())
+                    self.names.pop(cb.text())
                 else:
                     dirs.append(cb.text())
-        if not self.dofiles:
+        if self.dofiles:
+            self.parent.names = [self.names[x] for x in sorted(self.names.keys())]
+        else:
             self.parent.names = dirs
         super().accept()
 
@@ -194,7 +200,7 @@ class Results(qtw.QDialog):
                     else:
                         where = ""
                 if self.common:
-                    where = where.replace(self.common, "")
+                    where = where.replace(str(self.common), "")
                 if self.show_context:
                     where, rest = where.rsplit(' (', 1)
                     context = rest.split(')')[0]
@@ -281,7 +287,7 @@ class Results(qtw.QDialog):
         dlg = qtw.QFileDialog.getSaveFileName(
             self,
             "Resultaat naar bestand kopieren",
-            os.path.join(self.parent.hier, f_nam),
+            str(self.parent.hier / f_nam),
             "Text files (*.txt);;All files (*.*)", )
         if not dlg[0]:
             return
@@ -363,7 +369,7 @@ class MainFrame(qtw.QWidget, ABase):
             self._vervleeg)
 
         if self.apptype == "":
-            initial = self.fnames[0] if self.fnames else ''
+            initial = str(self.fnames[0]) if self.fnames else ''
             self.zoek = qtw.QPushButton("&Zoek")
             self.zoek.clicked.connect(self.zoekdir)
             self.vraag_dir = self.add_combobox_row(
@@ -378,7 +384,7 @@ class MainFrame(qtw.QWidget, ABase):
             self.row += 1
             self.grid.addWidget(qtw.QLabel("In file/directory:"), self.row, 0)
             box = qtw.QHBoxLayout()
-            box.addWidget(qtw.QLabel(self.fnames[0]))
+            box.addWidget(qtw.QLabel(str(self.fnames[0])))
             box.addStretch()
             self.grid.addLayout(box, self.row, 1)
 
@@ -388,10 +394,10 @@ class MainFrame(qtw.QWidget, ABase):
                                 self.row, 0, 1, 2)
             self.row += 1
             self.lb = qtw.QListWidget(self)
-            self.lb.insertItems(0, self.fnames)
+            self.lb.insertItems(0, [str(x) for x in self.fnames])
             self.grid.addWidget(self.lb, self.row, 0, 1, 2)
 
-        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+        if self.apptype != "single" or self.fnames[0].is_dir():
             txt = "van geselecteerde directories " if self.apptype == "multi" else ""
             self.vraag_subs = self.add_checkbox_row(
                 txt + "ook subdirectories doorzoeken",
@@ -525,7 +531,7 @@ class MainFrame(qtw.QWidget, ABase):
         if self.apptype == 'single':
             test = self.fnames[0]
         elif self.apptype == 'multi':
-            test = os.path.commonpath(self.fnames)
+            test = os.path.commonpath([str(x) for x in self.fnames])
             ## if test in self.fnames:
                 ## pass
             ## else:
@@ -549,15 +555,15 @@ class MainFrame(qtw.QWidget, ABase):
                            self.vraag_leeg.isChecked())
             self.checkattr(self.vraag_regex.isChecked(), self.vraag_case.isChecked(),
                            self.vraag_woord.isChecked())
-            if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+            if self.apptype != "single" or self.fnames[0].is_dir():
                 self.checktype(str(self.vraag_types.currentText()))
             if not self.apptype:
                 mld = self.checkpath(str(self.vraag_dir.currentText()))
         if not mld:
-            if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+            if self.apptype != "single" or self.fnames[0].is_dir():
                 self.checksubs(self.vraag_subs.isChecked(),
                                self.vraag_links.isChecked(), self.vraag_diepte.value())
-            elif self.apptype == "single" and os.path.islink(self.fnames[0]):
+            elif self.apptype == "single" and self.fnames[0].is_symlink():
                 self.p["follow_symlinks"] = True
         self.p["backup"] = self.vraag_backup.isChecked()
         self.p["context"] = self.vraag_context.isChecked()
@@ -569,7 +575,7 @@ class MainFrame(qtw.QWidget, ABase):
 
         self.vraag_zoek.insertItem(0, item)
         if not self.extraopts['dont_save']:
-            loc = self.p.get('pad', '') or os.path.dirname(self.p['filelist'][0])
+            loc = self.p.get('pad', '') or str(self.p['filelist'][0].parent)
             self.schrijfini(loc)
         self.zoekvervang = Finder(**self.p)
 
@@ -585,7 +591,7 @@ class MainFrame(qtw.QWidget, ABase):
 
         common_part = self.determine_common()
         if self.apptype == "single" or (
-                len(self.fnames) == 1 and os.path.isfile(self.fnames[0])):
+                len(self.fnames) == 1 and self.fnames[0].is_file()):
             pass
         else:
             go_on = self.ask_skipdirs.isChecked() or self.ask_skipfiles.isChecked()
@@ -601,15 +607,16 @@ class MainFrame(qtw.QWidget, ABase):
                             break
                         # tweede ronde: toon de files die overblijven
                         fnames = self.zoekvervang.filenames[:]
-                        for fname in fnames:
+                        for entry in fnames:
                             for name in self.names:
-                                if fname.startswith(name + '/'):
-                                    self.zoekvervang.filenames.remove(fname)
+                                if str(entry).startswith(name + '/'):
+                                    self.zoekvervang.filenames.remove(entry)
                                     break
                         if not self.ask_skipfiles.isChecked():
                             go_on = False
                 if self.ask_skipfiles.isChecked():
-                    self.names = sorted(self.zoekvervang.filenames)
+                    self.names = sorted(self.zoekvervang.filenames, key=lambda x:
+                        str(x))
                     dlg = SelectNames(self).exec_()
                     if dlg == qtw.QDialog.Rejected and not self.ask_skipdirs.isChecked():
                         canceled = True

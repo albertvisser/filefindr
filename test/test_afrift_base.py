@@ -13,7 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.FileHandler(str(HERE / 'test_abase.log'), mode="w"))
 logger.setLevel(logging.DEBUG)
-from afrift_base import ABase
+from afrift.afrift_base import ABase
 
 
 def lees_ini():
@@ -40,7 +40,7 @@ def test_abase(parent=None, apptype="", fnaam=""):
     """test routine
     """
     logger.info("\ntesting Abase with apptype = %s, filename = %s", apptype, fnaam)
-    abase = ABase(parent, apptype, fnaam)
+    abase = ABase(parent=parent, apptype=apptype, fnaam=fnaam)
     logger.info(pprint.pformat(abase.__dict__))
     if not abase.pickled:
         logger.info('Settings in oud formaat, konden niet gelezen worden')

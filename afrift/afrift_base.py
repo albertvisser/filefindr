@@ -51,10 +51,10 @@ class ABase(object):
     def __init__(self, **kwargs):
         """attributen die altijd nodig zijn
 
-        self.pickled geeft aan of bij het op de nieuwe manier (met pickle) lezen
+        self.pickled geeft aan of het op de nieuwe manier (met pickle) lezen
         van de mru-settings gelukt is of niet.
         """
-        log('in init van mixin: cwd is {}'.format(os.getcwd()))
+        log('in init van mixin: cwd is {}'.format(pathlib.Path.cwd()))
         log('kwargs is {}'.format(kwargs))
         apptype = kwargs.pop('apptype', '')
         fnaam = kwargs.pop('fnaam', '')
@@ -65,44 +65,41 @@ class ABase(object):
         self.apptype = apptype
         self.hier = ""
         self._mru_items = {}
-        if self.apptype == "" and os.path.exists(fnaam) and not os.path.isdir(fnaam):
+        fnaam_given = bool(fnaam)
+        fnaam = pathlib.Path(fnaam).expanduser().resolve()
+        if self.apptype == "" and fnaam.exists() and not fnaam.is_dir():
             self.apptype = 'single'
         if self.apptype == "":
             self.fnames = []
-            self.hier = os.getcwd()
-            if fnaam.startswith('...'):
-                pass
-            elif fnaam.startswith('..'):
-                fnaam = fnaam.replace('..', os.path.dirname(self.hier), 1)
-            elif fnaam.startswith('.'):
-                fnaam = fnaam.replace('.', self.hier, 1)
-            elif fnaam.startswith('~'):
-                fnaam = os.path.expanduser(fnaam)
-            if fnaam:
+            self.hier = pathlib.Path.cwd()  # os.getcwd()
+            if fnaam_given:
                 self.fnames = [fnaam]
+                self.hier = fnaam.parent
         elif self.apptype == "single":
             self.title += " - single file version"
-            if not fnaam:
+            if not fnaam_given:
                 raise ValueError('Need filename for application type "single"')
+            fnaam = pathlib.Path(fnaam).expanduser().resolve()
             self.fnames = [fnaam]
-            self.hier = os.path.dirname(fnaam)
+            self.hier = fnaam.parent
         elif self.apptype == "multi":
             self.title += " - file list version"
             self.fnames = []
-            if fnaam:
-                try:
-                    with open(fnaam) as f_in:
+            if fnaam_given:
+                if fnaam.is_dir:
+                    self.fnames = [fnaam]
+                else:
+                    with fnaam.open() as f_in:
                         for line in f_in:
                             line = line.strip()
+                            if line.endswith("\\") or line.endswith("/"):
+                                line = line[:-1]
+                            line = pathlib.Path(line).expanduser().resolve()
                             if not self.hier:
-                                if line.endswith("\\") or line.endswith("/"):
-                                    line = line[:-1]
-                                self.hier = os.path.dirname(line)
+                                self.hier = line.parent
                             self.fnames.append(line)
-                except IsADirectoryError:
-                    self.fnames = [fnaam]
             elif flist:
-                self.fnames = flist
+                self.fnames = [pathlib.Path(x) for x in flist]
             else:
                 raise ValueError('Need filename or list of files for application '
                                  'type "multi"')
@@ -112,10 +109,6 @@ class ABase(object):
         self.p = {'filelist': []}
         if len(self.fnames) > 0:
             self.p["filelist"] = self.fnames
-        for ix, name in enumerate(self.fnames):
-            if name.endswith("\\") or name.endswith("/"):
-                name = name[:-1]
-            self.fnames[ix] = os.path.abspath(name)
         self._keys = ("zoek", "verv", "types", "dirs")
         for key in self._keys:
             self._mru_items[key] = []
@@ -128,9 +121,9 @@ class ABase(object):
         self._options = ("matchcase", "matchwords", "searchsubdirs", "showcontext")
         if self.p['filelist']:
             if self.apptype == 'single':
-                self.readini(pathlib.Path(self.p['filelist'][0]).parent)
+                self.readini(self.p['filelist'][0].parent)
             elif self.apptype == 'multi':
-                self.readini(os.path.commonpath(self.p['filelist']))
+                self.readini(os.path.commonpath([str(x) for x in self.p['filelist']]))
             else:
                 self.readini(self.p['filelist'][0])
         else:
@@ -192,14 +185,14 @@ class ABase(object):
                     'dont_save',
                     'no_gui',
                     'output_file'):
-            self.extraopts[arg] = kwargs.pop(arg)
+            self.extraopts[arg] = kwargs.pop(arg, '')
         if not self.extraopts['use_saved']:
             for arg, key in (('case_sensitive', "case"),
                              ('whole_words', "woord"),
                              ('recursive', "subdirs"),
                              ('python_context', "context"), ):
-                self.p[key] = kwargs.pop(arg)
-        self._backup = kwargs.pop('backup_originals')
+                self.p[key] = kwargs.pop(arg, '')
+        self._backup = kwargs.pop('backup_originals', '')
         self._exit_when_ready = True
 
     def schrijfini(self, path=None):
@@ -285,7 +278,7 @@ class ABase(object):
         if not item:
             mld = ("Ik wil wel graag weten in welke directory ik moet "
                    "(beginnen met) zoeken")
-        elif not os.path.exists(item):
+        elif not pathlib.Path(item).exists():
             mld = "De opgegeven directory bestaat niet"
         else:
             mld = ""

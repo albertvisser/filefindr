@@ -5,6 +5,7 @@ de uitvoering wordt gestuurd door in een dictionary verzamelde parameters"""
 
 from __future__ import print_function
 import os
+import pathlib
 import re
 import shutil
 import collections
@@ -13,15 +14,15 @@ contains_default = 'module level code'
 special_chars = ('.', '^', '$', '*', '+', '?', '{', '}', '[', ']', '(', ')', '|', '\\')
 
 
-def pyread(fname, fallback_encoding):
+def pyread(file, fallback_encoding):
     """context-aware search in Python files
     """
     try:
-        with open(fname) as f_in:
+        with file.open() as f_in:
             lines = f_in.readlines()
     except UnicodeDecodeError:
         try:
-            with open(fname, "r", encoding=fallback_encoding) as f_in:
+            with file.open("r", encoding=fallback_encoding) as f_in:
                 lines = f_in.readlines()
         except UnicodeDecodeError:
             return
@@ -42,7 +43,8 @@ def pyread(fname, fallback_encoding):
             constructs.append(in_construct + [construct])
         if test.startswith('def ') or test.startswith('class '):
             words = test.split()
-            construct = (indentpos, words[0], words[1].split(':')[0].split('(')[0], lineno)
+            construct = (indentpos, words[0],
+                         words[1].split(':')[0].split('(')[0], lineno)
             in_construct.append(construct)
         prev_lineno = lineno
     indentpos = 0
@@ -91,8 +93,7 @@ class Finder(object):
                 self.p[x] = parms[x]
             else:
                 raise TypeError('Onbekende optie ' + x)
-        ## print self.p
-        ## sys.exit()
+        ## print('On creating Finder instance:', self.p)
         self.ok = True
         self.rpt = []  # oorspronkelijk: verslag van wat er gebeurd is
         self.use_complex = True
@@ -143,7 +144,7 @@ class Finder(object):
                 ## self.subdirs(entry, is_list=False)
                 self.subdirs(entry)
         if self.p['subdirs']:
-            specs.append(" en onderliggende directories")
+            specs.append(" en evt. onderliggende directories")
         self.rpt.insert(0, "".join(specs))
         self.specs = specs
 
@@ -159,29 +160,41 @@ class Finder(object):
         (misschien is dat recent veranderd) daarom is deze verwijderd en is de
         except NotADirectoryError toegevoegd
         """
-        if os.path.isdir(pad):
+        path = pad
+        try:
+            test = path.name
+        except AttributeError:
+            path = pathlib.Path(pad)
+        else:
+            pad = str(path)
+        if path.is_dir():
             self.dirnames.add(pad)
+
         if self.p["maxdepth"] != -1:
             level += 1
             if level > self.p["maxdepth"]:
                 return
         ## if is_list:
         try:
-            _list = (fname.path for fname in os.scandir(pad))
+            _list = (fname for fname in os.scandir(pad))
         except NotADirectoryError:
-            _list = [pad]
-        except PermissionError:
+            _list = [path]
+        except PermissionError:     # , FileNotFoundError
             _list = []
         ## else:
             ## _list = (pad,)
         for entry in _list:
-            if os.path.isdir(entry):
+            if entry.is_dir():
                 if self.p['subdirs']:
-                    self.subdirs(entry, level=level)
-            elif os.path.islink(entry) and not self.p['follow_symlinks']:
+                    self.subdirs(entry.path, level=level)
+            elif entry.is_symlink() and not self.p['follow_symlinks']:
                 pass
             else:
-                _, ext = os.path.splitext(entry)
+                try:
+                    ext = entry.suffix
+                except AttributeError:
+                    entry = pathlib.Path(entry.path)
+                    ext = entry.suffix
                 if len(self.p['extlist']) == 0 or ext.upper() in self.extlist_upper:
                     self.filenames.append(entry)
 
@@ -279,17 +292,17 @@ class Finder(object):
     def do_action(self, search_python=False):
         """start the search
         """
-        for name in self.filenames:
-            self.zoek(name)
+        for entry in self.filenames:
+            self.zoek(entry)
         if not search_python:
             return
         results, self.rpt = self.rpt, []
         locations = {}
-        for name in self.filenames:
-            if os.path.splitext(name)[1] in ('.py', '.pyw'):
-                locations[name] = pyread(name, self.p['fallback_encoding'])
+        for entry in self.filenames:
+            if entry.suffix in ('.py', '.pyw'):
+                locations[str(entry)] = pyread(entry, self.p['fallback_encoding'])
             else:
-                locations[name] = []
+                locations[str(entry)] = []
         for item in results:
             test = item.split(' r. ', 1)
             if len(test) == 1:
@@ -317,7 +330,7 @@ class Finder(object):
         pos, lines, regels = 0, [], []
         msg = ""
         try_again = False
-        with open(best, "r") as f_in:
+        with best.open("r") as f_in:
             try:
                 for x in f_in:
                     lines.append(pos)
@@ -328,7 +341,7 @@ class Finder(object):
                 try_again = True
         if try_again:
             pos, lines, regels = 0, [], []
-            with open(best, "r", encoding=self.p['fallback_encoding']) as f_in:
+            with best.open("r", encoding=self.p['fallback_encoding']) as f_in:
                 try:
                     for x in f_in:
                         lines.append(pos)

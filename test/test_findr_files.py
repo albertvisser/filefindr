@@ -89,6 +89,6 @@ def test_findr_complex():
         ## do_stuff(use_this, regexp=True)
 
 if __name__ == '__main__':
-    ## test_findr()
+    test_findr()
     ## test_findr_complex()
-    test_findr_pyzoek()
+    ## test_findr_pyzoek()
