@@ -115,7 +115,7 @@ class ABase(object):
         self._optionskey = "options"
         self._sections = ('zoek', 'vervang', 'filetypes', 'dirs')
         self._words = ('woord', 'woord', 'spec', 'pad', )
-        self._optkeys = ("case", "woord", "subdirs", "context")
+        self._optkeys = ("case", "woord", "subdirs", "context", "negeer")
         for key in self._optkeys:
             self.p[key] = False
         self._options = ("matchcase", "matchwords", "searchsubdirs", "showcontext")

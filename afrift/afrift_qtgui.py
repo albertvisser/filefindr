@@ -423,6 +423,8 @@ class MainFrame(qtw.QWidget, ABase):
 
         self.vraag_context = self.add_checkbox_row(
             "context tonen (waar mogelijk, anders overslaan)", self.p["context"])
+        self.vraag_uitsluit = self.add_checkbox_row(
+            "commentaren en docstrings negeren", self.p["negeer"], indent=22)
         self.vraag_backup = self.add_checkbox_row(
             "gewijzigd(e) bestand(en) backuppen", self._backup)
         self.vraag_exit = self.add_checkbox_row(
@@ -475,7 +477,7 @@ class MainFrame(qtw.QWidget, ABase):
             self.grid.addWidget(cb, self.row, 1)
         return cb
 
-    def add_checkbox_row(self, text, toggler=None, spinner=None):
+    def add_checkbox_row(self, text, toggler=None, spinner=None, indent=0):
         """create a row of widgets in the GUI
         """
         self.row += 1
@@ -486,6 +488,12 @@ class MainFrame(qtw.QWidget, ABase):
             box = qtw.QHBoxLayout()
             box.addWidget(cb)
             box.addWidget(spinner)
+            box.addStretch()
+            self.grid.addLayout(box, self.row, 1)
+        elif indent:
+            box = qtw.QHBoxLayout()
+            box.addSpacing(indent)
+            box.addWidget(cb)
             box.addStretch()
             self.grid.addLayout(box, self.row, 1)
         else:
@@ -566,6 +574,7 @@ class MainFrame(qtw.QWidget, ABase):
             elif self.apptype == "single" and self.fnames[0].is_symlink():
                 self.p["follow_symlinks"] = True
         self.p["backup"] = self.vraag_backup.isChecked()
+        self.p["negeer"] = self.vraag_uitsluit.isChecked()
         self.p["context"] = self.vraag_context.isChecked()
         self.p["fallback_encoding"] = self._fallback_encoding
 

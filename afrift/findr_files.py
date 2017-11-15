@@ -14,9 +14,30 @@ contains_default = 'module level code'
 special_chars = ('.', '^', '$', '*', '+', '?', '{', '}', '[', ']', '(', ')', '|', '\\')
 
 
-def pyread(file, fallback_encoding):
+def check_single_string(str):
+    test = str[0]
+    while test in ('"', "'"):
+        try:
+            ix = str.index(test, 1)
+        except IndexError:
+            return
+        str = str[ix + 1:].strip()
+        if not str:
+            return True
+        test = str[0]
+    return
+
+
+def pyread(file, fallback_encoding, negeer_docs):
     """context-aware search in Python files
     """
+    def pop_construct(last_line):
+        """if needed, add construct(s) to list
+        """
+        while in_construct and indentpos <= in_construct[-1][0]:
+            construct = list(in_construct.pop())
+            construct.append(last_line)
+            constructs.append(in_construct + [construct])
     try:
         with file.open() as f_in:
             lines = f_in.readlines()
@@ -26,21 +47,39 @@ def pyread(file, fallback_encoding):
                 lines = f_in.readlines()
         except UnicodeDecodeError:
             return
+    itemlist = [(1, len(lines), contains_default)]
     constructs = []
     in_construct = []
+    docstring = ''
+    docstring_start = 0
     indentpos = prev_lineno = 0
     for ix, line in enumerate(lines):
         if line.strip() == "":
             continue
         lineno = ix + 1
         test = line.lstrip()
-        ## indentpos = line.index(test)
-        if test[0] != '#':
+        if test.startswith('#') and negeer_docs:
+            itemlist.append((lineno - 1, lineno, 'comment'))
+            continue
+        else:
             indentpos = line.index(test)
-        while in_construct and indentpos <= in_construct[-1][0]:
-            construct = list(in_construct.pop())
-            construct.append(prev_lineno)
-            constructs.append(in_construct + [construct])
+        if negeer_docs:
+            if docstring and line.rstrip().endswith(docstring):
+                docstring = ''
+                itemlist.append((docstring_start, lineno, "docstring"))
+                continue
+            if test.startswith('"""') or test.startswith("'''"):
+                docstring = test[:3]
+                docstring_start = lineno - 1
+                if line.rstrip().endswith(docstring):
+                    docstring = ''
+                    itemlist.append((docstring_start, lineno, "docstring"))
+                continue
+            if test.startswith('"') or test.startswith("'"):
+                if check_single_string(test.rstrip()):
+                    itemlist.append((lineno - 1, lineno, 'docstring'))
+                    continue
+        pop_construct(prev_lineno)
         if test.startswith('def ') or test.startswith('class '):
             words = test.split()
             construct = (indentpos, words[0],
@@ -48,11 +87,7 @@ def pyread(file, fallback_encoding):
             in_construct.append(construct)
         prev_lineno = lineno
     indentpos = 0
-    while in_construct and indentpos <= in_construct[-1][0]:
-        construct = list(in_construct.pop())
-        construct.append(prev_lineno)
-        constructs.append(in_construct + [construct])
-    itemlist = [(1, len(lines), contains_default)]
+    pop_construct(prev_lineno - 1)
     for item in constructs:
         _, _, _, start, end = item[-1]
         construct = []
@@ -87,7 +122,8 @@ class Finder(object):
             "follow_symlinks": False,
             "maxdepth": 5,
             "fallback_encoding": 'ascii',
-            "context": False, }
+            "context": False,
+            "negeer": False, }
         for x in parms:
             if x in self.p:
                 self.p[x] = parms[x]
@@ -300,7 +336,8 @@ class Finder(object):
         locations = {}
         for entry in self.filenames:
             if entry.suffix in ('.py', '.pyw'):
-                locations[str(entry)] = pyread(entry, self.p['fallback_encoding'])
+                locations[str(entry)] = pyread(entry, self.p['fallback_encoding'],
+                                               self.p['negeer'])
             else:
                 locations[str(entry)] = []
         for item in results:
@@ -321,9 +358,11 @@ class Finder(object):
                 lineno = int(lineno)
                 if loc[0] < lineno <= loc[1]:
                     contains = loc[2]
-                if loc[0] > lineno:
+                if loc[0] > lineno or contains == 'docstring':
                     break
-            self.rpt.append('{} r. {} ({}): {}'.format(best, lineno, contains, text))
+            if contains not in ('comment', 'docstring'):
+                self.rpt.append('{} r. {} ({}): {}'.format(best, lineno, contains,
+                                                           text))
 
     def zoek(self, best):
         "het daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
