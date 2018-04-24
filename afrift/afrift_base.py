@@ -83,10 +83,9 @@ class ABase(object):
             self.fnames = [fnaam]
             self.hier = fnaam.parent
         elif self.apptype == "multi":
-            self.title += " - file list version"
             self.fnames = []
             if fnaam_given:
-                if fnaam.is_dir:
+                if fnaam.is_dir():
                     self.fnames = [fnaam]
                 else:
                     with fnaam.open() as f_in:
@@ -99,6 +98,7 @@ class ABase(object):
                                 self.hier = line.parent
                             self.fnames.append(line)
             elif flist:
+                print('flist given:', flist)
                 self.fnames = [pathlib.Path(x) for x in flist]
             else:
                 raise ValueError('Need filename or list of files for application '
