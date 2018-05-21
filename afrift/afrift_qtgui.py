@@ -79,13 +79,15 @@ class SelectNames(qtw.QDialog):
         self.setLayout(vbox)
 
     def select_all(self):
-        ""
+        """check or uncheck all boxes
+        """
         state = self.sel_all.isChecked()
         for cb in self.checklist:
             cb.setChecked(state)
 
     def invert_selection(self):
-        ""
+        """check unchecked and uncheck checked boxes
+        """
         for cb in self.checklist:
             cb.setChecked(not cb.isChecked())
 
@@ -121,70 +123,79 @@ class Results(qtw.QDialog):
         self.setWindowIcon(gui.QIcon(iconame))
         vbox = qtw.QVBoxLayout()
 
+        label_only = self.parent.p['vervang'] and self.parent.apptype == 'single'
         hbox = qtw.QHBoxLayout()
-        label_txt = "{} ({} items)".format(self.parent.zoekvervang.rpt[0],
-                                           len(self.parent.zoekvervang.rpt) - 1)
-        if self.parent.apptype == "multi":
-            label_txt += '\n' + common_path_txt.format(self.common.rstrip(os.sep))
+        if label_only:
+            aantal = self.parent.zoekvervang.rpt[1].split(None, 1)[1]
+            label_txt = self.parent.zoekvervang.rpt[0]
+            label_txt = label_txt.replace('vervangen', aantal + ' vervangen')
+        else:
+            label_txt = "{} ({} items)".format(self.parent.zoekvervang.rpt[0],
+                                               len(self.parent.zoekvervang.rpt) - 1)
+            if self.parent.apptype == "multi":
+                label_txt += '\n' + common_path_txt.format(self.common.rstrip(os.sep))
         self.txt = qtw.QLabel(label_txt, self)
         hbox.addWidget(self.txt)
         vbox.addLayout(hbox)
 
-        hbox = qtw.QHBoxLayout()
-        self.lijst = qtw.QTableWidget(self)
-        self.lijst.verticalHeader().setVisible(False)
-        self.lijst.setGridStyle(core.Qt.NoPen)
-        if self.show_context:
-            self.lijst.setColumnCount(3)
-            self.lijst.setColumnWidth(1, 200)
-            self.lijst.setColumnWidth(2, 340)
-            self.lijst.setHorizontalHeaderLabels((titel, 'Context', 'Tekst'))
-        else:
-            self.lijst.setColumnCount(2)
-            self.lijst.setColumnWidth(1, 520)
-            self.lijst.setHorizontalHeaderLabels((titel, 'Tekst'))
-        self.lijst.setColumnWidth(0, breedte)
-        self.lijst.horizontalHeader().setStretchLastSection(True)
-        self.populate_list()
-        self.lijst.cellDoubleClicked[int, int].connect(self.goto_result)
-        act = qtw.QAction('Help', self)
-        act.setShortcut('F1')
-        act.triggered.connect(self.help)
-        self.addAction(act)
-        act = qtw.QAction('Goto Result', self)
-        act.setShortcut('Ctrl+G')
-        act.triggered.connect(self.to_result)
-        self.addAction(act)
-        hbox.addWidget(self.lijst)
-        vbox.addLayout(hbox)
+        if not label_only:
+            hbox = qtw.QHBoxLayout()
+            self.lijst = qtw.QTableWidget(self)
+            self.lijst.verticalHeader().setVisible(False)
+            self.lijst.setGridStyle(core.Qt.NoPen)
+            if self.show_context:
+                self.lijst.setColumnCount(3)
+                self.lijst.setColumnWidth(1, 200)
+                self.lijst.setColumnWidth(2, 340)
+                self.lijst.setHorizontalHeaderLabels((titel, 'Context', 'Tekst'))
+            else:
+                self.lijst.setColumnCount(2)
+                self.lijst.setColumnWidth(1, 520)
+                self.lijst.setHorizontalHeaderLabels((titel, 'Tekst'))
+            self.lijst.setColumnWidth(0, breedte)
+            self.lijst.horizontalHeader().setStretchLastSection(True)
+            self.populate_list()
+            self.lijst.cellDoubleClicked[int, int].connect(self.goto_result)
+            act = qtw.QAction('Help', self)
+            act.setShortcut('F1')
+            act.triggered.connect(self.help)
+            self.addAction(act)
+            act = qtw.QAction('Goto Result', self)
+            act.setShortcut('Ctrl+G')
+            act.triggered.connect(self.to_result)
+            self.addAction(act)
+            hbox.addWidget(self.lijst)
+            vbox.addLayout(hbox)
 
         hbox = qtw.QHBoxLayout()
         hbox.addStretch(1)
         btn = qtw.QPushButton("&Klaar", self)
         btn.clicked.connect(self.klaar)
         hbox.addWidget(btn)
-        btn = qtw.QPushButton("&Repeat Search", self)
-        btn.clicked.connect(self.refresh)
-        if self.parent.p['vervang']:
-            btn.setEnabled(False)
-        hbox.addWidget(btn)
-        btn = qtw.QPushButton("Copy to &File", self)
-        btn.clicked.connect(self.kopie)
-        hbox.addWidget(btn)
-        btn = qtw.QPushButton("Copy to &Clipboard", self)
-        btn.clicked.connect(self.to_clipboard)
-        hbox.addWidget(btn)
-        self.cb = qtw.QCheckBox("toon directorypad in uitvoer", self)
-        if self.parent.apptype == "single":
-            self.cb.setEnabled(False)
-        hbox.addWidget(self.cb)
-        self.cb2 = qtw.QCheckBox("comma-delimited", self)
-        hbox.addWidget(self.cb2)
-        hbox.addStretch(1)
+        if not label_only:
+            btn = qtw.QPushButton("&Repeat Search", self)
+            btn.clicked.connect(self.refresh)
+            if self.parent.p['vervang']:
+                btn.setEnabled(False)
+            hbox.addWidget(btn)
+            btn = qtw.QPushButton("Copy to &File", self)
+            btn.clicked.connect(self.kopie)
+            hbox.addWidget(btn)
+            btn = qtw.QPushButton("Copy to &Clipboard", self)
+            btn.clicked.connect(self.to_clipboard)
+            hbox.addWidget(btn)
+            self.cb = qtw.QCheckBox("toon directorypad in uitvoer", self)
+            if self.parent.apptype == "single":
+                self.cb.setEnabled(False)
+            hbox.addWidget(self.cb)
+            self.cb2 = qtw.QCheckBox("comma-delimited", self)
+            hbox.addWidget(self.cb2)
+            hbox.addStretch(1)
         vbox.addLayout(hbox)
 
         self.setLayout(vbox)
-        self.resize(574 + breedte, 480)
+        if not label_only:
+            self.resize(574 + breedte, 480)
 
     def populate_list(self):
         """copy results to listbox
@@ -527,7 +538,6 @@ class MainFrame(qtw.QWidget, ABase):
             self.vraag_subs.setChecked(self.p["subdirs"])
             self.vraag_context.setChecked(self.p["context"])
 
-
     def keyPressEvent(self, event):
         """event handler voor toetsaanslagen"""
         if event.key() == core.Qt.Key_Escape:
@@ -547,7 +557,7 @@ class MainFrame(qtw.QWidget, ABase):
                     ## test = test[:-1]
             # make sure common part is a directory
             if os.path.isfile(test):
-                test = os.dirname(test) + os.sep
+                test = os.path.dirname(test) + os.sep
             else:
                 test += os.sep
         else:
@@ -624,8 +634,8 @@ class MainFrame(qtw.QWidget, ABase):
                         if not self.ask_skipfiles.isChecked():
                             go_on = False
                 if self.ask_skipfiles.isChecked():
-                    self.names = sorted(self.zoekvervang.filenames, key=lambda x:
-                        str(x))
+                    self.names = sorted(self.zoekvervang.filenames,
+                                        key=lambda x: str(x))
                     dlg = SelectNames(self).exec_()
                     if dlg == qtw.QDialog.Rejected and not self.ask_skipdirs.isChecked():
                         canceled = True

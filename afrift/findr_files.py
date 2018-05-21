@@ -14,17 +14,19 @@ contains_default = 'module level code'
 special_chars = ('.', '^', '$', '*', '+', '?', '{', '}', '[', ']', '(', ')', '|', '\\')
 
 
-def check_single_string(str):
-    test = str[0]
+def check_single_string(inp):
+    """inspect single (doc)string
+    """
+    test = inp[0]
     while test in ('"', "'"):
         try:
-            ix = str.index(test, 1)
+            ix = inp.index(test, 1)
         except IndexError:
             return
-        str = str[ix + 1:].strip()
-        if not str:
+        inp = inp[ix + 1:].strip()
+        if not inp:
             return True
-        test = str[0]
+        test = inp[0]
     return
 
 
@@ -423,11 +425,12 @@ class Finder(object):
                     break
         if found and self.p['wijzig']:
             ndata, aant = self.rgx.subn(self.p["vervang"], data)
-            self.rpt.append("%s: %s times" % (best, aant))
+            best_s = str(best)
+            self.rpt.append("%s: %s keer" % (best_s, aant))
             if self.p['backup']:
-                bestnw = best + ".bak"
-                shutil.copyfile(best, bestnw)
-            with open(best, "w") as f_out:
+                bestnw = best_s + ".bak"
+                shutil.copyfile(best_s, bestnw)
+            with best.open("w") as f_out:
                 f_out.write(ndata)
 
     def complex_search(self, data, lines):
