@@ -210,7 +210,7 @@ class Results(qtw.QDialog):
                         where = where.split("r. ", 1)[1]
                     else:
                         where = ""
-                if self.common:
+                if self.common and self.common != '/':
                     where = where.replace(str(self.common), "")
                 if self.show_context:
                     where, rest = where.rsplit(' (', 1)
