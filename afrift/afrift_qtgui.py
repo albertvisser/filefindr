@@ -6,7 +6,7 @@ import subprocess
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
-from .findr_files import Finder
+from .findr_files import Finder, format_result
 from .afrift_base import iconame, ABase, log
 common_path_txt = 'De bestanden staan allemaal in of onder de directory "{}"'
 TXTW = 200
@@ -188,8 +188,13 @@ class Results(qtw.QDialog):
             if self.parent.apptype == "single":
                 self.cb.setEnabled(False)
             hbox.addWidget(self.cb)
+            vbox2 = qtw.QVBoxLayout()
             self.cb2 = qtw.QCheckBox("comma-delimited", self)
-            hbox.addWidget(self.cb2)
+            self.cb3 = qtw.QCheckBox("summarized", self)
+            # hbox.addWidget(self.cb2)
+            vbox2.addWidget(self.cb2)
+            vbox2.addWidget(self.cb3)
+            hbox.addLayout(vbox2)
             hbox.addStretch(1)
         vbox.addLayout(hbox)
 
@@ -247,6 +252,7 @@ class Results(qtw.QDialog):
         """
         toonpad = True if self.cb.isChecked() else False
         comma = True if self.cb2.isChecked() else False
+
         text = ["{}".format(self.results[0])]
         if self.parent.apptype == "multi" and not toonpad:
             text.append(common_path_txt.format(self.common) + '\n')
@@ -263,9 +269,17 @@ class Results(qtw.QDialog):
                 writer.writerow(result)
             else:
                 text.append(" ".join(result))
+
         if comma:
             text = textbuf.getvalue().split("\n")
             textbuf.close()
+
+        if self.cb3.isChecked():
+            context = 'py' if self.show_context else None
+            print(text)
+            text = format_result(text, context)
+            print(text)
+
         return text
 
     def refresh(self):
@@ -287,19 +301,35 @@ class Results(qtw.QDialog):
         self.txt.setText(label_txt)
         self.populate_list()
 
+    def check_option_combinations_ok(self):
+        """onzinnige combinatie(s) uitsluiten
+        """
+        if self.cb2.isChecked() and self.cb3.isChecked():
+            qtw.QMessageBox.information(self, "Fancy Title", "Summarize to comma delimited"
+                                        " is not a sensible option, request denied")
+            return False
+        return True
+
     def kopie(self):
         """callback for button 'Copy to file'
         """
+        if not self.check_option_combinations_ok():
+            return
         f_nam = self.parent.p["zoek"]
         for char in '/\\?%*:|"><.':
             if char in f_nam:
                 f_nam = f_nam.replace(char, "~")
-        f_nam = f_nam.join(("files containing ", ".txt"))
-        dlg = qtw.QFileDialog.getSaveFileName(
-            self,
-            "Resultaat naar bestand kopieren",
-            str(self.parent.hier / f_nam),
-            "Text files (*.txt);;All files (*.*)", )
+        if self.cb2.isChecked():
+            ext = '.csv'
+            f_filter = 'Comma delimited files (*.csv)'
+        else:
+            ext = '.txt'
+            f_filter = 'Text files (*.txt)'
+        f_nam = f_nam.join(("files-containing-", ext))
+        dlg = qtw.QFileDialog.getSaveFileName(self,
+                                              "Resultaat naar bestand kopieren",
+                                              str(self.parent.hier / f_nam),
+                                              "{};;All files (*.*)".format(f_filter))
         if not dlg[0]:
             return
         with open(dlg[0], "w") as f_out:
@@ -318,6 +348,8 @@ class Results(qtw.QDialog):
     def to_clipboard(self):
         """callback for button 'Copy to clipboard'
         """
+        if not self.check_option_combinations_ok():
+            return
         clp = qtw.QApplication.clipboard()
         clp.setText('\n'.join(self.get_results()))
 

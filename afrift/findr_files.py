@@ -14,6 +14,63 @@ contains_default = 'module level code'
 special_chars = ('.', '^', '$', '*', '+', '?', '{', '}', '[', ']', '(', ')', '|', '\\')
 
 
+def determine_split_none(words):
+    """determine word number to split on for regular search
+    argument is provided for compatibility with other variants
+    """
+    return 3
+
+
+def determine_split_py(words):
+    """determine word number to split on for python context sensitive search
+    """
+    if words[3] == 'class':
+        end = 5
+        if words[5] == 'method':
+            end = 7
+    elif words[3] == 'function':
+        end = 5
+    else:  # if words == 'module':
+        end = 6
+    return end
+determine_split = {None: determine_split_none,  # dispatch table
+                   "py": determine_split_py}
+
+
+def format_result(lines, context_type=None):
+    """reformat search results
+    """
+    start_splitting = False
+    old_program_file = old_context = ''
+    lines_out = []
+    for line in lines:
+        line = line.strip()
+        if not start_splitting:
+            if line:
+                lines_out.append(line)
+                start_splitting = True
+            continue
+        words = line.split()
+        program_file = words[0]
+        location = ' '.join(words[1:3])
+
+        end = determine_split[context_type](words)
+        context = ' '.join(words[3:end]) if end > 3 else ''
+
+        split_on = words[end - 1]
+        statement = line.split(split_on, 1)[1]
+        if program_file != old_program_file:
+            if old_program_file:
+                lines_out.append('')
+            old_program_file = program_file
+            lines_out.append(program_file)
+        if context and context != old_context:
+            old_context = context
+            lines_out.append(context)
+        lines_out.append(': '.join((location, statement)))
+    return lines_out
+
+
 def check_single_string(inp):
     """inspect single (doc)string
     """
