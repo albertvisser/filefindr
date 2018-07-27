@@ -98,7 +98,6 @@ class ABase(object):
                                 self.hier = line.parent
                             self.fnames.append(line)
             elif flist:
-                print('flist given:', flist)
                 self.fnames = [pathlib.Path(x) for x in flist]
             else:
                 raise ValueError('Need filename or list of files for application '
