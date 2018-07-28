@@ -48,6 +48,7 @@ def format_result(lines, context_type=None):
         if not start_splitting:
             if line:
                 lines_out.append(line)
+            else:
                 start_splitting = True
             continue
         words = line.split()
@@ -59,12 +60,14 @@ def format_result(lines, context_type=None):
 
         split_on = words[end - 1]
         statement = line.split(split_on, 1)[1]
+        source_changed = False
         if program_file != old_program_file:
+            source_changed = True
             if old_program_file:
                 lines_out.append('')
             old_program_file = program_file
             lines_out.append(program_file)
-        if context and context != old_context:
+        if context and context != old_context or source_changed:
             old_context = context
             lines_out.append(context)
         lines_out.append(': '.join((location, statement)))

@@ -255,7 +255,8 @@ class Results(qtw.QDialog):
 
         text = ["{}".format(self.results[0])]
         if self.parent.apptype == "multi" and not toonpad:
-            text.append(common_path_txt.format(self.common) + '\n')
+            text.append(common_path_txt.format(self.common))
+        text.append("")
         if comma:
             import io
             import csv
@@ -276,9 +277,7 @@ class Results(qtw.QDialog):
 
         if self.cb3.isChecked():
             context = 'py' if self.show_context else None
-            print(text)
             text = format_result(text, context)
-            print(text)
 
         return text
 
