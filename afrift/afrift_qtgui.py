@@ -264,9 +264,11 @@ class Results(qtw.QDialog):
             writer = csv.writer(textbuf, dialect='unix')
         for item in self.results[1:]:
             result = list(item)
-            if toonpad and self.parent.apptype == 'multi':
+            if toonpad and (self.parent.apptype == 'multi' or comma):
                 result[0] = self.common + result[0]
             if comma:
+                loc, line = result[0].rsplit(' r. ', 1)
+                result[:1] = [loc, line]
                 writer.writerow(result)
             else:
                 text.append(" ".join(result))
