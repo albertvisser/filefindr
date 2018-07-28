@@ -63,7 +63,7 @@ class ABase(object):
         self.fouttitel = self.title + "- fout"
         self.resulttitel = self.title + " - Resultaten"
         self.apptype = apptype
-        self.hier = ""
+        self.hier = pathlib.Path.cwd()  # os.getcwd()
         self._mru_items = {}
         fnaam_given = bool(fnaam)
         fnaam = pathlib.Path(fnaam).expanduser().resolve()
@@ -71,17 +71,17 @@ class ABase(object):
             self.apptype = 'single'
         if self.apptype == "":
             self.fnames = []
-            self.hier = pathlib.Path.cwd()  # os.getcwd()
+            # self.hier = pathlib.Path.cwd()  # os.getcwd()
             if fnaam_given:
                 self.fnames = [fnaam]
-                self.hier = fnaam.parent
+                # self.hier = fnaam.parent
         elif self.apptype == "single":
             self.title += " - single file version"
             if not fnaam_given:
                 raise ValueError('Need filename for application type "single"')
             fnaam = pathlib.Path(fnaam).expanduser().resolve()
             self.fnames = [fnaam]
-            self.hier = fnaam.parent
+            # self.hier = fnaam.parent
         elif self.apptype == "multi":
             self.fnames = []
             if fnaam_given:
@@ -94,8 +94,8 @@ class ABase(object):
                             if line.endswith("\\") or line.endswith("/"):
                                 line = line[:-1]
                             line = pathlib.Path(line).expanduser().resolve()
-                            if not self.hier:
-                                self.hier = line.parent
+                            # if not self.hier:
+                            #     self.hier = line.parent
                             self.fnames.append(line)
             elif flist:
                 self.fnames = [pathlib.Path(x) for x in flist]
