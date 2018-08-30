@@ -262,24 +262,40 @@ class Results(qtw.QDialog):
             import csv
             textbuf = io.StringIO()
             writer = csv.writer(textbuf, dialect='unix')
+            header = [('Path/file' if toonpad else 'File'), 'Line', 'Context', 'Result']
         for item in self.results[1:]:
             result = list(item)
+            if self.parent.apptype == 'single':
+                result[0] = ' r. ' + result[0]
             if toonpad and (self.parent.apptype == 'multi' or comma):
                 result[0] = self.common + result[0]
             if comma:
                 loc, line = result[0].rsplit(' r. ', 1)
                 result[:1] = [loc, line]
+                if header and len(header) > len(result):
+                    header[2:] = header[3:]
+                if self.parent.apptype == 'single' and not toonpad:
+                    result = result[1:]
+                    if header:
+                        header = header[1:]
+                if header:
+                    writer.writerow(header)
+                    header = None
                 writer.writerow(result)
             else:
-                text.append(" ".join(result))
+                text.append(" ".join(result).strip())
 
         if comma:
-            text = textbuf.getvalue().split("\n")
+            text += textbuf.getvalue().split("\n")
             textbuf.close()
 
         if self.cb3.isChecked():
             context = 'py' if self.show_context else None
+            if self.parent.apptype == 'single':
+                text = [('{} {}'.format(self.parent.fnames[0], x) if x else '') for x in text]
             text = format_result(text, context)
+            if self.parent.apptype == 'single' and not toonpad:
+                text = [x.replace(str(self.parent.fnames[0]), '', 1).strip() for x in text]
 
         return text
 
