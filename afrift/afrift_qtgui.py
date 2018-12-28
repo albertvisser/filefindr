@@ -184,17 +184,23 @@ class Results(qtw.QDialog):
             btn = qtw.QPushButton("Copy to &Clipboard", self)
             btn.clicked.connect(self.to_clipboard)
             hbox.addWidget(btn)
-            self.cb = qtw.QCheckBox("toon directorypad in uitvoer", self)
+            gbox = qtw.QGridLayout()
+            gbox.addWidget(qtw.QLabel('Formatteer output:', self), 0, 0)
+            self.cb = qtw.QCheckBox("toon directorypad", self)
             if self.parent.apptype == "single":
                 self.cb.setEnabled(False)
-            hbox.addWidget(self.cb)
-            vbox2 = qtw.QVBoxLayout()
+            # hbox.addWidget(self.cb)
+            gbox.addWidget(self.cb, 1, 0)
+            # vbox2 = qtw.QVBoxLayout()
             self.cb2 = qtw.QCheckBox("comma-delimited", self)
             self.cb3 = qtw.QCheckBox("summarized", self)
             # hbox.addWidget(self.cb2)
-            vbox2.addWidget(self.cb2)
-            vbox2.addWidget(self.cb3)
-            hbox.addLayout(vbox2)
+            # vbox2.addWidget(self.cb2)
+            gbox.addWidget(self.cb2, 0, 1)
+            # vbox2.addWidget(self.cb3)
+            gbox.addWidget(self.cb3, 1, 1)
+            # hbox.addLayout(vbox2)
+            hbox.addLayout(gbox)
             hbox.addStretch(1)
         vbox.addLayout(hbox)
 
@@ -397,6 +403,7 @@ class MainFrame(qtw.QWidget, ABase):
         self.app = qtw.QApplication(sys.argv)
         parent = None
         super().__init__(parent, **kwargs)
+        print('MF after init:', self.p['context'])
 
         self.setWindowTitle(self.title)
         self.setWindowIcon(gui.QIcon(iconame))
@@ -481,6 +488,7 @@ class MainFrame(qtw.QWidget, ABase):
             if self.p.get("extlist", ''):
                 self.vraag_types.setEditText(self.p['extlist'])
 
+        print(self.p['context'])
         self.vraag_context = self.add_checkbox_row(
             "context tonen (waar mogelijk, anders overslaan)", self.p["context"])
         self.vraag_uitsluit = self.add_checkbox_row(
@@ -644,7 +652,7 @@ class MainFrame(qtw.QWidget, ABase):
         self.vraag_zoek.insertItem(0, item)
         if not self.extraopts['dont_save']:
             loc = self.p.get('pad', '') or str(self.p['filelist'][0].parent)
-            self.schrijfini(loc)
+            self.schrijfini(os.path.abspath(loc))
         self.zoekvervang = Finder(**self.p)
 
         if not self.zoekvervang.ok:
