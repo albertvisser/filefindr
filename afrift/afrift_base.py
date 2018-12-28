@@ -26,6 +26,7 @@ def log(message):
 
 def get_iniloc(path=None):
     """determine location & filenames for stored settings
+    if given, input should be an absolute path
     """
     path = pathlib.Path(path) if path else pathlib.Path.cwd()
     if path == pathlib.Path.home():
@@ -34,7 +35,7 @@ def get_iniloc(path=None):
         try:
             here = '~' + str(path.relative_to(pathlib.Path.home()))
         except ValueError:
-            here = str(path)[1:]
+            here = str(path.resolve())[1:]
     iniloc = BASE / here.replace('/', '_')
     mrufile = iniloc / 'mru_items.json'
     optsfile = iniloc / 'options.json'
@@ -122,7 +123,8 @@ class ABase(object):
             if self.apptype == 'single':
                 self.readini(self.p['filelist'][0].parent)
             elif self.apptype == 'multi':
-                self.readini(os.path.commonpath([str(x) for x in self.p['filelist']]))
+                test = os.path.commonpath([str(x) for x in self.p['filelist']])
+                self.readini(os.path.abspath(test))
             else:
                 self.readini(self.p['filelist'][0])
         else:
@@ -180,11 +182,11 @@ class ABase(object):
                     'follow_symlinks',
                     'select_subdirs',
                     'select_files',
-                    'use_saved',
                     'dont_save',
                     'no_gui',
                     'output_file'):
             self.extraopts[arg] = kwargs.pop(arg, '')
+        self.extraopts['use_saved'] = kwargs.pop(arg, True)
         if not self.extraopts['use_saved']:
             for arg, key in (('case_sensitive', "case"),
                              ('whole_words', "woord"),
