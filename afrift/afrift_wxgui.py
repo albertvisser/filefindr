@@ -198,15 +198,16 @@ class Results(wx.Dialog):
             wx.MessageBox("Unable to open the clipboard", "Error")
 
 
-class MainFrame(wx.Frame, ABase):
+class MainFrame(ABase, wx.Frame):
     """Hoofdscherm van de applicatie"""
 
-    def __init__(self, parent=None, apptype="", fnaam=""):
-        app = wx.App(redirect=False, filename=os.path.join(os.path.dirname(HERE), 'logs',
-                                                           "afrift_wx.log"))
-        ABase.__init__(self, apptype=apptype, fnaam=fnaam)
-        wx.Frame.__init__(self, parent, wx.ID_ANY, self.title,
+    def __init__(self, **kwargs):  # parent=None, apptype="", fnaam=""):
+        app = wx.App()  # redirect=False, filename=os.path.join(os.path.dirname(HERE), 'logs',
+                        #                                       "afrift_wx.log"))
+        ABase.__init__(self, **kwargs)  # apptype=apptype, fnaam=fnaam)
+        wx.Frame.__init__(self, None, wx.ID_ANY, self.title,
                           style=wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE)
+        # super().__init__(**kwargs)
         self.setupscreen()
         app.MainLoop()
 
@@ -333,7 +334,7 @@ class MainFrame(wx.Frame, ABase):
             gbsizer.Add(t6, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
             hsizer = wx.BoxSizer(wx.HORIZONTAL)
             hsizer.Add(c6, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
-            hsizer.Add(self.Zoek, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 4)
+            hsizer.Add(btn, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 4)
             gbsizer.Add(hsizer, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
         elif self.apptype == "single":
             row += 1
@@ -491,7 +492,3 @@ class MainFrame(wx.Frame, ABase):
             if dlg.ShowModal() == wx.ID_OK:
                 self.vraag_dir.SetValue(dlg.GetPath())
         # dlg.Destroy()
-
-
-if __name__ == "__main__":
-    MainFrame()
