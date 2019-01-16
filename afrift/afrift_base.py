@@ -12,15 +12,20 @@ if not BASE.exists():
     BASE.mkdir()
 HERE = pathlib.Path(__file__).parent  # os.path.dirname(__file__)
 iconame = str(HERE / "find.ico")  # os.path.join(HERE, "find.ico")
-logging.basicConfig(
-    filename=str(HERE.parent / 'logs' / 'afrift.log'),
-    level=logging.DEBUG,
-    format='%(asctime)s %(message)s')
+LOGFILE = HERE.parent / 'logs' / 'afrift.log'
+WANT_LOGGING = 'DEBUG' in os.environ and os.environ["DEBUG"] != "0"
+if WANT_LOGGING:
+    if not LOGFILE.parent.exists():
+        LOGFILE.parent.mkdir()
+    if not LOGFILE.exists():
+        LOGFILE.touch()
+    logging.basicConfig(filename=str(LOGFILE), level=logging.DEBUG,
+                        format='%(asctime)s %(message)s')
 
 
 def log(message):
     "output to log"
-    if 'DEBUG' in os.environ and os.environ["DEBUG"] != "0":
+    if WANT_LOGGING:
         logging.info(message)
 
 
