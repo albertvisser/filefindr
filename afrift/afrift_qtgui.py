@@ -403,7 +403,6 @@ class MainFrame(qtw.QWidget, ABase):
         self.app = qtw.QApplication(sys.argv)
         parent = None
         super().__init__(parent, **kwargs)
-        print('MF after init:', self.p['context'])
 
         self.setWindowTitle(self.title)
         self.setWindowIcon(gui.QIcon(iconame))
@@ -488,7 +487,6 @@ class MainFrame(qtw.QWidget, ABase):
             if self.p.get("extlist", ''):
                 self.vraag_types.setEditText(self.p['extlist'])
 
-        print(self.p['context'])
         self.vraag_context = self.add_checkbox_row(
             "context tonen (waar mogelijk, anders overslaan)", self.p["context"])
         self.vraag_uitsluit = self.add_checkbox_row(

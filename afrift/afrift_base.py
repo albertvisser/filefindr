@@ -12,10 +12,9 @@ if not BASE.exists():
     BASE.mkdir()
 HERE = pathlib.Path(__file__).parent  # os.path.dirname(__file__)
 iconame = str(HERE / "find.ico")  # os.path.join(HERE, "find.ico")
-logging.basicConfig(
-    filename=str(HERE.parent / 'logs' / 'afrift.log'),
-    level=logging.DEBUG,
-    format='%(asctime)s %(message)s')
+if 'DEBUG' in os.environ and os.environ["DEBUG"] != "0":
+    logging.basicConfig(filename=str(HERE.parent / 'logs' / 'afrift.log'),
+                        level=logging.DEBUG, format='%(asctime)s %(message)s')
 
 
 def log(message):
@@ -171,13 +170,13 @@ class ABase(object):
         """
         self.p['zoek'] = kwargs.pop('search', '')
         test = kwargs.pop('replace', None)
-        if test is not None:
+        if test is None:
             self.p['vervang'] = test
             if test == '':
                 self._vervleeg = True
         self.p["extlist"] = kwargs.pop('extensions', '')
-        if self.p["extlist"] is None:
-            self.p["extlist"] = []
+        if not self.p["extlist"]:
+           self.p["extlist"] = []
         for arg in ('regex',
                     'follow_symlinks',
                     'select_subdirs',
@@ -186,13 +185,13 @@ class ABase(object):
                     'no_gui',
                     'output_file'):
             self.extraopts[arg] = kwargs.pop(arg, '')
-        self.extraopts['use_saved'] = kwargs.pop(arg, True)
+        self.extraopts['use_saved'] = kwargs.pop(arg, False)
         if not self.extraopts['use_saved']:
             for arg, key in (('case_sensitive', "case"),
                              ('whole_words', "woord"),
                              ('recursive', "subdirs"),
                              ('python_context', "context"), ):
-                self.p[key] = kwargs.pop(arg, '')
+                self.p[key] = kwargs.pop(arg, self.p[key])
         self._backup = kwargs.pop('backup_originals', '')
         self._exit_when_ready = True
 
