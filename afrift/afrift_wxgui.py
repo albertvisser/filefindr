@@ -9,6 +9,8 @@ from .findr_files import Finder
 from .afrift_base import iconame, ABase, HERE
 
 
+# TODO: toevoegen: select/unselect all checkbox, invert selection button, terug button
+#             kijken hoe ik gemeenschappelijke zaken kan uitlichten
 class SelectNames(wx.Dialog):
     """Tussenscherm om te verwerken files te kiezen"""
 
@@ -64,6 +66,7 @@ class SelectNames(wx.Dialog):
         self.EndModal(0)
 
 
+# TODO: toevoegen: context kolom indien context search gebruikt, extra context opties
 class Results(wx.Dialog):
     """Resultaten scherm"""
 
@@ -217,24 +220,17 @@ class MainFrame(ABase, wx.Frame):
         self.SetIcon(wx.Icon(iconame, wx.BITMAP_TYPE_ICO))
         self.pnl = wx.Panel(self, -1)
 
-        TXTW = 200
+        TXTW = 240
+        TXTH = 24
 
         ## box = wx.StaticBox(self.pnl, -1)
         t1 = wx.StaticText(self.pnl, -1, "Zoek naar:")
-        c1 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1), choices=self._mru_items["zoek"],
+        c1 = wx.ComboBox(self.pnl, -1, size=(TXTW, TXTH), choices=self._mru_items["zoek"],
                          style=wx.CB_DROPDOWN)
         self.vraag_zoek = c1
 
-        t2 = wx.StaticText(self.pnl, -1, "Vervang door:")
-        c2 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1), choices=self._mru_items["verv"],
-                         style=wx.CB_DROPDOWN)
-        self.vraag_verv = c2
-
         c3a = wx.CheckBox(self.pnl, -1, label="regular expression (Python format)")
         self.vraag_regex = c3a
-        c3 = wx.CheckBox(self.pnl, -1, label="lege vervangtekst = weghalen")
-        c3.SetValue(self._vervleeg)
-        self.check_vervang = c3
         c4 = wx.CheckBox(self.pnl, -1, label="hoofd/kleine letters gelijk")
         c4.SetValue(bool(self.p["case"]))
         self.vraag_case = c4
@@ -242,13 +238,22 @@ class MainFrame(ABase, wx.Frame):
         c5.SetValue(bool(self.p["woord"]))
         self.vraag_woord = c5
 
+        t2 = wx.StaticText(self.pnl, -1, "Vervang door:")
+        c2 = wx.ComboBox(self.pnl, -1, size=(TXTW, TXTH), choices=self._mru_items["verv"],
+                         style=wx.CB_DROPDOWN)
+        self.vraag_verv = c2
+
+        c3 = wx.CheckBox(self.pnl, -1, label="lege vervangtekst = weghalen")
+        c3.SetValue(self._vervleeg)
+        self.check_vervang = c3
+
         t = ""
         if self.apptype == "":
             t6 = wx.StaticText(self.pnl, -1, "In directory:")
-            c6 = wx.ComboBox(self.pnl, -1, size=(TXTW + 120, -1), choices=self._mru_items["dirs"],
+            c6 = wx.ComboBox(self.pnl, -1, size=(TXTW, TXTH), choices=self._mru_items["dirs"],
                              style=wx.CB_DROPDOWN)
             self.vraag_dir = c6
-            btn = wx.Button(self.pnl, -1, label="&Zoek")
+            btn = wx.Button(self.pnl, -1, label="&Zoek", size=(-1, TXTH))
             btn.Bind(wx.EVT_BUTTON, self.zoekdir)
         elif self.apptype == "single":
             t6t = wx.StaticText(self.pnl, -1, "In file/directory:")
@@ -264,11 +269,18 @@ class MainFrame(ABase, wx.Frame):
             c7a = wx.CheckBox(self.pnl, -1, label="symlinks volgen")
             self.vraag_links = c7a
             t7b = wx.StaticText(self.pnl, -1, label="    max. diepte (-1 is alles): ")
-            c7b = wx.SpinCtrl(self.pnl, -1, min=-1, initial=5)
+            c7b = wx.SpinCtrl(self.pnl, -1, min=-1, initial=5, size=(122, TXTH))
             self.vraag_diepte = c7b
 
+        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+            self.ask_skipdirs = wx.CheckBox(self.pnl, -1,
+                                            label="selecteer (sub)directories om over te slaan")
+            self.ask_skipfiles = wx.CheckBox(self.pnl, -1,
+                                             label="selecteer bestanden om over te slaan")
+
+        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
             t8 = wx.StaticText(self.pnl, -1, "alleen files van type:")
-            c8 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1), choices=self._mru_items["types"],
+            c8 = wx.ComboBox(self.pnl, -1, size=(TXTW, TXTH), choices=self._mru_items["types"],
                              style=wx.CB_DROPDOWN)
             self.vraag_types = c8
 
@@ -276,12 +288,6 @@ class MainFrame(ABase, wx.Frame):
             t9 = wx.StaticText(self.pnl, -1, "In de volgende files/directories:")
             c9 = wx.ListBox(self.pnl, -1, size=(TXTW, -1), choices=self.fnames)
             self.lb = c9
-
-        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
-            self.ask_skipdirs = wx.CheckBox(self.pnl, -1,
-                                            label="selecteer (sub)directories om over te slaan")
-            self.ask_skipfiles = wx.CheckBox(self.pnl, -1,
-                                             label="selecteer bestanden om over te slaan")
 
         ## t10 =  wx.StaticText(self.pnl, -1,"", size=wid)
         c10 = wx.CheckBox(self.pnl, -1, label="gewijzigde bestanden backuppen")
@@ -291,10 +297,10 @@ class MainFrame(ABase, wx.Frame):
         c11.SetValue(bool(self._exit_when_ready))
         self.vraag_exit = c11
 
-        self.DoIt = wx.Button(self.pnl, -1, label="&Uitvoeren")
+        self.DoIt = wx.Button(self.pnl, -1, size=(-1, TXTH), label="&Uitvoeren")
         self.Bind(wx.EVT_BUTTON, self.doe, self.DoIt)
         ## self.Cancel = wx.Button(self.pnl,  wx.ID_CANCEL, "&Einde") # helpt niet
-        self.Cancel = wx.Button(self.pnl, -1, label="&Einde")
+        self.Cancel = wx.Button(self.pnl, -1, size=(-1, TXTH), label="&Einde")
         self.Bind(wx.EVT_BUTTON, self.einde, self.Cancel)
 
         bsizer = wx.BoxSizer(wx.VERTICAL)
@@ -304,18 +310,10 @@ class MainFrame(ABase, wx.Frame):
         gbsizer.Add(c1, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
         gbsizer.Add(wx.StaticText(self.pnl, -1, "", size=(20, -1)), (row, 2))
         row += 1
-        gbsizer.Add(t2, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
-        gbsizer.Add(c2, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
-        row += 1
         vsizer = wx.BoxSizer(wx.VERTICAL)
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hbsizer = wx.BoxSizer(wx.HORIZONTAL)
         hbsizer.Add(c3a, 0)
-        hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
-        vsizer.Add(hsizer, 0, wx.EXPAND)
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer.Add(c3, 0)
         hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
         vsizer.Add(hsizer, 0, wx.EXPAND)
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -328,7 +326,19 @@ class MainFrame(ABase, wx.Frame):
         hbsizer.Add(c5, 0)
         hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
         vsizer.Add(hsizer, 0, wx.EXPAND)
-        gbsizer.Add(vsizer, (row, 1))  # ,(1, 2))
+        gbsizer.Add(vsizer, (row, 1))
+        row += 1
+        gbsizer.Add(t2, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
+        gbsizer.Add(c2, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
+        row += 1
+        vsizer = wx.BoxSizer(wx.VERTICAL)
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        hbsizer = wx.BoxSizer(wx.HORIZONTAL)
+        hbsizer.Add(c3, 0)
+        hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
+        vsizer.Add(hsizer, 0, wx.EXPAND)
+        gbsizer.Add(vsizer, (row, 1))
+
         if self.apptype == "":
             row += 1
             gbsizer.Add(t6, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
@@ -350,6 +360,12 @@ class MainFrame(ABase, wx.Frame):
             hsizer.Add(t7b, 0, wx.ALIGN_CENTER_VERTICAL)  # wx.TOP | wx.BOTTOM, 4)
             hsizer.Add(c7b, 0, wx.ALIGN_CENTER_VERTICAL)  # , 4)
             gbsizer.Add(hsizer, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
+        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+            row += 1
+            gbsizer.Add(self.ask_skipdirs, (row, 1), flag=wx.EXPAND)
+            row += 1
+            gbsizer.Add(self.ask_skipfiles, (row, 1), flag=wx.EXPAND)
+        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
             row += 1
             gbsizer.Add(t8, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
             gbsizer.Add(c8, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
@@ -358,11 +374,6 @@ class MainFrame(ABase, wx.Frame):
             gbsizer.Add(t9, (row, 0), (1, 2), flag=wx.EXPAND | wx.LEFT | wx.TOP, border=4)
             row += 1
             gbsizer.Add(c9, (row, 0), (1, 2), flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=4)
-        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
-            row += 1
-            gbsizer.Add(self.ask_skipdirs, (row, 1), flag=wx.EXPAND)
-            row += 1
-            gbsizer.Add(self.ask_skipfiles, (row, 1), flag=wx.EXPAND)
         row += 1
         gbsizer.Add(c10, (row, 1), flag=wx.EXPAND)
         row += 1
@@ -386,7 +397,6 @@ class MainFrame(ABase, wx.Frame):
         self.Bind(wx.EVT_KEY_UP, self.on_key_up)
         ## for win in self.GetChildren():
             ## self.Bind(wx.EVT_KEY_UP,self.on_key_up,win)
-        print('showing screen')
         self.Show(True)
         self.SetFocus()
 
