@@ -9,7 +9,6 @@ import pathlib
 import re
 import shutil
 import collections
-from .afrift_base import log
 contains_default = 'module level code'
 special_chars = ('.', '^', '$', '*', '+', '?', '{', '}', '[', ']', '(', ')', '|', '\\')
 
