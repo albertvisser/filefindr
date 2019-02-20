@@ -26,6 +26,7 @@ if WANT_LOGGING:
     logging.basicConfig(filename=str(LOGFILE), level=logging.DEBUG,
                         format='%(asctime)s %(message)s')
 common_path_txt = 'De bestanden staan allemaal in of onder de directory "{}"'
+iconame = str(HERE / "find.ico")  # os.path.join(HERE, "find.ico")
 
 
 def log(message):
@@ -62,15 +63,21 @@ class SelectNames():
         self.dofiles = files
         self.parent = parent
         self.title = self.parent.title + " - file list"
+        self.iconame = iconame
         if files:
             text = "Selecteer de bestanden die je *niet* wilt verwerken"
             self.names = {str(x): x for x in self.parent.names}
         else:
             text = "Selecteer de directories die je *niet* wilt verwerken"
-        self.gui = SelectNamesGui(parent)   # te definieren in gui specifieke module
+        self.gui = SelectNamesGui(parent, self)   # te definieren in gui specifieke module
         captions = {'heading': text, 'sel_all': 'Select/Unselect All', 'invert': 'Invert selection',
                     'exit': "&Terug", 'execute': "&Klaar"}
         self.gui.setup_screen(captions)
+
+    def show(self):
+        """show the dialog screen
+        """
+        return self.gui.go()
 
 
 class Results():
@@ -85,6 +92,7 @@ class Results():
         self.show_context = self.parent.p["context"]
         self.results = []
         self.titel = 'Regel' if self.parent.apptype == "single" else 'File/Regel'
+        self.iconame = iconame
         self.gui = ResultsGui(parent, self)
 
         self.label_only = self.parent.p['vervang'] and self.parent.apptype == 'single'
@@ -102,9 +110,10 @@ class Results():
                     'cpy': "Copy to &File", 'clp': "Copy to &Clipboard", 'fmt': 'Formatteer output:',
                     'pth': "toon directorypad", 'dlm': "comma-delimited", 'sum': "summarized"}
         self.build_list()
-        self.setup_gui(captions)
+        self.gui.setup_screen(captions)
 
     def build_list(self):
+        "construct list of results"
         for ix, line in enumerate(self.parent.zoekvervang.rpt):
             if ix == 0:
                 kop = line
@@ -125,21 +134,17 @@ class Results():
                     self.results.append((where, what))
         self.results.insert(0, kop)
 
-    def get_results(self):
-        """apply switch to show complete path to results
+    def show(self):
+        """show the dialog screen
         """
-        # wx versie
-        # text = ["{0}".format(self.results[0])]
-        # for r1, r2 in self.results[1:]:
-        #     if toonpad:
-        #         text.append("{0} {1}".format(r1, r2))
-        #     else:
-        #         text.append("{0} {1}".format(r1.split(os.sep)[-1], r2))
-        # return text
+        self.gui.go()
 
-        # qt versie
-        toonpad = True if self.cb.isChecked() else False
-        comma = True if self.cb2.isChecked() else False
+    def get_results(self):
+        """format output
+        """
+        toonpad = self.gui.get_pth()
+        comma = self.gui.get_csv()
+        context = self.gui.get_sum()
 
         text = ["{}".format(self.results[0])]
         if self.parent.apptype == "multi" and not toonpad:
@@ -177,7 +182,7 @@ class Results():
             text += textbuf.getvalue().split("\n")
             textbuf.close()
 
-        if self.cb3.isChecked():
+        if context:
             context = 'py' if self.show_context else None
             if self.parent.apptype == 'single':
                 text = [('{} {}'.format(self.parent.fnames[0], x) if x else '') for x in text]
@@ -224,12 +229,10 @@ class Results():
                 f_nam = f_nam.replace(char, "~")
         if self.gui.check_csv():
             ext = '.csv'
-            f_filter = 'Comma delimited files (*.csv)'
         else:
             ext = '.txt'
-            f_filter = 'Text files (*.txt)'
         f_nam = f_nam.join(("files-containing-", ext))
-        savename = self.gui.get_savefile(f_nam, f_filter)
+        savename = self.gui.get_savefile(f_nam, ext)
         if savename:
             with open(savename, "w") as f_out:
                 for line in self.get_results():
@@ -280,7 +283,7 @@ class MainFrame():
         fnaam = kwargs.pop('fnaam', '')
         flist = kwargs.pop('flist', None)
         self.title = "Albert's find-replace in files tool"
-        self.iconame = str(HERE / "find.ico")  # os.path.join(HERE, "find.ico")
+        self.iconame = iconame
         self.fouttitel = self.title + "- fout"
         self.resulttitel = self.title + " - Resultaten"
         self.apptype = apptype
@@ -327,7 +330,7 @@ class MainFrame():
             raise ValueError('application type should be empty, "single" or "multi"')
         self.s = ""
         self.p = {'filelist': []}
-        if len(self.fnames) > 0:
+        if self.fnames:
             self.p["filelist"] = self.fnames
         self._keys = ("zoek", "verv", "types", "dirs")
         for key in self._keys:
@@ -420,15 +423,10 @@ class MainFrame():
         self.p["extlist"] = kwargs.pop('extensions', '')
         if self.p["extlist"] is None:
             self.p["extlist"] = []
-        for arg in ('regex',
-                    'follow_symlinks',
-                    'select_subdirs',
-                    'select_files',
-                    'dont_save',
-                    'no_gui',
-                    'output_file'):
+        for arg in ('regex', 'follow_symlinks', 'select_subdirs', 'select_files',
+                    'dont_save', 'no_gui', 'output_file'):
             self.extraopts[arg] = kwargs.pop(arg, '')
-        self.extraopts['use_saved'] = kwargs.pop(arg, True)
+        self.extraopts['use_saved'] = kwargs.pop('use_saved', True)
         if not self.extraopts['use_saved']:
             for arg, key in (('case_sensitive', "case"),
                              ('whole_words', "woord"),
@@ -485,7 +483,7 @@ class MainFrame():
             self.p["zoek"] = item
         return mld
 
-    def checkverv(self, *items):
+    def checkverv(self, items):
         "controleer vervanging"
         mld = ""
         self.p["vervang"] = None
@@ -503,7 +501,7 @@ class MainFrame():
             self.p["vervang"] = ""
         return mld
 
-    def checkattr(self, *items):
+    def checkattr(self, items):
         "controleer extra opties"
         mld = ""
         regex, case, words = items
@@ -556,7 +554,7 @@ class MainFrame():
             self.p['filelist'] = ''
         return mld
 
-    def checksubs(self, *items):
+    def checksubs(self, items):
         "subdirs aangeven"
         subdirs, links, depth = items
         if subdirs:
@@ -567,7 +565,7 @@ class MainFrame():
 
     def doe(self):
         """Zoekactie uitvoeren en resultaatscherm tonen"""
-        item = self.gui.get_zoektext()
+        item = self.gui.get_searchtext()
         mld = self.checkzoek(item)
         if not mld:
             self.checkverv(self.gui.get_replace_args())
@@ -631,16 +629,12 @@ class MainFrame():
                     # eerste ronde: toon directories
                     if self.zoekvervang.dirnames:
                         self.names = sorted(self.zoekvervang.dirnames)
-                        # qt version
-                        dlg = SelectNames(self, files=False).exec_()
-                        if dlg == qtw.QDialog.Rejected:
-                            canceled = True
+
+                        result = SelectNames(self, files=False).show()
+                        if not result:
+                            canceled = False
                             break
-                        # wx version (houdt geen rekening met go_on lus)
-                        dlg = SelectNames(self, -1, files=False)
-                        dlg.ShowModal()
-                        dlg.Destroy()
-                        #
+
                         # tweede ronde: toon de files die overblijven
                         fnames = self.zoekvervang.filenames[:]
                         for entry in fnames:
@@ -651,18 +645,12 @@ class MainFrame():
                         if not skip_files:
                             go_on = False
                 if skip_files:
-                    self.names = sorted(self.zoekvervang.filenames, key=lambda x: str(x))
-                    # qt version
-                    dlg = SelectNames(self).exec_()
-                    # wx version (houdt geen rekening met go_on lus)
-                    dlg = SelectNames(self, -1)
-                    dlg.ShowModal()
-                    dlg.Destroy()
-                    #
-                    if dlg == qtw.QDialog.Rejected and not skip_dirs:
+                    self.names = sorted(self.zoekvervang.filenames)  # , key=lambda x: str(x))
+                    result = SelectNames(self).show()
+                    if not result and not skip_dirs:
                         canceled = True
                         break
-                    if dlg == qtw.QDialog.Accepted:
+                    elif result:
                         self.zoekvervang.filenames = self.names
                         go_on = False
 
@@ -681,17 +669,15 @@ class MainFrame():
                 mld = "Niks gevonden" if self.zoekvervang.ok else self.zoekvervang.rpt[0]
                 self.gui.meld(self.resulttitel, mld)
         else:
-            dlg = Results(self, common_part)            # qt version
-            dlg = Results(self, -1, self.resulttitel)   # wx version
+            dlg = Results(self, common_part)
+
             if self.extraopts['output_file']:
                 with self.extraopts['output_file'] as f_out:
                     for line in dlg.get_results():
                         f_out.write(line + "\n")
             else:
-                dlg.exec_()      # qt version
-                dlg.ShowModal()  # wx version
+                dlg.show()
 
         if (self.extraopts['no_gui'] and self.extraopts['output_file']) or (
                 self.gui.get_exit() and self.p["vervang"] is not None):
-            self.close()    # qt versie
-            self.einde()    # wx versie
+            self.gui.einde()

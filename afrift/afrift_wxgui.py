@@ -1,4 +1,4 @@
-"""AFRIFT wxPython versie
+"""AFRIFT wxPython specific classes
 """
 import os
 import sys
@@ -7,13 +7,16 @@ import wx
 
 
 class SelectNamesGui(wx.Dialog):
-    def __init__(self, parent):
+    """dialog for selecting directories/files
+    """
+    def __init__(self, parent, root):
         self.parent = parent
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
-        super().__init__(parent, title=self.title, style=style)
-        self.SetIcon(wx.Icon(iconame, wx.BITMAP_TYPE_ICO))
+        super().__init__(parent.gui, title=self.title, style=style)
+        self.SetIcon(wx.Icon(root.iconame, wx.BITMAP_TYPE_ICO))
 
     def setup_screen(self, captions):
+        "build widgets"
         vbox = wx.BoxSizer(wx.VERTICAL)
 
         txt = wx.StaticText(self, -1, captions['heading'])
@@ -58,6 +61,15 @@ class SelectNamesGui(wx.Dialog):
         ## vsizer.SetSizeHints(self)
         self.Layout()
 
+    def go(self):
+        """show the dialog screen
+        """
+        result = self.ShowModal()
+        if result == wx.ID_OK:
+            return True
+        # elif result == wx.ID_CANCEL:
+        return False
+
     def select_all(self):
         """check or uncheck all boxes
         """
@@ -86,13 +98,16 @@ class SelectNamesGui(wx.Dialog):
 
 
 class ResultsGui(wx.Dialog):
+    """results screen
+    """
     def __init__(self, parent, root):
         self.root = root
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
-        super().__init__(parent, title=parent.resulttitel, style=style)
-        self.SetIcon(wx.Icon(iconame, wx.BITMAP_TYPE_ICO))
+        super().__init__(parent.gui, title=root.parent.resulttitel, style=style)
+        self.SetIcon(wx.Icon(root.iconame, wx.BITMAP_TYPE_ICO))
 
-    def setup_gui(self, captions):
+    def setup_screen(self, captions):
+        "build widgets"
         if self.root.parent.apptype == "single":
             breedte = 50
         elif self.root.parent.apptype == 'multi':
@@ -102,9 +117,9 @@ class ResultsGui(wx.Dialog):
         vsizer = wx.BoxSizer(wx.VERTICAL)
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         txt = wx.StaticText(self, label=captions['heading'])
-
         hsizer.Add(txt, 0, wx.EXPAND | wx.ALL, 5)
         vsizer.Add(hsizer, 0, wx.EXPAND)
+
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         self.lijst = wx.ListCtrl(self, -1, size=(breedte + 385, 460),
                                  style=wx.LC_REPORT | wx.LC_VRULES)
@@ -113,6 +128,7 @@ class ResultsGui(wx.Dialog):
         self.lijst.InsertColumn(1, "Data")
         self.lijst.SetColumnWidth(1, 380)
         self.populate_list()
+        hsizer.Add(self.lijst, 0, wx.EXPAND | wx.ALL, 5)
         vsizer.Add(hsizer, 1, wx.EXPAND)
 
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -121,14 +137,14 @@ class ResultsGui(wx.Dialog):
         ## self.Bind(wx.EVT_BUTTON, self.einde,  b2)
         bsizer.Add(btn, 0, wx.ALL, 5)
         btn = wx.Button(self, label=captions['cpy'])
-        btn.Bind(wx.EVT_BUTTON, self.kopie)
+        btn.Bind(wx.EVT_BUTTON, self.root.kopie)
         bsizer.Add(btn, 0, wx.ALL, 5)
         btn = wx.Button(self, label=captions['clp'])
-        btn.Bind(wx.EVT_BUTTON, self.to_clipboard)
+        btn.Bind(wx.EVT_BUTTON, self.root.to_clipboard)
         bsizer.Add(btn, 0, wx.ALL, 5)
         cb = wx.CheckBox(self, label=captions['pth'])
         cb.SetValue(False)
-        if self.parent.apptype == "single":
+        if self.root.parent.apptype == "single":
             cb.Enable(False)
         self.cb = cb
         bsizer.Add(cb, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
@@ -146,30 +162,78 @@ class ResultsGui(wx.Dialog):
     def populate_list(self):
         """copy results to listbox
         """
-        for result in self.results[1:]:
+        for result in self.root.results[1:]:
             i = self.lijst.InsertItem(sys.maxsize, result[0])
             self.lijst.SetItem(i, 0, result[0])
             # TODO: insert context if present
             self.lijst.SetItem(i, 1, result[-1])
 
-    def get_savefile(self, fname, filter):
+    def clear_contents(self):
+        "remove all entries from list"
         # TODO finish
-        # filter komt mee vanwege de csv mogelijkheid
+        # self.lijst.clearContents()
+
+    def go(self):
+        """show the dialog screen
+        """
+        self.ShowModal()
+
+    def breekaf(self, message):
+        "show reason and end dialog"
+        # TODO finish
+        # self.meld(self.parent.resulttitel, message)
+        # super().done(0)
+
+    def set_header(self, text):
+        "set header for list"
+        # TODO finish
+        # self.txt.setText(text)
+
+    def check_options_combinations(self, title, message):
+        "see if chosen options make sense"
+        if self.get_csv() and self.get_sum():
+            self.meld(title, message)
+            return False
+        return True
+
+    def get_pth(self):
+        "get indicator to show path"
+        return self.cb_path.GetValue()
+
+    def get_csv(self):
+        "get indicator to save as csv"
+        return self.cb_delim.GetValue()
+
+    def get_sum(self):
+        "get indicator to show as summarized"
+        return self.cb_smrz.GetValue()
+
+    def get_savefile(self, fname, ext):
+        """callback for button 'Copy to file'
+        """
+        if ext == '.csv':
+            f_filter = 'Comma delimited files (*.csv)|*.csv;;'
+        elif ext == '.txt':
+            f_filter = 'Text files (*.txt)|*.txt;;'
         fn = ''
         with wx.FileDialog(self, message="Resultaat naar bestand kopieren",
                            defaultDir=str(self.root.parent.hier),
                            defaultFile=fname.join(('searchfor_', ".txt")),
-                           wildcard="text files (*.txt)|*.txt|all files (*.*)|*.*",
+                           wildcard="{}All files (*.*)|*.*".format(f_filter),
                            style=wx.FD_SAVE) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 fn = dlg.GetPath()
         return fn
 
+    def meld(self, titel, message):
+        "show an informational message"
+        wx.MessageBox(message, titel, wx.OK | wx.ICON_INFORMATION, self)
+
     def copy_to_clipboard(self, text):
-        # TODO: finish
-        toonpad = True if self.cb.IsChecked() else False
+        """callback for button 'Copy to clipboard'
+        """
         do = wx.TextDataObject()
-        do.SetText('\n'.join([str(x) for x in self.get_results(toonpad)]))
+        do.SetText(text)
         clp = wx.Clipboard.Get()
         if clp.Open():
             clp.SetData(do)
@@ -177,8 +241,22 @@ class ResultsGui(wx.Dialog):
         else:
             wx.MessageBox("Unable to open the clipboard", "Error")
 
+    def to_result(self):
+        """show result in file
+        """
+        # TODO finish
+        # self.root.goto_result(self.lijst.currentRow(), self.lijst.currentColumn())
+
+    def klaar(self):
+        """finish dialog
+        """
+        # TODO finish
+        # super().done(0)
+
 
 class MainFrameGui(wx.Frame):
+    """main screen
+    """
     def __init__(self, root):
         self.root = root        # verwijzing naar MainFrame - voor als het nodig is
         self.app = wx.App()
@@ -316,7 +394,7 @@ class MainFrameGui(wx.Frame):
         row += 1
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         self.DoIt = wx.Button(self.pnl, -1, size=(-1, TXTH), label="&Uitvoeren")
-        self.DoIt.Bind(wx.EVT_BUTTON, self.root.doe)
+        self.DoIt.Bind(wx.EVT_BUTTON, self.doe)
         hsizer.Add(self.DoIt, 0, wx.EXPAND | wx.ALL, 4)
         ## self.Cancel = wx.Button(self.pnl,  wx.ID_CANCEL, "&Einde") # helpt niet
         self.Cancel = wx.Button(self.pnl, -1, size=(-1, TXTH), label="&Einde")
@@ -338,65 +416,114 @@ class MainFrameGui(wx.Frame):
         self.SetFocus()
 
     def get_searchtext(self):
+        "get value of search field"
         return self.vraag_zoek.GetValue()
 
     def get_replace_args(self):
+        "get value of replace field"
         return self.vraag_verv.GetValue(), self.check_vervang.GetValue()
 
     def get_search_attr(self):
+        "read switches for type of search"
         return (self.vraag_regex.GetValue(), self.vraag_case.GetValue(),
                 self.vraag_woord.GetValue())
 
     def get_types_to_search(self):
+        "get filetypes to search"
         return self.vraag_types.GetValue()
 
     def get_dir_to_search(self):
+        "get directory to search"
         return self.vraag_dir.GetValue()
 
     def get_subdirs_to_search(self):
+        "get parameters for search in subdirectories"
         return (self.vraag_subs.GetValue(), self.vraag_links.GetValue(),
                 self.vraag_diepte.GetValue())
 
     def get_backup(self):
+        "get backup indicator"
         return self.vraag_backup.GetValue()
 
     def get_ignore(self):
+        "get indicator not to search in comments amd docstrings"
         return
 
     def get_context(self):
+        "get indicator to do context specific search"
         return
 
     def error(self, titel, message):
-        wx.MessageBox(message, titel, wx.OK | wx.ICON_ERROR)
+        "show an error message"
+        wx.MessageBox(message, titel, wx.OK | wx.ICON_ERROR, self)
 
     def meld(self, titel, message):
-        wx.MessageBox(message, titel, wx.OK | wx.ICON_INFORMATION)
+        "show an informational message"
+        wx.MessageBox(message, titel, wx.OK | wx.ICON_INFORMATION, self)
 
     def add_item_to_searchlist(self, item):
-        ""
+        "add string to list of items searched for"
 
     def get_skipdirs(self):
+        "get indicator to select directories to skip"
         return self.ask_skipdirs.IsChecked()
 
     def get_skipfiles(self):
+        "get indicator to select files to skip"
         return self.ask_skipfiles.IsChecked()
 
-    def set_waitcursor(value):
+    def doe(self, event):
+        """callback implemented here to swallow the event parameter
+        """
+        self.root.doe()
+
+    def set_waitcursor(self, value):
+        """switch back and forth to a "busy" cursor
+        """
         if value:
             wx.BeginBusyCursor()
         else:
             wx.EndBusyCursor()
 
     def get_exit(self):
+        "get indicator to exot program when ready"
         self.vraag_exit.GetValue()
 
     def go(self):
+        "show screen and handle events"
         self.Show(True)
         self.app.MainLoop()
 
     def einde(self, event=None):
         """applicatie afsluiten"""
         self.Close(True)
+
+    def check_case(self, val):
+        """autocompletion voor zoektekst in overeenstemming brengen met case
+        indicator"""
+        # if val == core.Qt.Checked:
+        #     new_value = core.Qt.CaseSensitive
+        # else:
+        #     new_value = core.Qt.CaseInsensitive
+        # self.vraag_zoek.setAutoCompletionCaseSensitivity(new_value)
+
+    def check_loc(self, txt):
+        """update location to get settings from
+        """
+        if os.path.exists(txt) and not txt.endswith(os.path.sep):
+            self.readini(txt)
+            # self.vraag_zoek.clear()
+            # self.vraag_zoek.addItems(self.root._mru_items["zoek"])
+            # self.vraag_verv.clear()
+            # self.vraag_verv.addItems(self.root._mru_items["verv"])
+            # self.vraag_types.clear()
+            # self.vraag_types.addItems(self.root._mru_items["types"])
+            ## self.vraag_dir.clear()
+            ## self.vraag_dir.addItems(self._mru_items["dirs"])
+            # self.vraag_case.setChecked(self.root.p["case"])
+            # self.vraag_woord.setChecked(self.root.p["woord"])
+            # self.vraag_subs.setChecked(self.root.p["subdirs"])
+            # self.vraag_context.setChecked(self.root.p["context"])
 
     def on_key_up(self, ev):
         """event handler voor toetsaanslagen"""

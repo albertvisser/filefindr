@@ -1,5 +1,5 @@
-"AFRIFT PyQt5 versie"
-
+"""AFRIFT PyQt5 specific classes
+"""
 import os
 import sys
 import PyQt5.QtWidgets as qtw
@@ -9,12 +9,15 @@ TXTW = 200
 
 
 class SelectNamesGui(qtw.QDialog):
-    def __init__(self, parent):
+    """dialog for selecting directories/files
+    """
+    def __init__(self, parent, root):
         super().__init__(parent)
         self.setWindowTitle(self.title)
-        self.setWindowIcon(gui.QIcon(iconame))  # iconame is een global constant
+        self.setWindowIcon(gui.QIcon(root.iconame))
 
     def setup_screen(self, captions):
+        "build widgets"
         vbox = qtw.QVBoxLayout()
 
         txt = qtw.QLabel(captions['heading'], self)
@@ -38,7 +41,7 @@ class SelectNamesGui(qtw.QDialog):
         frm = qtw.QFrame(self)
         fvbox = qtw.QVBoxLayout()
         self.checklist = []
-        for item in self.parent.names:
+        for item in self.root.names:
             if self.root.dofiles:
                 cb = qtw.QCheckBox(str(item), frm)
             else:
@@ -69,6 +72,15 @@ class SelectNamesGui(qtw.QDialog):
 
         self.setLayout(vbox)
 
+    def go(self):
+        """show the dialog screen
+        """
+        result = self.exec_()
+        if result == qtw.QDialog.accepted:
+            return True
+        # elif result == qtw.QDialog.rejected:
+        return False
+
     def select_all(self):
         """check or uncheck all boxes
         """
@@ -87,25 +99,29 @@ class SelectNamesGui(qtw.QDialog):
         dirs = []
         for cb in self.checklist:
             if cb.isChecked():
-                if self.parent.dofiles:
+                if self.root.dofiles:
                     self.names.pop(cb.text())
                 else:
                     dirs.append(cb.text())
-        if self.parent.dofiles:
-            self.parent.names = [self.names[x] for x in sorted(self.names.keys())]
+        if self.root.dofiles:
+            self.root.names = [self.names[x] for x in sorted(self.names.keys())]
         else:
-            self.parent.names = dirs
+            self.root.names = dirs
         super().accept()
 
 
 class ResultsGui(qtw.QDialog):
+    """results screen
+    """
     def __init__(self, parent, root):
         self.root = root
-        super().__init__(parent)
+        # super().__init__(parent)
+        qtw.QDialog.__init__(self)
         self.setWindowTitle(parent.resulttitel)
-        self.setWindowIcon(gui.QIcon(iconame))
+        self.setWindowIcon(gui.QIcon(root.iconame))
 
-    def setup_gui(self, captions):
+    def setup_screen(self, captions):
+        "build widgets"
         breedte = 50 if self.root.parent.apptype == "single" else 150  # qt versie
         vbox = qtw.QVBoxLayout()
         hbox = qtw.QHBoxLayout()
@@ -128,19 +144,19 @@ class ResultsGui(qtw.QDialog):
                 self.lijst.setColumnCount(2)
                 self.lijst.setColumnWidth(1, 520)
                 self.lijst.setHorizontalHeaderLabels((self.root.titel, captions['txt']))
-            self.lijst.setColumnWidth(0, self.breedte)
+            self.lijst.setColumnWidth(0, breedte)
             self.lijst.horizontalHeader().setStretchLastSection(True)
 
             self.populate_list()
 
-            self.lijst.cellDoubleClicked[int, int].connect(self.goto_result)
+            self.lijst.cellDoubleClicked[int, int].connect(self.root.goto_result)
             act = qtw.QAction(captions['hlp'], self)
             act.setShortcut('F1')
             act.triggered.connect(self.root.help)
             self.addAction(act)
             act = qtw.QAction(captions['rslt'], self)
             act.setShortcut('Ctrl+G')
-            act.triggered.connect(self.root.to_result)
+            act.triggered.connect(self.root.goto_result)
             self.addAction(act)
             hbox.addWidget(self.lijst)
             vbox.addLayout(hbox)
@@ -164,20 +180,14 @@ class ResultsGui(qtw.QDialog):
             hbox.addWidget(btn)
             gbox = qtw.QGridLayout()
             gbox.addWidget(qtw.QLabel(captions['fmt'], self), 0, 0)
-            self.cb = qtw.QCheckBox(captions['pth'], self)
+            self.cb_path = qtw.QCheckBox(captions['pth'], self)
             if self.root.parent.apptype == "single":
-                self.cb.setEnabled(False)
-            # hbox.addWidget(self.cb)
-            gbox.addWidget(self.cb, 1, 0)
-            # vbox2 = qtw.QVBoxLayout()
-            self.cb2 = qtw.QCheckBox(captions['dlm'], self)
-            self.cb3 = qtw.QCheckBox(captions['sum'], self)
-            # hbox.addWidget(self.cb2)
-            # vbox2.addWidget(self.cb2)
-            gbox.addWidget(self.cb2, 0, 1)
-            # vbox2.addWidget(self.cb3)
-            gbox.addWidget(self.cb3, 1, 1)
-            # hbox.addLayout(vbox2)
+                self.cb_path.setEnabled(False)
+            gbox.addWidget(self.cb_path, 1, 0)
+            self.cb_delim = qtw.QCheckBox(captions['dlm'], self)
+            self.cb_smrz = qtw.QCheckBox(captions['sum'], self)
+            gbox.addWidget(self.cb_delim, 0, 1)
+            gbox.addWidget(self.cb_smrz, 1, 1)
             hbox.addLayout(gbox)
             hbox.addStretch(1)
         vbox.addLayout(hbox)
@@ -189,7 +199,7 @@ class ResultsGui(qtw.QDialog):
     def populate_list(self):
         """copy results to listbox
         """
-        for ix, result in enumerate(self.results[1:]):
+        for ix, result in enumerate(self.root.results[1:]):
 
             self.lijst.insertRow(ix - 1)
             self.lijst.setRowHeight(ix - 1, 18)
@@ -210,35 +220,61 @@ class ResultsGui(qtw.QDialog):
             self.lijst.setItem(ix - 1, col, item)
 
     def clear_contents(self):
+        "remove all entries from list"
         self.lijst.clearContents()
 
+    def go(self):
+        """show the dialog screen
+        """
+        self.exec_()
+
     def breekaf(self, message):
-        self.meld(self.parent.resulttitel, message)
+        "show reason and end dialog"
+        self.meld(self.root.resulttitel, message)
         super().done(0)
 
     def set_header(self, text):
+        "set header for list"
         self.txt.setText(text)
 
     def check_options_combinations(self, title, message):
-        if self.cb2.isChecked() and self.cb3.isChecked():
+        "see if chosen options make sense"
+        if self.get_pth() and self.get_sum():
             self.meld(title, message)
             return False
         return True
 
-    def check_csv(self):
-        return self.cb2.isChecked()
+    def get_pth(self):
+        "get indicator to show path"
+        return self.cb_path.isChecked()
 
-    def get_savefile(self, fname, filefilter):
-        dlg = qtw.QFileDialog.getSaveFileName(self,
-                                              "Resultaat naar bestand kopieren",
-                                              str(self.parent.hier / fname),
-                                              "{};;All files (*.*)".format(filefilter))
+    def get_csv(self):
+        "get indicator to save as csv"
+        return self.cb_delim.isChecked()
+
+    def get_sum(self):
+        "get indicator to show as summarized"
+        return self.cb_smrz.isChecked()
+
+    def get_savefile(self, fname, ext):
+        """callback for button 'Copy to file'
+        """
+        if ext == '.csv':
+            f_filter = 'Comma delimited files (*.csv)'
+        elif ext == '.txt':
+            f_filter = 'Text files (*.txt)'
+        f_filter = "{};;All files (*.*)".format(f_filter)
+        dlg = qtw.QFileDialog.getSaveFileName(self, "Resultaat naar bestand kopieren",
+                                              str(self.root.hier / fname), f_filter)
         return dlg[0]
 
     def meld(self, title, message):
+        "show message"
         qtw.QMessageBox.information(self, title, message)
 
     def copy_to_clipboard(self, text):
+        """callback for button 'Copy to clipboard'
+        """
         clp = qtw.QApplication.clipboard()
         clp.setText(text)
 
@@ -254,6 +290,8 @@ class ResultsGui(qtw.QDialog):
 
 
 class MainFrameGui(qtw.QWidget):
+    """main screen
+    """
     def __init__(self, root):
         self.root = root        # verwijzing naar MainFrame - voor als het nodig is
         self.app = qtw.QApplication(sys.argv)
@@ -263,6 +301,7 @@ class MainFrameGui(qtw.QWidget):
         self.setWindowIcon(gui.QIcon(root.iconame))
 
     def setup_screen(self, captions):
+        "set up screen for the various modes"
         self.grid = qtw.QGridLayout()
         self.row = -1
         self.vraag_zoek = self.add_combobox_row(captions['vraag_zoek'],
@@ -345,61 +384,83 @@ class MainFrameGui(qtw.QWidget):
         self.vraag_zoek.setFocus()
 
     def get_searchtext(self):
+        "get value of search field"
         return self.vraag_zoek.currentText()
 
     def get_replace_args(self):
+        "get value of replace field"
         return self.vraag_verv.currentText(), self.vraag_leeg.isChecked()
 
     def get_search_attr(self):
+        "read switches for type of search"
         return (self.vraag_regex.isChecked(), self.vraag_case.isChecked(),
                 self.vraag_woord.isChecked())
 
     def get_types_to_search(self):
+        "get filetypes to search"
         return self.vraag_types.currentText()
 
     def get_dir_to_search(self):
+        "get directory to search"
         return self.vraag_dir.currentText()
 
     def get_subdirs_to_search(self):
+        "get parameters for search in subdirectories"
         return (self.vraag_subs.isChecked(), self.vraag_links.isChecked(),
                 self.vraag_diepte.value())
 
     def get_backup(self):
+        "get backup indicator"
         return self.vraag_backup.isChecked()
 
     def get_ignore(self):
+        "get indicator not to search in comments amd docstrings"
         return self.vraag_uitsluit.isChecked()
 
     def get_context(self):
+        "get indicator to do context specific search"
         return self.vraag_context.isChecked()
 
     def error(self, titel, message):
+        "show an error message"
         qtw.QMessageBox.critical(self, titel, message, qtw.QMessageBox.Ok)
 
     def meld(self, titel, message):
+        "show an informational message"
         qtw.QMessageBox.information(self, titel, message, qtw.QMessageBox.Ok)
 
     def add_item_to_searchlist(self, item):
+        "add string to list of items searched for"
         self.vraag_zoek.insertItem(0, item)
 
     def get_skipdirs(self):
+        "get indicator to select directories to skip"
         return self.ask_skipdirs.isChecked()
 
     def get_skipfiles(self):
+        "get indicator to select files to skip"
         return self.ask_skipfiles.isChecked()
 
     def set_waitcursor(self, value):
+        """switch back and forth to a "busy" cursor
+        """
         if value:
             self.app.setOverrideCursor(gui.QCursor(core.Qt.WaitCursor))
         else:
             self.app.restoreOverrideCursor()
 
     def get_exit(self):
+        "get indicator to exot program when ready"
         self.vraag_exit.isChecked()
 
     def go(self):
+        "show screen and handle events"
         self.show()
         sys.exit(self.app.exec_())
+
+    def einde(self):
+        """applicatie afsluiten"""
+        self.close()
 
     def add_combobox_row(self, labeltext, itemlist, initial='', button=None):
         """create a row of widgets in the GUI
@@ -460,7 +521,7 @@ class MainFrameGui(qtw.QWidget):
         """update location to get settings from
         """
         if os.path.exists(txt) and not txt.endswith(os.path.sep):
-            self.readini(txt)
+            self.root.readini(txt)
             self.vraag_zoek.clear()
             self.vraag_zoek.addItems(self.root._mru_items["zoek"])
             self.vraag_verv.clear()
