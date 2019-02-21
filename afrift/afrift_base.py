@@ -409,6 +409,9 @@ class MainFrame():
                 self._mru_items = json.load(_in)
             with ofile.open() as _in:
                 opts = json.load(_in)
+                for key, value in opts.items():
+                    if value is None:
+                        opts[key] = False
             self.p.update(opts)
 
     def read_kwargs(self, kwargs):
@@ -632,19 +635,20 @@ class MainFrame():
 
                         result = SelectNames(self, files=False).show()
                         if not result:
-                            canceled = False
+                            canceled = True
                             break
 
-                        # tweede ronde: toon de files die overblijven
                         fnames = self.zoekvervang.filenames[:]
                         for entry in fnames:
                             for name in self.names:
-                                if entry.startswith(name + '/'):
+                                # if str(entry).startswith(name + '/'):
+                                if entry.parent == name:
                                     self.zoekvervang.filenames.remove(entry)
                                     break
                         if not skip_files:
                             go_on = False
                 if skip_files:
+                    # tweede ronde: toon de files die overblijven
                     self.names = sorted(self.zoekvervang.filenames)  # , key=lambda x: str(x))
                     result = SelectNames(self).show()
                     if not result and not skip_dirs:

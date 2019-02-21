@@ -12,8 +12,9 @@ class SelectNamesGui(qtw.QDialog):
     """dialog for selecting directories/files
     """
     def __init__(self, parent, root):
-        super().__init__(parent)
-        self.setWindowTitle(self.title)
+        self.root = root
+        super().__init__(parent.gui)
+        self.setWindowTitle(root.title)
         self.setWindowIcon(gui.QIcon(root.iconame))
 
     def setup_screen(self, captions):
@@ -41,7 +42,7 @@ class SelectNamesGui(qtw.QDialog):
         frm = qtw.QFrame(self)
         fvbox = qtw.QVBoxLayout()
         self.checklist = []
-        for item in self.root.names:
+        for item in self.root.parent.names:
             if self.root.dofiles:
                 cb = qtw.QCheckBox(str(item), frm)
             else:
@@ -76,7 +77,7 @@ class SelectNamesGui(qtw.QDialog):
         """show the dialog screen
         """
         result = self.exec_()
-        if result == qtw.QDialog.accepted:
+        if result == qtw.QDialog.Accepted:
             return True
         # elif result == qtw.QDialog.rejected:
         return False
@@ -104,7 +105,7 @@ class SelectNamesGui(qtw.QDialog):
                 else:
                     dirs.append(cb.text())
         if self.root.dofiles:
-            self.root.names = [self.names[x] for x in sorted(self.names.keys())]
+            self.root.names = [self.root.names[x] for x in sorted(self.root.names.keys())]
         else:
             self.root.names = dirs
         super().accept()
@@ -115,8 +116,8 @@ class ResultsGui(qtw.QDialog):
     """
     def __init__(self, parent, root):
         self.root = root
-        # super().__init__(parent)
-        qtw.QDialog.__init__(self)
+        super().__init__(parent.gui)
+        # qtw.QDialog.__init__(self)
         self.setWindowTitle(parent.resulttitel)
         self.setWindowIcon(gui.QIcon(root.iconame))
 
@@ -237,7 +238,7 @@ class ResultsGui(qtw.QDialog):
         "set header for list"
         self.txt.setText(text)
 
-    def check_options_combinations(self, title, message):
+    def check_option_combinations(self, title, message):
         "see if chosen options make sense"
         if self.get_pth() and self.get_sum():
             self.meld(title, message)
