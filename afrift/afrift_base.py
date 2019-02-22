@@ -424,18 +424,18 @@ class MainFrame():
             if test == '':
                 self._vervleeg = True
         self.p["extlist"] = kwargs.pop('extensions', '')
-        if self.p["extlist"] is None:
+        if not self.p["extlist"]:
             self.p["extlist"] = []
         for arg in ('regex', 'follow_symlinks', 'select_subdirs', 'select_files',
                     'dont_save', 'no_gui', 'output_file'):
             self.extraopts[arg] = kwargs.pop(arg, '')
-        self.extraopts['use_saved'] = kwargs.pop('use_saved', True)
+        self.extraopts['use_saved'] = kwargs.pop('use_saved', False)
         if not self.extraopts['use_saved']:
             for arg, key in (('case_sensitive', "case"),
                              ('whole_words', "woord"),
                              ('recursive', "subdirs"),
                              ('python_context', "context"), ):
-                self.p[key] = kwargs.pop(arg, '')
+                self.p[key] = kwargs.pop(arg, self.p[key])
         self._backup = kwargs.pop('backup_originals', '')
         self._exit_when_ready = True
 
