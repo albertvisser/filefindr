@@ -1,47 +1,57 @@
-# -*- coding: UTF-8 -*-
-"""AFRIFT wxPython versie
+"""AFRIFT wxPython specific classes
 """
 import os
 import sys
 import wx
 ## import contextlib
-from .findr_files import Finder
-from .afrift_base import iconame, ABase, HERE
 
 
-class SelectNames(wx.Dialog):
-    """Tussenscherm om te verwerken files te kiezen"""
+class SelectNamesGui(wx.Dialog):
+    """dialog for selecting directories/files
+    """
+    def __init__(self, parent, root):
+        self.root = root
+        style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+        super().__init__(parent.gui, title=self.title, style=style)
+        self.SetIcon(wx.Icon(root.iconame, wx.BITMAP_TYPE_ICO))
 
-    def __init__(self, parent, ID, style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER, files=True):
-        self.dofiles = files
-        self.parent = parent
-        self.results = []
-        title = self.parent.title + " - file list"
-        wx.Dialog.__init__(self, parent, ID, title, style=style)
-        self.SetIcon(wx.Icon(iconame, wx.BITMAP_TYPE_ICO))
+    def setup_screen(self, captions):
+        "build widgets"
         vbox = wx.BoxSizer(wx.VERTICAL)
 
-        if files:
-            text = "Selecteer de bestanden die je *niet* wilt verwerken"
-        else:
-            text = "Selecteer de directories die je *niet* wilt verwerken"
-        txt = wx.StaticText(self, -1, text)
+        txt = wx.StaticText(self, -1, captions['heading'])
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         hbox.Add(txt, 0, wx.EXPAND | wx.ALL, 5)
         vbox.Add(hbox, 0)
 
+        self.sel_all = wx.CheckBox(self, label=captions['sel_all'])
+        self.sel_all.Bind(wx.EVT_CHECKBOX, self.select_all)
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.addSpacing(10)
+        hbox.addWidget(self.sel_all)
+
+        self.flip_sel = wx.Button(self, label=captions['invert'])
+        self.flip_Bind(wx.EVT_BUTTON, self.invert_selection)
+        hbox.addStretch()
+        hbox.addWidget(self.flip_sel)
+        hbox.addSpacing(20)
+        vbox.addLayout(hbox)
+
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         self.frm = wx.CheckListBox(self, -1, choices=self.parent.names)
+        self.checklist = self.frm.GetItems()
         hbox.Add(self.frm, 0)
         vbox.Add(hbox, 0)
 
-        id_ = wx.NewId()
-        b1 = wx.Button(self, id_, "&Klaar")
-        ## self.Bind(wx.EVT_BUTTON, self.klaar, b1)
-        b1.Bind(wx.EVT_BUTTON, self.klaar)
-        self.SetAffirmativeId(id_)
+        b_can = wx.Button(self, label=captions['exit'])
+        b_can.Bind(wx.EVT_BUTTON, self.klaar)
+        self.SetEscapeId(b_can.GetId())
+        b_ok = wx.Button(self, label=captions['execute'])
+        b_ok.Bind(wx.EVT_BUTTON, self.klaar)
+        self.SetAffirmativeId(b_ok.GetId())
         hbox = wx.BoxSizer(wx.HORIZONTAL)
-        hbox.Add(b1, 0)
+        hbox.Add(b_can, 0)
+        hbox.Add(b_ok, 0)
         vbox.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL)
 
         self.SetAutoLayout(True)
@@ -50,73 +60,137 @@ class SelectNames(wx.Dialog):
         ## vsizer.SetSizeHints(self)
         self.Layout()
 
+    def go(self):
+        """show the dialog screen
+        """
+        result = self.ShowModal()
+        if result == wx.ID_OK:
+            return True
+        # elif result == wx.ID_CANCEL:
+        return False
+
+    def select_all(self):
+        """check or uncheck all boxes
+        """
+        state = self.sel_all.IsChecked()
+        for cb in self.checklist:
+            cb.setChecked(state)
+
+    def invert_selection(self):
+        """check unchecked and uncheck checked boxes
+        """
+        for cb in self.checklist:
+            cb.setChecked(not cb.isChecked())
+
     def klaar(self, event):
         "dialoog afsluiten"
         dirs = []
         for checked in self.frm.CheckedStrings:
             print(checked)
-            if self.dofiles:
+            if self.parent.dofiles:
                 self.parent.names.remove(checked)
             else:
                 dirs.append(checked)
-        if not self.dofiles:
-            self.parent.names = dirs
+        if not self.root.dofiles:
+            self.root.names = dirs
         self.EndModal(0)
 
 
-class Results(wx.Dialog):
-    """Resultaten scherm"""
+class ResultsGui(wx.Dialog):
+    """results screen
+    """
+    def __init__(self, parent, root):
+        self.root = root
+        style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+        super().__init__(parent.gui, title=root.parent.resulttitel, style=style)
+        self.SetIcon(wx.Icon(root.iconame, wx.BITMAP_TYPE_ICO))
 
-    def __init__(self, parent, ID, title, style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER):
-        self.parent = parent
-        self.results = []
-        # breedte en titel linkerkolom
-        if self.parent.apptype == "":
-            breedte, titel = 300, 'File/Regel'
-        elif self.parent.apptype == "single":
-            breedte, titel = 50, 'Regel'
-        elif self.parent.apptype == "multi":
-            breedte, titel = 200, 'File/Regel'
-        wx.Dialog.__init__(self, parent, ID, title, style=style)
-        self.SetIcon(wx.Icon(iconame, wx.BITMAP_TYPE_ICO))
+    def setup_screen(self, captions):
+        "build widgets"
+        if self.root.parent.apptype == "single":
+            breedte = 50
+        elif self.root.parent.apptype == 'multi':
+            breedte = 200
+        else:
+            breedte = 300
+        vsizer = wx.BoxSizer(wx.VERTICAL)
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.txt = wx.StaticText(self, label=captions['heading'])
+        hsizer.Add(self.txt, 0, wx.EXPAND | wx.ALL, 5)
+        vsizer.Add(hsizer, 0, wx.EXPAND)
 
-        # pnl = wx.Panel(self,-1)
-        txt = wx.StaticText(self, -1, "{} ({} items)".format(self.parent.zoekvervang.rpt[0],
-                                                             len(self.parent.zoekvervang.rpt) - 1))
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
         self.lijst = wx.ListCtrl(self, -1, size=(breedte + 385, 460),
                                  style=wx.LC_REPORT | wx.LC_VRULES)
-        self.lijst.InsertColumn(0, titel)
+        self.lijst.InsertColumn(0, self.root.titel)
         self.lijst.SetColumnWidth(0, breedte)
         self.lijst.InsertColumn(1, "Data")
         self.lijst.SetColumnWidth(1, 380)
         self.populate_list()
 
-        b2 = wx.Button(self, wx.ID_CANCEL, "&Klaar")
-        ## self.Bind(wx.EVT_BUTTON, self.einde,  b2)
-        b1 = wx.Button(self, -1, "&Copy to File")
-        self.Bind(wx.EVT_BUTTON, self.kopie, b1)
-        b3 = wx.Button(self, -1, "Copy to &Clipboard")
-        self.Bind(wx.EVT_BUTTON, self.to_clipboard, b3)
-        cb = wx.CheckBox(self, -1, label="toon directorypad in uitvoer")
-        cb.SetValue(False)
-        if self.parent.apptype == "single":
-            cb.Enable(False)
-        self.cb = cb
+        self.lijst.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.to_result)
+        accel_list = []
+        menuitem = wx.MenuItem(None, wx.NewId(), 'help')
+        self.Bind(wx.EVT_MENU, self.help, menuitem)
+        accel = wx.AcceleratorEntry(cmd=menuitem.GetId())
+        ok = accel.FromString('F1')
+        if ok:
+            accel_list.append(accel)
+        menuitem = wx.MenuItem(None, wx.NewId(), 'result')
+        self.Bind(wx.EVT_MENU, self.to_result, menuitem)
+        accel = wx.AcceleratorEntry(cmd=menuitem.GetId())
+        ok = accel.FromString('Ctrl+G')
+        if ok:
+            accel_list.append(accel)
+        if accel_list:
+            self.SetAcceleratorTable(wx.AcceleratorTable(accel_list))
 
-        vsizer = wx.BoxSizer(wx.VERTICAL)
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hsizer.Add(txt, 0, wx.EXPAND | wx.ALL, 5)
-        vsizer.Add(hsizer, 0, wx.EXPAND)
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hsizer.Add(self.lijst, 1, wx.EXPAND | wx.ALL)
+        hsizer.Add(self.lijst, 0, wx.EXPAND | wx.ALL, 5)
         vsizer.Add(hsizer, 1, wx.EXPAND)
+
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         bsizer = wx.BoxSizer(wx.HORIZONTAL)
-        bsizer.Add(b1, 0, wx.ALL, 5)
-        bsizer.Add(b3, 0, wx.ALL, 5)
-        bsizer.Add(b2, 0, wx.ALL, 5)
-        bsizer.Add(cb, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
-        hsizer.Add(bsizer, 0)
+        btn = wx.Button(self, wx.ID_CANCEL, label=captions['exit'])
+        bsizer.Add(btn, 0, wx.ALL, 5)
+
+        if not self.root.label_only:
+            btn = wx.Button(self, label=captions['rpt'])
+            btn.Bind(wx.EVT_BUTTON, self.root.refresh)
+            if self.root.parent.p['vervang']:
+                btn.Enable(False)
+            bsizer.Add(btn, 0, wx.ALL, 5)
+
+            btn = wx.Button(self, label=captions['cpy'])
+            btn.Bind(wx.EVT_BUTTON, self.root.kopie)
+            bsizer.Add(btn, 0, wx.ALL, 5)
+
+            btn = wx.Button(self, label=captions['clp'])
+            btn.Bind(wx.EVT_BUTTON, self.root.to_clipboard)
+            bsizer.Add(btn, 0, wx.ALL, 5)
+
+            gsizer = wx.FlexGridSizer(cols=2)
+            gsizer.Add(wx.StaticText(self, label=captions['fmt']))
+
+            cb = wx.CheckBox(self, label=captions['pth'])
+            cb.SetValue(False)
+            if self.root.parent.apptype == "single":
+                cb.Enable(False)
+            self.cb_path = cb
+            # bsizer.Add(cb, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
+            gsizer.Add(cb)
+
+            cb = wx.CheckBox(self, label=captions['dlm'])
+            cb.SetValue(False)
+            self.cb_delim = cb
+            gsizer.Add(cb)
+
+            cb = wx.CheckBox(self, label=captions['sum'])
+            cb.SetValue(False)
+            self.cb_smrz = cb
+            gsizer.Add(cb)
+
+            bsizer.Add(gsizer, 0)
+            hsizer.Add(bsizer, 0)
         vsizer.Add(hsizer, 0, wx.ALIGN_CENTER_HORIZONTAL)  # wx.EXPAND)
 
         self.SetAutoLayout(True)
@@ -128,68 +202,84 @@ class Results(wx.Dialog):
         self.SetFocus()
 
     def populate_list(self):
-        "resultaten in de listbox zetten"
-        for ix, line in enumerate(self.parent.zoekvervang.rpt):
-            if ix == 0:
-                kop = line
-            elif line != "":
-                where, what = line.split(": ", 1)
-                ## try:
-                fname, lineno = where.rsplit("r. ", 1)
-                ## except ValueError:
-                    ## pass
-                ## else:
-                if self.parent.apptype == "single":
-                    if ix == 1:
-                        kop += " in {0}".format(fname)
-                    where = lineno
-                elif not self.parent.apptype:
-                    where = where.replace(self.parent.p['pad'], '')[1:]
-                i = self.lijst.InsertItem(sys.maxsize, where)
-                self.lijst.SetItem(i, 0, where)
-                try:
-                    self.lijst.SetItem(i, 1, what)
-                except UnicodeDecodeError as e:
-                    self.lijst.SetItem(i, 1, ">> {0} <<".format(e))
-                self.results.append((where, what))
-        self.results.insert(0, kop)
-
-    def get_results(self, toonpad):
-        """apply switch to show complete path to results
+        """copy results to listbox
         """
-        text = ["{0}".format(self.results[0])]
-        for r1, r2 in self.results[1:]:
-            if toonpad:
-                text.append("{0} {1}".format(r1, r2))
-            else:
-                text.append("{0} {1}".format(r1.split(os.sep)[-1], r2))
-        return text
+        for result in self.root.results[1:]:
 
-    def kopie(self, event=None):
-        "callback for button 'Copy to file'"
-        toonpad = self.cb.GetValue()
-        f = self.parent.p["zoek"]
-        for char in '/\\?%*:|"><.':
-            if char in f:
-                f = f.replace(char, "~")
+            col = 0
+            indx = self.lijst.InsertItem(sys.maxsize, result[0])
+            self.lijst.SetItem(indx, col, result[0])
+
+            if self.root.show_context:
+                col += 1
+                self.lijst.SetItem(indx, col, result[1])
+
+            col += 1
+            self.lijst.SetItem(indx, col, result[-1])
+
+    def clear_contents(self):
+        "remove all entries from list"
+        self.lijst.DeleteAllItems()
+
+    def go(self):
+        """show the dialog screen
+        """
+        self.ShowModal()
+
+    def breekaf(self, message):
+        "show reason and end dialog"
+        self.meld(self.parent.resulttitel, message)
+        self.EndModal(0)
+
+    def set_header(self, text):
+        "set header for list"
+        self.txt.SetValue(text)
+
+    def check_option_combinations(self, title, message):
+        "see if chosen options make sense"
+        if self.get_pth() and self.get_sum():
+            self.meld(title, message)
+            return False
+        return True
+
+    def get_pth(self):
+        "get indicator to show path"
+        return self.cb_path.GetValue()
+
+    def get_csv(self):
+        "get indicator to save as csv"
+        return self.cb_delim.GetValue()
+
+    def get_sum(self):
+        "get indicator to show as summarized"
+        return self.cb_smrz.GetValue()
+
+    def get_savefile(self, fname, ext):
+        """callback for button 'Copy to file'
+        """
+        if ext == '.csv':
+            f_filter = 'Comma delimited files (*.csv)|*.csv;;'
+        elif ext == '.txt':
+            f_filter = 'Text files (*.txt)|*.txt;;'
+        fn = ''
         with wx.FileDialog(self, message="Resultaat naar bestand kopieren",
-                           defaultDir=str(self.parent.hier),
-                           defaultFile=f.join(('searchfor_', ".txt")),
-                           wildcard="text files (*.txt)|*.txt|all files (*.*)|*.*",
+                           defaultDir=str(self.root.hier),
+                           defaultFile=fname.join(('searchfor_', ".txt")),
+                           wildcard="{}All files (*.*)|*.*".format(f_filter),
                            style=wx.FD_SAVE) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 fn = dlg.GetPath()
-                with open(fn, "w") as f_out:
-                    for line in self.get_results(toonpad):
-                        f_out.write(line + "\n")
-        # dlg.Destroy()
+        return fn
 
-    def to_clipboard(self, event=None):
+    def meld(self, titel, message):
+        "show an informational message"
+        wx.MessageBox(message, titel, wx.OK | wx.ICON_INFORMATION, self)
+
+    def copy_to_clipboard(self, text):
         """callback for button 'Copy to clipboard'
         """
-        toonpad = True if self.cb.IsChecked() else False
         do = wx.TextDataObject()
-        do.SetText('\n'.join([str(x) for x in self.get_results(toonpad)]))
+        do.SetText(text)
         clp = wx.Clipboard.Get()
         if clp.Open():
             clp.SetData(do)
@@ -197,178 +287,180 @@ class Results(wx.Dialog):
         else:
             wx.MessageBox("Unable to open the clipboard", "Error")
 
+    def help(self, event):
+        """implemented here to swallow event argument
+        """
+        self.root.help()
 
-class MainFrame(wx.Frame, ABase):
-    """Hoofdscherm van de applicatie"""
+    def to_result(self, event):
+        """show result in file
+        """
+        self.root.goto_result(self.lijst.GetFirstSelected(), -1)
 
-    def __init__(self, parent=None, apptype="", fnaam=""):
-        app = wx.App(redirect=False, filename=os.path.join(os.path.dirname(HERE), 'logs',
-                                                           "afrift_wx.log"))
-        ABase.__init__(self, apptype=apptype, fnaam=fnaam)
-        wx.Frame.__init__(self, parent, wx.ID_ANY, self.title,
-                          style=wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE)
-        self.setupscreen()
-        app.MainLoop()
+    def klaar(self):
+        """finish dialog
+        """
+        self.EndModal(0)
 
-    def setupscreen(self):
+
+class MainFrameGui(wx.Frame):
+    """main screen
+    """
+    def __init__(self, root):
+        self.root = root        # verwijzing naar MainFrame - voor als het nodig is
+        self.app = wx.App()
+        super().__init__(None, title=self.root.title,
+                         style=wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE)
+        self.SetIcon(wx.Icon(root.iconame, wx.BITMAP_TYPE_ICO))
+
+    def setup_screen(self, captions):
         "set up screen for the various modes"
-        self.SetTitle(self.title)
-        self.SetIcon(wx.Icon(iconame, wx.BITMAP_TYPE_ICO))
-        self.pnl = wx.Panel(self, -1)
-
-        TXTW = 200
-
-        ## box = wx.StaticBox(self.pnl, -1)
-        t1 = wx.StaticText(self.pnl, -1, "Zoek naar:")
-        c1 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1), choices=self._mru_items["zoek"],
-                         style=wx.CB_DROPDOWN)
-        self.vraag_zoek = c1
-
-        t2 = wx.StaticText(self.pnl, -1, "Vervang door:")
-        c2 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1), choices=self._mru_items["verv"],
-                         style=wx.CB_DROPDOWN)
-        self.vraag_verv = c2
-
-        c3a = wx.CheckBox(self.pnl, -1, label="regular expression (Python format)")
-        self.vraag_regex = c3a
-        c3 = wx.CheckBox(self.pnl, -1, label="lege vervangtekst = weghalen")
-        c3.SetValue(self._vervleeg)
-        self.check_vervang = c3
-        c4 = wx.CheckBox(self.pnl, -1, label="hoofd/kleine letters gelijk")
-        c4.SetValue(bool(self.p["case"]))
-        self.vraag_case = c4
-        c5 = wx.CheckBox(self.pnl, -1, label="hele woorden")
-        c5.SetValue(bool(self.p["woord"]))
-        self.vraag_woord = c5
-
-        t = ""
-        if self.apptype == "":
-            t6 = wx.StaticText(self.pnl, -1, "In directory:")
-            c6 = wx.ComboBox(self.pnl, -1, size=(TXTW + 120, -1), choices=self._mru_items["dirs"],
-                             style=wx.CB_DROPDOWN)
-            self.vraag_dir = c6
-            btn = wx.Button(self.pnl, -1, label="&Zoek")
-            btn.Bind(wx.EVT_BUTTON, self.zoekdir)
-        elif self.apptype == "single":
-            t6t = wx.StaticText(self.pnl, -1, "In file/directory:")
-            t6 = wx.StaticText(self.pnl, -1, self.fnames[0])
-            t6b = wx.StaticText(self.pnl, -1, "", size=(120, -1))
-        else:
-            t = "van geselecteerde directories "
-
-        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
-            c7 = wx.CheckBox(self.pnl, -1, label=t + "ook subdirectories doorzoeken")
-            c7.SetValue(bool(self.p["subdirs"]))
-            self.vraag_subs = c7
-            c7a = wx.CheckBox(self.pnl, -1, label="symlinks volgen")
-            self.vraag_links = c7a
-            t7b = wx.StaticText(self.pnl, -1, label="    max. diepte (-1 is alles): ")
-            c7b = wx.SpinCtrl(self.pnl, -1, min=-1, initial=5)
-            self.vraag_diepte = c7b
-
-            t8 = wx.StaticText(self.pnl, -1, "alleen files van type:")
-            c8 = wx.ComboBox(self.pnl, -1, size=(TXTW, -1), choices=self._mru_items["types"],
-                             style=wx.CB_DROPDOWN)
-            self.vraag_types = c8
-
-        if self.apptype == "multi":
-            t9 = wx.StaticText(self.pnl, -1, "In de volgende files/directories:")
-            c9 = wx.ListBox(self.pnl, -1, size=(TXTW, -1), choices=self.fnames)
-            self.lb = c9
-
-        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
-            self.ask_skipdirs = wx.CheckBox(self.pnl, -1,
-                                            label="selecteer (sub)directories om over te slaan")
-            self.ask_skipfiles = wx.CheckBox(self.pnl, -1,
-                                             label="selecteer bestanden om over te slaan")
-
-        ## t10 =  wx.StaticText(self.pnl, -1,"", size=wid)
-        c10 = wx.CheckBox(self.pnl, -1, label="gewijzigde bestanden backuppen")
-        c10.SetValue(bool(self._backup))
-        self.vraag_backup = c10
-        c11 = wx.CheckBox(self.pnl, -1, label="direct afsluiten na vervangen")
-        c11.SetValue(bool(self._exit_when_ready))
-        self.vraag_exit = c11
-
-        self.DoIt = wx.Button(self.pnl, -1, label="&Uitvoeren")
-        self.Bind(wx.EVT_BUTTON, self.doe, self.DoIt)
-        ## self.Cancel = wx.Button(self.pnl,  wx.ID_CANCEL, "&Einde") # helpt niet
-        self.Cancel = wx.Button(self.pnl, -1, label="&Einde")
-        self.Bind(wx.EVT_BUTTON, self.einde, self.Cancel)
+        self.pnl = wx.Panel(self)
+        TXTW = 240
+        TXTH = 24
 
         bsizer = wx.BoxSizer(wx.VERTICAL)
         gbsizer = wx.GridBagSizer(4)
         row = 0
-        gbsizer.Add(t1, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
-        gbsizer.Add(c1, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
-        gbsizer.Add(wx.StaticText(self.pnl, -1, "", size=(20, -1)), (row, 2))
-        row += 1
-        gbsizer.Add(t2, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
-        gbsizer.Add(c2, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
+        gbsizer.Add(wx.StaticText(self.pnl, label=captions['vraag_zoek']), (row, 0),
+                    flag=wx.EXPAND | wx.ALL, border=4)
+        self.vraag_zoek = wx.ComboBox(self.pnl, size=(TXTW, TXTH), style=wx.CB_DROPDOWN,
+                                      choices=self.root._mru_items["zoek"])
+        self.vraag_zoek.AutoComplete(self.root._mru_items['zoek'])
+        gbsizer.Add(self.vraag_zoek, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
+        gbsizer.Add(wx.StaticText(self.pnl, size=(20, -1)), (row, 2))
         row += 1
         vsizer = wx.BoxSizer(wx.VERTICAL)
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hbsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer.Add(c3a, 0)
+        self.vraag_regex = wx.CheckBox(self.pnl, label=captions['regex'])
+        hbsizer.Add(self.vraag_regex, 0)
         hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
         vsizer.Add(hsizer, 0, wx.EXPAND)
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hbsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer.Add(c3, 0)
+        self.vraag_case = wx.CheckBox(self.pnl, -1, label=captions['case'])
+        self.vraag_case.SetValue(bool(self.root.p["case"]))
+        hbsizer.Add(self.vraag_case, 0)
         hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
         vsizer.Add(hsizer, 0, wx.EXPAND)
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hbsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer.Add(c4, 0)
+        self.vraag_woord = wx.CheckBox(self.pnl, label=captions['woord'])
+        self.vraag_woord.SetValue(bool(self.root.p["woord"]))
+        hbsizer.Add(self.vraag_woord, 0)
         hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
         vsizer.Add(hsizer, 0, wx.EXPAND)
+        gbsizer.Add(vsizer, (row, 1))
+
+        row += 1
+        gbsizer.Add(wx.StaticText(self.pnl, label=captions['vraag_verv']), (row, 0),
+                    flag=wx.EXPAND | wx.ALL, border=4)
+        self.vraag_verv = wx.ComboBox(self.pnl, size=(TXTW, TXTH), style=wx.CB_DROPDOWN,
+                                      choices=self.root._mru_items["verv"])
+        gbsizer.Add(self.vraag_verv, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
+        row += 1
+        vsizer = wx.BoxSizer(wx.VERTICAL)
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hbsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer.Add(c5, 0)
+        self.check_vervang = wx.CheckBox(self.pnl, label=captions['empty'])
+        self.check_vervang.SetValue(self.root._vervleeg)
+        hbsizer.Add(self.check_vervang, 0)
         hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
         vsizer.Add(hsizer, 0, wx.EXPAND)
-        gbsizer.Add(vsizer, (row, 1))  # ,(1, 2))
-        if self.apptype == "":
+        gbsizer.Add(vsizer, (row, 1))
+
+        t = ""
+        if self.root.apptype == "":
             row += 1
-            gbsizer.Add(t6, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
+            gbsizer.Add(wx.StaticText(self.pnl, label=captions['in']), (row, 0),
+                        flag=wx.EXPAND | wx.ALL, border=4)
+            self.vraag_dir = wx.ComboBox(self.pnl, size=(TXTW, TXTH), style=wx.CB_DROPDOWN,
+                                         choices=self.root._mru_items["dirs"])
+            self.vraag_dir.Bind(wx.EVT_TEXT, self.check_loc)
             hsizer = wx.BoxSizer(wx.HORIZONTAL)
-            hsizer.Add(c6, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
-            hsizer.Add(self.Zoek, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 4)
+            hsizer.Add(self.vraag_dir, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
+            btn = wx.Button(self.pnl, label=captions['zoek'], size=(-1, TXTH))
+            btn.Bind(wx.EVT_BUTTON, self.zoekdir)
+            hsizer.Add(btn, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 4)
             gbsizer.Add(hsizer, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
-        elif self.apptype == "single":
+        elif self.root.apptype == "single":
             row += 1
-            gbsizer.Add(t6t, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
-            gbsizer.Add(t6, (row, 1), flag=wx.EXPAND | wx.ALL, border=4)
-            gbsizer.Add(t6b, (row, 2), flag=wx.EXPAND | wx.ALL, border=4)
-        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
+            gbsizer.Add(wx.StaticText(self.pnl, label=captions['in_s']), (row, 0),
+                        flag=wx.EXPAND | wx.ALL, border=4)
+            gbsizer.Add(wx.StaticText(self.pnl, label=self.root.fnames[0]), (row, 1),
+                        flag=wx.EXPAND | wx.ALL, border=4)
+            gbsizer.Add(wx.StaticText(self.pnl, size=(120, -1)), (row, 2),
+                        flag=wx.EXPAND | wx.ALL, border=4)
+        else:  # if self.root.apptype == "multi":
+            t = captions['subs_m']
             row += 1
-            gbsizer.Add(c7, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
+            gbsizer.Add(wx.StaticText(self.pnl, label=captions['in_m']), (row, 0), (1, 2),
+                        flag=wx.EXPAND | wx.LEFT | wx.TOP, border=4)
+            row += 1
+            self.lb = wx.ListBox(self.pnl, size=(TXTW, -1),
+                                 choices=[str(x) for x in self.root.fnames])
+            gbsizer.Add(self.lb, (row, 0), (1, 2), flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=4)
+
+        if self.root.apptype != "single" or os.path.isdir(self.root.fnames[0]):
+            row += 1
+            self.vraag_subs = wx.CheckBox(self.pnl, -1, label=t + captions['subs'])
+            self.vraag_subs.SetValue(bool(self.root.p["subdirs"]))
+            gbsizer.Add(self.vraag_subs, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
+
             row += 1
             hsizer = wx.BoxSizer(wx.HORIZONTAL)
-            hsizer.Add(c7a, 0, wx.ALIGN_CENTER_VERTICAL)  # wx.TOP | wx.BOTTOM, 4)
-            hsizer.Add(t7b, 0, wx.ALIGN_CENTER_VERTICAL)  # wx.TOP | wx.BOTTOM, 4)
-            hsizer.Add(c7b, 0, wx.ALIGN_CENTER_VERTICAL)  # , 4)
+            self.vraag_links = wx.CheckBox(self.pnl, -1, label=captions['link'])
+            hsizer.Add(self.vraag_links, 0, wx.ALIGN_CENTER_VERTICAL)  # wx.TOP | wx.BOTTOM, 4)
+            self.vraag_diepte = wx.SpinCtrl(self.pnl, -1, min=-1, initial=5, size=(122, TXTH))
+            hsizer.Add(self.vraag_diepte, 0, wx.ALIGN_CENTER_VERTICAL)  # , 4)
             gbsizer.Add(hsizer, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
+
             row += 1
-            gbsizer.Add(t8, (row, 0), flag=wx.EXPAND | wx.ALL, border=4)
-            gbsizer.Add(c8, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
-        if self.apptype == "multi":
-            row += 1
-            gbsizer.Add(t9, (row, 0), (1, 2), flag=wx.EXPAND | wx.LEFT | wx.TOP, border=4)
-            row += 1
-            gbsizer.Add(c9, (row, 0), (1, 2), flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=4)
-        if self.apptype != "single" or os.path.isdir(self.fnames[0]):
-            row += 1
+            self.ask_skipdirs = wx.CheckBox(self.pnl, label=captions['skipdirs'])
             gbsizer.Add(self.ask_skipdirs, (row, 1), flag=wx.EXPAND)
+
             row += 1
+            self.ask_skipfiles = wx.CheckBox(self.pnl, label=captions['skipfiles'])
             gbsizer.Add(self.ask_skipfiles, (row, 1), flag=wx.EXPAND)
+
+            row += 1
+            gbsizer.Add(wx.StaticText(self.pnl, label=captions['ftypes']), (row, 0),
+                        flag=wx.EXPAND | wx.ALL, border=4)
+            self.vraag_types = wx.ComboBox(self.pnl, -1, size=(TXTW, TXTH),
+                                           choices=self.root._mru_items["types"],
+                                           style=wx.CB_DROPDOWN)
+            gbsizer.Add(self.vraag_types, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
+
         row += 1
-        gbsizer.Add(c10, (row, 1), flag=wx.EXPAND)
-        row += 1
-        gbsizer.Add(c11, (row, 1), flag=wx.EXPAND)
+        self.vraag_context = wx.CheckBox(self.pnl, label=captions['context'])
+        self.vraag_context.SetValue(self.root.p['context'])
+        gbsizer.Add(self.vraag_context, (row, 1), flag=wx.EXPAND)
+
         row += 1
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        hsizer.AddSpacer(22)
+        self.vraag_negeer = wx.CheckBox(self.pnl, label=captions['negeer'])
+        self.vraag_negeer.SetValue(self.root.p['negeer'])
+        hsizer.Add(self.vraag_negeer, 0)
+        gbsizer.Add(hsizer, (row, 1), flag=wx.EXPAND)
+
+        row += 1
+        self.vraag_backup = wx.CheckBox(self.pnl, label=captions['backup'])
+        self.vraag_backup.SetValue(bool(self.root._backup))
+        gbsizer.Add(self.vraag_backup, (row, 1), flag=wx.EXPAND)
+        row += 1
+        self.vraag_exit = wx.CheckBox(self.pnl, label=captions['exit'])
+        self.vraag_exit.SetValue(bool(self.root._exit_when_ready))
+        gbsizer.Add(self.vraag_exit, (row, 1), flag=wx.EXPAND)
+
+        row += 1
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.DoIt = wx.Button(self.pnl, -1, size=(-1, TXTH), label=captions['exec'])
+        self.DoIt.Bind(wx.EVT_BUTTON, self.doe)
         hsizer.Add(self.DoIt, 0, wx.EXPAND | wx.ALL, 4)
+        self.Cancel = wx.Button(self.pnl, -1, size=(-1, TXTH), label=captions['end'])
+        self.Cancel.Bind(wx.EVT_BUTTON, self.einde)
         hsizer.Add(self.Cancel, 0, wx.EXPAND | wx.ALL, 4)
         gbsizer.Add(hsizer, (row, 0), (1, 3), flag=wx.ALIGN_BOTTOM | wx.ALIGN_CENTER_HORIZONTAL,
                     border=0)
@@ -381,107 +473,131 @@ class MainFrame(wx.Frame, ABase):
 
         self.pnl.Layout()
         self.vraag_zoek.SetFocus()
-        self.noescape = False
-        self.Bind(wx.EVT_KEY_UP, self.on_key_up)
-        ## for win in self.GetChildren():
-            ## self.Bind(wx.EVT_KEY_UP,self.on_key_up,win)
-        print('showing screen')
-        self.Show(True)
+        accel_list = []
+        menuitem = wx.MenuItem(None, wx.NewId(), 'exec')
+        self.Bind(wx.EVT_MENU, self.doe, menuitem)
+        accel = wx.AcceleratorEntry(cmd=menuitem.GetId())
+        ok = accel.FromString('Return')
+        if ok:
+            accel_list.append(accel)
+        menuitem = wx.MenuItem(None, wx.NewId(), 'end')
+        self.Bind(wx.EVT_MENU, self.einde, menuitem)
+        accel = wx.AcceleratorEntry(cmd=menuitem.GetId())
+        ok = accel.FromString('Escape')
+        if ok:
+            accel_list.append(accel)
+        if accel_list:
+            self.SetAcceleratorTable(wx.AcceleratorTable(accel_list))
         self.SetFocus()
+
+    def get_searchtext(self):
+        "get value of search field"
+        return self.vraag_zoek.GetValue()
+
+    def get_replace_args(self):
+        "get value of replace field"
+        return self.vraag_verv.GetValue(), self.check_vervang.GetValue()
+
+    def get_search_attr(self):
+        "read switches for type of search"
+        return (self.vraag_regex.GetValue(), self.vraag_case.GetValue(),
+                self.vraag_woord.GetValue())
+
+    def get_types_to_search(self):
+        "get filetypes to search"
+        return self.vraag_types.GetValue()
+
+    def get_dir_to_search(self):
+        "get directory to search"
+        return self.vraag_dir.GetValue()
+
+    def get_subdirs_to_search(self):
+        "get parameters for search in subdirectories"
+        return (self.vraag_subs.GetValue(), self.vraag_links.GetValue(),
+                self.vraag_diepte.GetValue())
+
+    def get_backup(self):
+        "get backup indicator"
+        return self.vraag_backup.GetValue()
+
+    def get_ignore(self):
+        "get indicator not to search in comments amd docstrings"
+        return self.vraag_negeer.GetValue()
+
+    def get_context(self):
+        "get indicator to do context specific search"
+        return self.vraag_context.GetValue()
+
+    def error(self, titel, message):
+        "show an error message"
+        wx.MessageBox(message, titel, wx.OK | wx.ICON_ERROR, self)
+
+    def meld(self, titel, message):
+        "show an informational message"
+        wx.MessageBox(message, titel, wx.OK | wx.ICON_INFORMATION, self)
+
+    def add_item_to_searchlist(self, item):
+        "add string to list of items searched for"
+        self.vraag_zoek.Insert(item, 0)
+
+    def get_skipdirs(self):
+        "get indicator to select directories to skip"
+        return self.ask_skipdirs.IsChecked()
+
+    def get_skipfiles(self):
+        "get indicator to select files to skip"
+        return self.ask_skipfiles.IsChecked()
+
+    def doe(self, event):
+        """callback implemented here to swallow the event parameter
+        """
+        self.root.doe()
+
+    def set_waitcursor(self, value):
+        """switch back and forth to a "busy" cursor
+        """
+        if value:
+            wx.BeginBusyCursor()
+        else:
+            wx.EndBusyCursor()
+
+    def get_exit(self):
+        "get indicator to exot program when ready"
+        self.vraag_exit.GetValue()
+
+    def go(self):
+        "show screen and handle events"
+        self.Show(True)
+        self.app.MainLoop()
 
     def einde(self, event=None):
         """applicatie afsluiten"""
         self.Close(True)
 
-    def on_key_up(self, ev):
-        """event handler voor toetsaanslagen"""
-        ## print(ev.GetKeyCode())
-        if ev.GetKeyCode() == wx.WXK_ESCAPE:
-            if self.noescape:
-                self.noescape = False
-            else:
-                self.einde()
-        else:
-            ev.Skip()
-
-    def doe(self, event=None):
-        """Invoer controleren, indien ok zoekactie uitvoeren en resultaatscherm tonen"""
-        mld = self.checkzoek(self.vraag_zoek.GetValue())
-        if not mld:
-            self.checkverv(self.vraag_verv.GetValue(), self.check_vervang.GetValue())
-            self.checkattr(self.vraag_regex.GetValue(), self.vraag_case.GetValue(),
-                           self.vraag_woord.GetValue())
-            try:
-                b = self.vraag_types.GetValue()
-            except AttributeError:
-                b = None
-            if b:
-                self.checktype(b)
-            if not self.apptype:
-                mld = self.checkpath(self.vraag_dir.GetValue())
-        if not mld:
-            try:
-                self.checksubs(self.vraag_subs.GetValue(),
-                               self.vraag_links.GetValue(), self.vraag_diepte.GetValue())
-            except AttributeError:
-                pass
-        self.p["backup"] = self.vraag_backup.GetValue()
-        self.p["fallback_encoding"] = self._fallback_encoding
-
-        if mld:
-            with wx.MessageDialog(self, mld, self.fouttitel, wx.OK | wx.ICON_ERROR) as dlg:
-                dlg.ShowModal()
-            # dlg.Destroy()
-            return
-
-        # TODO: find out why json.dump doesn't work in Py 2 and fix it - or just enable for Py 3
-        ## self.schrijfini()
-        # print("\ninitializing zoekvervang class")
-        self.zoekvervang = Finder(**self.p)
-        if not self.zoekvervang.filenames:
-            with wx.MessageDialog(self, "Geen bestanden gevonden", self.resulttitel,
-                                  wx.OK | wx.ICON_ERROR) as dlg:
-                dlg.ShowModal()
-            # dlg.Destroy()
-            return
-
-        if self.apptype == "single" or (len(self.fnames) == 1 and os.path.isfile(self.fnames[0])):
-            pass
-        else:
-            ## print(self.skipdirs_overslaan, self.skipfiles_overslaan)
-            if self.ask_skipdirs.IsChecked():
-                # eerste ronde: toon directories
-                if self.zoekvervang.dirnames:
-                    self.names = sorted(self.zoekvervang.dirnames)
-                    dlg = SelectNames(self, -1, files=False)
-                    dlg.ShowModal()
-                    dlg.Destroy()
-                    # tweede ronde: toon de files die overblijven
-                    fnames = self.zoekvervang.filenames[:]
-                    for name in self.names:
-                        for fname in fnames:
-                            if str(fname).startswith(name + '/'):
-                                self.zoekvervang.filenames.remove(fname)
-            if self.ask_skipfiles.IsChecked():
-                self.names = self.zoekvervang.filenames
-                dlg = SelectNames(self, -1)
-                dlg.ShowModal()
-                dlg.Destroy()
-                self.zoekvervang.filenames = self.names
-
-        self.zoekvervang.do_action()
-
-        self.noescape = True
-        if len(self.zoekvervang.rpt) == 1:
-            txt = "Niks gevonden" if self.zoekvervang.ok else self.zoekvervang.rpt[0]
-            dlg = wx.MessageDialog(self, txt, self.resulttitel, wx.OK | wx.ICON_INFORMATION)
-        else:
-            dlg = Results(self, -1, self.resulttitel)
-        with dlg:
-            dlg.ShowModal()
-        # dlg.Destroy()
-        if self.vraag_exit.GetValue() and self.p["vervang"] is not None:
-            self.einde()
+    def check_loc(self, event):
+        """update location to get settings from
+        """
+        txt = event.GetEventObject().GetValue()
+        if os.path.exists(txt) and not txt.endswith(os.path.sep):
+            self.root.readini(txt)
+            self.vraag_zoek.Clear()
+            self.vraag_zoek.AppendItems(self.root._mru_items["zoek"])
+            if self.root._mru_items["zoek"]:
+                self.vraag_zoek.SetValue(self.root._mru_items["zoek"][0])
+            self.vraag_verv.Clear()
+            self.vraag_verv.AppendItems(self.root._mru_items["verv"])
+            if self.root._mru_items["verv"]:
+                self.vraag_verv.SetValue(self.root._mru_items["verv"][0])
+            self.vraag_types.Clear()
+            self.vraag_types.AppendItems(self.root._mru_items["types"])
+            if self.root._mru_items["types"]:
+                self.vraag_types.SetValue(self.root._mru_items["types"][0])
+            ## self.vraag_dir.Clear()
+            ## self.vraag_dir.AppendItems(self._mru_items["dirs"])
+            self.vraag_case.SetValue(self.root.p["case"])
+            self.vraag_woord.SetValue(self.root.p["woord"])
+            self.vraag_subs.SetValue(self.root.p["subdirs"])
+            self.vraag_context.SetValue(self.root.p["context"])
 
     def zoekdir(self, event):
         """event handler voor 'zoek in directory'"""
@@ -490,8 +606,3 @@ class MainFrame(wx.Frame, ABase):
                           style=wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 self.vraag_dir.SetValue(dlg.GetPath())
-        # dlg.Destroy()
-
-
-if __name__ == "__main__":
-    MainFrame()
