@@ -200,25 +200,26 @@ class ResultsGui(qtw.QDialog):
     def populate_list(self):
         """copy results to listbox
         """
+        print('in populate_list:', self.root.results[0])
         for ix, result in enumerate(self.root.results[1:]):
 
-            self.lijst.insertRow(ix - 1)
-            self.lijst.setRowHeight(ix - 1, 18)
+            self.lijst.insertRow(ix)
+            self.lijst.setRowHeight(ix, 18)
             col = 0
             item = qtw.QTableWidgetItem(result[0])
             item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
-            self.lijst.setItem(ix - 1, col, item)
+            self.lijst.setItem(ix, col, item)
 
             if self.root.show_context:
                 col += 1
                 item = qtw.QTableWidgetItem(result[1])
                 item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
-                self.lijst.setItem(ix - 1, col, item)
+                self.lijst.setItem(ix, col, item)
 
             col += 1
             item = qtw.QTableWidgetItem(result[-1])
             item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
-            self.lijst.setItem(ix - 1, col, item)
+            self.lijst.setItem(ix, col, item)
 
     def clear_contents(self):
         "remove all entries from list"
@@ -297,8 +298,8 @@ class MainFrameGui(qtw.QWidget):
         self.root = root        # verwijzing naar MainFrame - voor als het nodig is
         self.app = qtw.QApplication(sys.argv)
         parent = None
-        super().__init__(parent, **kwargs)
-        print('MF after init:', self.p['context'])
+        super().__init__(parent)
+        print('MF after init:', self.root.p['context'])
 
     def setup_screen(self, captions):
         "set up screen for the various modes"
@@ -360,15 +361,15 @@ class MainFrameGui(qtw.QWidget):
             if self.root.p.get("extlist", ''):
                 self.vraag_types.setEditText(self.root.p['extlist'])
 
-        print(self.p['context'])
+        print(self.root.p['context'])
         self.vraag_context = self.add_checkbox_row(
-            "context tonen (waar mogelijk, anders overslaan)", self.p["context"])
+            "context tonen (waar mogelijk, anders overslaan)", self.root.p["context"])
         self.vraag_uitsluit = self.add_checkbox_row(
-            "commentaren en docstrings negeren", self.p["negeer"], indent=22)
+            "commentaren en docstrings negeren", self.root.p["negeer"], indent=22)
         self.vraag_backup = self.add_checkbox_row(
-            "gewijzigd(e) bestand(en) backuppen", self._backup)
+            "gewijzigd(e) bestand(en) backuppen", self.root._backup)
         self.vraag_exit = self.add_checkbox_row(
-            "direct afsluiten na vervangen", self._exit_when_ready)
+            "direct afsluiten na vervangen", self.root._exit_when_ready)
 
         self.row += 1
         hbox = qtw.QHBoxLayout()
