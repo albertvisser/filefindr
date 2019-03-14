@@ -468,7 +468,7 @@ class MainFrame():
             else:
                 test += os.sep
         else:
-            test = self.p["pad"] + os.sep
+            test = str(self.p["pad"]) + os.sep
         return test
 
     def checkzoek(self, item):
@@ -540,10 +540,12 @@ class MainFrame():
 
     def checkpath(self, item):
         "controleer zoekpad"
+        print('in checkpath:', item)
+        test = pathlib.Path(item)
         if not item:
             mld = ("Ik wil wel graag weten in welke directory ik moet "
                    "(beginnen met) zoeken")
-        elif not pathlib.Path(item).exists():
+        elif not test.exists():  # pathlib.Path(item).exists():
             mld = "De opgegeven directory bestaat niet"
         else:
             mld = ""
@@ -553,7 +555,7 @@ class MainFrame():
                 pass
             self._mru_items["dirs"].insert(0, item)
             self.s += "\nin {0}".format(item)
-            self.p["pad"] = item
+            self.p["pad"] = test  # item
             self.p['filelist'] = ''
         return mld
 
