@@ -239,13 +239,6 @@ class ResultsGui(qtw.QDialog):
         "set header for list"
         self.txt.setText(text)
 
-    def check_option_combinations(self, title, message):
-        "see if chosen options make sense"
-        if self.get_pth() and self.get_sum():
-            self.meld(title, message)
-            return False
-        return True
-
     def get_pth(self):
         "get indicator to show path"
         return self.cb_path.isChecked()

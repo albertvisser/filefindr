@@ -215,8 +215,13 @@ class Results():
     def check_option_combinations_ok(self):
         """onzinnige combinatie(s) uitsluiten
         """
-        title, msg = "Fancy Title", "Summarize to comma delimited is not a sensible option, request denied"
-        return self.gui.check_option_combinations(title, msg)
+        title, msg = (self.parent.title,
+                      "Summarize to comma delimited is not a sensible option, request denied")
+        if self.gui.get_sum() and self.gui.get_csv():
+            self.gui.meld(title, msg)
+            return False
+        return True
+
 
     def kopie(self):
         """callback for button 'Copy to file'
