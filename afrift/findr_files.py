@@ -192,6 +192,7 @@ class Finder(object):
                 raise TypeError('Onbekende optie ' + x)
         ## print('On creating Finder instance:', self.p)
         self.ok = True
+        self.errors = []
         self.rpt = []  # oorspronkelijk: verslag van wat er gebeurd is
         self.use_complex = True
         self.rgx, self.ignore = '', ''
@@ -203,7 +204,6 @@ class Finder(object):
             self.rpt.append('Fout: geen zoekstring opgegeven')
         if self.rpt:
             self.ok = False
-            specs = "Zoekactie niet mogelijk"
             return
         self.p['wijzig'] = True if self.p['vervang'] is not None else False
         self.extlist_upper = []
@@ -239,11 +239,16 @@ class Finder(object):
                 specs.append(" in opgegeven bestanden/directories")
             for entry in self.p['filelist']:
                 ## self.subdirs(entry, is_list=False)
-                self.subdirs(entry)
+                mld = self.subdirs(entry)
+                if mld:
+                    self.errors.append(mld)
         if self.p['subdirs']:
             specs.append(" en evt. onderliggende directories")
         self.rpt.insert(0, "".join(specs))
         self.specs = specs
+        if self.errors:
+            self.rpt.append("Zoekactie niet mogelijk")
+            self.ok = False
 
     ## def subdirs(self, pad, is_list=True, level=0):
     def subdirs(self, pad, level=0):
@@ -276,8 +281,10 @@ class Finder(object):
             _list = (fname for fname in os.scandir(pad))
         except NotADirectoryError:
             _list = [path]
-        except PermissionError:     # , FileNotFoundError
+        except PermissionError:
             _list = []
+        except FileNotFoundError:
+            return 'File not found: {}'.format(path.resolve())
         ## else:
             ## _list = (pad,)
         for entry in _list:
@@ -294,6 +301,7 @@ class Finder(object):
                     ext = entry.suffix
                 if len(self.p['extlist']) == 0 or ext.upper() in self.extlist_upper:
                     self.filenames.append(entry)
+        return ''
 
     def build_regexp_simple(self):
         """build the search regexp(s)

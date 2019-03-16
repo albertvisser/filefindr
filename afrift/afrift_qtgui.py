@@ -294,7 +294,8 @@ class MainFrameGui(qtw.QWidget):
         self.app = qtw.QApplication(sys.argv)
         parent = None
         super().__init__(parent)
-        print('MF after init:', self.root.p['context'])
+        self.setWindowTitle(root.title)
+        self.setWindowIcon(gui.QIcon(root.iconame))
 
     def setup_screen(self, captions):
         "set up screen for the various modes"
@@ -426,9 +427,16 @@ class MainFrameGui(qtw.QWidget):
         "show an error message"
         qtw.QMessageBox.critical(self, titel, message, qtw.QMessageBox.Ok)
 
-    def meld(self, titel, message):
+    def meld(self, titel, message, additional=None):
         "show an informational message"
-        qtw.QMessageBox.information(self, titel, message, qtw.QMessageBox.Ok)
+        if additional:
+            dlg = qtw.QMessageBox(qtw.QMessageBox.Information, titel, message, qtw.QMessageBox.Ok,
+                                  parent=self)
+            dlg.setDetailedText('\n'.join(additional))
+            dlg.exec_()
+            dlg.close()
+        else:
+            qtw.QMessageBox.information(self, titel, message, qtw.QMessageBox.Ok)
 
     def add_item_to_searchlist(self, item):
         "add string to list of items searched for"

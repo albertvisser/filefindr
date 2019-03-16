@@ -617,7 +617,8 @@ class MainFrame():
         self.zoekvervang = Finder(**self.p)
 
         if not self.zoekvervang.ok:
-            self.gui.meld(self.resulttitel, '\n'.join(self.zoekvervang.rpt))
+            self.gui.meld(self.resulttitel, '\n'.join(self.zoekvervang.rpt),
+                          self.zoekvervang.errors)
             return
 
         if not self.zoekvervang.filenames:
