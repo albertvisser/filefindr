@@ -11,6 +11,18 @@ def main(args):
     relay the arguments to the application class
     """
     args['apptype'] = args.pop('appmode')
+    err = ''
+    if args['output_file']:
+        if args['as_csv'] and args['summarize']:
+            err = 'Summarize output to csv is not a sensible combination'
+    else:
+        for option in ('full_path', 'as_csv', 'summarize'):
+            if args[option]:
+                err = 'Output options without output destination not allowed'
+                break
+    if err:
+        print(err)
+        return
     test = args.pop('fname')
     if len(test) > 1:
         args['flist'] = test
@@ -60,5 +72,11 @@ if __name__ == "__main__":
                         help="don't show initial parameters screen")
     parser.add_argument("-o", "--output-file", type=argparse.FileType('w'),
                         help="save output to file")
+    parser.add_argument("-p", "--full-path", action='store_true',
+                        help="show full paths in output")
+    parser.add_argument("-c", "--as-csv", action='store_true',
+                        help="output as csv")
+    parser.add_argument("-u", "--summarize", action='store_true',
+                        help="output_summarized")
     args = parser.parse_args()
     main(vars(args))
