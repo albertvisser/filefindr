@@ -227,7 +227,7 @@ class Results():
         for char in '/\\?%*:|"><.':
             if char in f_nam:
                 f_nam = f_nam.replace(char, "~")
-        if self.gui.check_csv():
+        if self.gui.get_csv():
             ext = '.csv'
         else:
             ext = '.txt'

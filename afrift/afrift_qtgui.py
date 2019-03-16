@@ -267,7 +267,7 @@ class ResultsGui(qtw.QDialog):
             f_filter = 'Text files (*.txt)'
         f_filter = "{};;All files (*.*)".format(f_filter)
         dlg = qtw.QFileDialog.getSaveFileName(self, "Resultaat naar bestand kopieren",
-                                              str(self.root.hier / fname), f_filter)
+                                              str(self.root.parent.hier / fname), f_filter)
         return dlg[0]
 
     def meld(self, title, message):
