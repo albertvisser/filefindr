@@ -123,6 +123,8 @@ class ResultsGui(qtw.QDialog):
 
     def setup_screen(self, captions):
         "build widgets"
+        def add_ampersand(text):
+            return '&'.join((text[0], text[1:]))
         breedte = 50 if self.root.parent.apptype == "single" else 150  # qt versie
         vbox = qtw.QVBoxLayout()
         hbox = qtw.QHBoxLayout()
@@ -181,12 +183,12 @@ class ResultsGui(qtw.QDialog):
             hbox.addWidget(btn)
             gbox = qtw.QGridLayout()
             gbox.addWidget(qtw.QLabel(captions['fmt'], self), 0, 0)
-            self.cb_path = qtw.QCheckBox(captions['pth'], self)
+            self.cb_path = qtw.QCheckBox('&' + captions['pth'], self)
             if self.root.parent.apptype == "single":
                 self.cb_path.setEnabled(False)
             gbox.addWidget(self.cb_path, 1, 0)
-            self.cb_delim = qtw.QCheckBox(captions['dlm'], self)
-            self.cb_smrz = qtw.QCheckBox(captions['sum'], self)
+            self.cb_delim = qtw.QCheckBox(add_ampersand(captions['dlm']), self)
+            self.cb_smrz = qtw.QCheckBox(add_ampersand(captions['sum']), self)
             gbox.addWidget(self.cb_delim, 0, 1)
             gbox.addWidget(self.cb_smrz, 1, 1)
             hbox.addLayout(gbox)
