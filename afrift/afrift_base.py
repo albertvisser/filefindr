@@ -222,7 +222,6 @@ class Results():
             return False
         return True
 
-
     def kopie(self):
         """callback for button 'Copy to file'
         """
@@ -545,7 +544,6 @@ class MainFrame():
 
     def checkpath(self, item):
         "controleer zoekpad"
-        print('in checkpath:', item)
         test = pathlib.Path(item)
         if not item:
             mld = ("Ik wil wel graag weten in welke directory ik moet "
