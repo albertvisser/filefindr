@@ -107,6 +107,8 @@ class ResultsGui(wx.Dialog):
 
     def setup_screen(self, captions):
         "build widgets"
+        def add_ampersand(text):
+            return '&'.join((text[0], text[1:]))
         if self.root.parent.apptype == "single":
             breedte = 50
         elif self.root.parent.apptype == 'multi':
@@ -142,8 +144,6 @@ class ResultsGui(wx.Dialog):
         ok = accel.FromString('Ctrl+G')
         if ok:
             accel_list.append(accel)
-        if accel_list:
-            self.SetAcceleratorTable(wx.AcceleratorTable(accel_list))
 
         hsizer.Add(self.lijst, 0, wx.EXPAND | wx.ALL, 5)
         vsizer.Add(hsizer, 1, wx.EXPAND)
@@ -168,10 +168,23 @@ class ResultsGui(wx.Dialog):
             btn.Bind(wx.EVT_BUTTON, self.root.to_clipboard)
             bsizer.Add(btn, 0, wx.ALL, 5)
 
-            gsizer = wx.FlexGridSizer(cols=2)
+            gsizer = wx.FlexGridSizer(cols=2, vgap=5, hgap=5)
             gsizer.Add(wx.StaticText(self, label=captions['fmt']))
 
-            cb = wx.CheckBox(self, label=captions['pth'])
+            cb = wx.CheckBox(self, label=add_ampersand(captions['dlm']))
+            accel = wx.AcceleratorEntry(cmd=cb.GetId())
+            ok = accel.FromString('Alt+O')
+            if ok:
+                accel_list.append(accel)
+            cb.SetValue(False)
+            self.cb_delim = cb
+            gsizer.Add(cb)
+
+            cb = wx.CheckBox(self, label='&' + captions['pth'])
+            accel = wx.AcceleratorEntry(cmd=cb.GetId())
+            ok = accel.FromString('Alt+P')
+            if ok:
+                accel_list.append(accel)
             cb.SetValue(False)
             if self.root.parent.apptype == "single":
                 cb.Enable(False)
@@ -179,20 +192,21 @@ class ResultsGui(wx.Dialog):
             # bsizer.Add(cb, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
             gsizer.Add(cb)
 
-            cb = wx.CheckBox(self, label=captions['dlm'])
-            cb.SetValue(False)
-            self.cb_delim = cb
-            gsizer.Add(cb)
-
-            cb = wx.CheckBox(self, label=captions['sum'])
+            cb = wx.CheckBox(self, label=add_ampersand(captions['sum']))
+            accel = wx.AcceleratorEntry(cmd=cb.GetId())
+            ok = accel.FromString('Alt+U')
+            if ok:
+                accel_list.append(accel)
             cb.SetValue(False)
             self.cb_smrz = cb
             gsizer.Add(cb)
 
-            bsizer.Add(gsizer, 0)
-            hsizer.Add(bsizer, 0)
+            hsizer.Add(bsizer, 0, wx.ALIGN_CENTER_VERTICAL)
+            hsizer.Add(gsizer, 0, wx.ALL, 5)
         vsizer.Add(hsizer, 0, wx.ALIGN_CENTER_HORIZONTAL)  # wx.EXPAND)
 
+        if accel_list:
+            self.SetAcceleratorTable(wx.AcceleratorTable(accel_list))
         self.SetAutoLayout(True)
         self.SetSizer(vsizer)
         vsizer.Fit(self)
@@ -327,6 +341,8 @@ class MainFrameGui(wx.Frame):
         self.vraag_zoek = wx.ComboBox(self.pnl, size=(TXTW, TXTH), style=wx.CB_DROPDOWN,
                                       choices=self.root._mru_items["zoek"])
         self.vraag_zoek.AutoComplete(self.root._mru_items['zoek'])
+        if self.root.p.get("zoek", ''):
+            self.vraag_zoek.SetValue(self.root.p['zoek'])
         gbsizer.Add(self.vraag_zoek, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
         gbsizer.Add(wx.StaticText(self.pnl, size=(20, -1)), (row, 2))
         row += 1
@@ -358,6 +374,9 @@ class MainFrameGui(wx.Frame):
                     flag=wx.EXPAND | wx.ALL, border=4)
         self.vraag_verv = wx.ComboBox(self.pnl, size=(TXTW, TXTH), style=wx.CB_DROPDOWN,
                                       choices=self.root._mru_items["verv"])
+        self.vraag_verv.AutoComplete(self.root._mru_items['verv'])
+        if self.root.p.get("verv", ''):
+            self.vraag_verv.SetValue(self.root.p['verv'])
         gbsizer.Add(self.vraag_verv, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
         row += 1
         vsizer = wx.BoxSizer(wx.VERTICAL)
@@ -377,6 +396,9 @@ class MainFrameGui(wx.Frame):
                         flag=wx.EXPAND | wx.ALL, border=4)
             self.vraag_dir = wx.ComboBox(self.pnl, size=(TXTW, TXTH), style=wx.CB_DROPDOWN,
                                          choices=self.root._mru_items["dirs"])
+            self.vraag_dir.AutoComplete(self.root._mru_items['dirs'])
+            initial = str(self.root.fnames[0]) if self.root.fnames else ''
+            self.vraag_dir.SetValue(initial)
             self.vraag_dir.Bind(wx.EVT_TEXT, self.check_loc)
             hsizer = wx.BoxSizer(wx.HORIZONTAL)
             hsizer.Add(self.vraag_dir, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
