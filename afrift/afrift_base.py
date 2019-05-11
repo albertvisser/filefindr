@@ -198,9 +198,9 @@ class Results():
         self.results = []
         self.gui.clear_contents()
         self.parent.zoekvervang.rpt = ["".join(self.parent.zoekvervang.specs)]
-        self.gui.set_waitcursor(True)
+        self.parent.gui.set_waitcursor(True)
         self.parent.zoekvervang.do_action(search_python=self.parent.p["context"])
-        self.gui.set_waitcursor(False)
+        self.parent.gui.set_waitcursor(False)
         if len(self.parent.zoekvervang.rpt) == 1:
             self.gui.breekaf("Niks gevonden")
         label_txt = "{} ({} items)".format(self.parent.zoekvervang.rpt[0],
