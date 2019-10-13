@@ -192,7 +192,7 @@ class Results():
 
         return text
 
-    def refresh(self):
+    def refresh(self, *args):
         """repeat search and show new results
         """
         self.results = []
@@ -222,7 +222,7 @@ class Results():
             return False
         return True
 
-    def kopie(self):
+    def kopie(self, *args):
         """callback for button 'Copy to file'
         """
         if not self.check_option_combinations_ok():
@@ -249,7 +249,7 @@ class Results():
                       "Select a line and doubleclick or press Ctrl-G to open the indicated file\n"
                       "at the indicated line (not in single file mode)")
 
-    def to_clipboard(self):
+    def to_clipboard(self, *args):
         """callback for button 'Copy to clipboard'
         """
         if not self.check_option_combinations_ok():
@@ -281,8 +281,8 @@ class MainFrame():
         self.pickled geeft aan of het op de nieuwe manier (met pickle) lezen
         van de mru-settings gelukt is of niet.
         """
-        log('in init van mixin: cwd is {}'.format(pathlib.Path.cwd()))
-        log('kwargs is {}'.format(kwargs))
+        log('in MainFrame.init: cwd is {}'.format(pathlib.Path.cwd()))
+        log('  kwargs is {}'.format(kwargs))
         apptype = kwargs.pop('apptype', '')
         fnaam = kwargs.pop('fnaam', '')
         flist = kwargs.pop('flist', None)
@@ -292,7 +292,7 @@ class MainFrame():
         self.resulttitel = self.title + " - Resultaten"
         self.apptype = apptype
         self.hier = pathlib.Path.cwd()  # os.getcwd()
-        self._mru_items = {}
+        self.mru_items = {}
         fnaam_given = bool(fnaam)
         fnaam = pathlib.Path(fnaam).expanduser().resolve()
         if self.apptype == "" and fnaam.exists() and not fnaam.is_dir():
@@ -338,7 +338,7 @@ class MainFrame():
             self.p["filelist"] = self.fnames
         self._keys = ("zoek", "verv", "types", "dirs")
         for key in self._keys:
-            self._mru_items[key] = []
+            self.mru_items[key] = []
         self._optionskey = "options"
         self._sections = ('zoek', 'vervang', 'filetypes', 'dirs')
         self._words = ('woord', 'woord', 'spec', 'pad', )
@@ -374,9 +374,9 @@ class MainFrame():
             edfile.write_text(test)
         self.editor_option = [x.split(' = ')[1].strip("'")
                               for x in test.strip().split('\n')]
-        self._vervleeg = False
-        self._backup = True
-        self._exit_when_ready = False
+        self.always_replace = False
+        self.maak_backups = True
+        self.exit_when_ready = False
         self.extraopts = collections.defaultdict(lambda: False)
         self.read_kwargs(kwargs)
         self.gui = MainFrameGui(self)
@@ -410,7 +410,7 @@ class MainFrame():
         loc, mfile, ofile = get_iniloc(path)
         if loc.exists():
             with mfile.open() as _in:
-                self._mru_items = json.load(_in)
+                self.mru_items = json.load(_in)
             with ofile.open() as _in:
                 opts = json.load(_in)
                 for key, value in opts.items():
@@ -426,12 +426,12 @@ class MainFrame():
         if test is not None:
             self.p['vervang'] = test
             if test == '':
-                self._vervleeg = True
+                self.always_replace = True
         self.p["extlist"] = kwargs.pop('extensions', '')
         if not self.p["extlist"]:
             self.p["extlist"] = []
         for arg in ('regex', 'follow_symlinks', 'select_subdirs', 'select_files',
-                    'dont_save', 'no_gui', 'output_file'):
+                    'dont_save', 'no_gui', 'output_file', 'full_path', 'as_csv', 'summarize'):
             self.extraopts[arg] = kwargs.pop(arg, '')
         self.extraopts['use_saved'] = kwargs.pop('use_saved', False)
         if not self.extraopts['use_saved']:
@@ -440,8 +440,8 @@ class MainFrame():
                              ('recursive', "subdirs"),
                              ('python_context', "context"), ):
                 self.p[key] = kwargs.pop(arg, self.p[key])
-        self._backup = kwargs.pop('backup_originals', '')
-        self._exit_when_ready = True
+        self.maak_backups = kwargs.pop('backup_originals', '')
+        self.exit_when_ready = True
 
     def schrijfini(self, path=None):
         """huidige settings toevoegen dan wel vervangen in ini file"""
@@ -449,7 +449,7 @@ class MainFrame():
         if not loc.exists():
             loc.mkdir()
         with mfile.open("w") as _out:
-            json.dump(self._mru_items, _out, indent=4)
+            json.dump(self.mru_items, _out, indent=4)
         opts = {key: self.p[key] for key in self._optkeys}
         with ofile.open("w") as _out:
             json.dump(opts, _out, indent=4)
@@ -482,10 +482,10 @@ class MainFrame():
         else:
             mld = ""
             try:
-                self._mru_items["zoek"].remove(item)
+                self.mru_items["zoek"].remove(item)
             except ValueError:
                 pass
-            self._mru_items["zoek"].insert(0, item)
+            self.mru_items["zoek"].insert(0, item)
             self.s += "zoeken naar {0}".format(item)
             self.p["zoek"] = item
         return mld
@@ -497,10 +497,10 @@ class MainFrame():
         vervang, leeg = items
         if vervang:
             try:
-                self._mru_items["verv"].remove(vervang)
+                self.mru_items["verv"].remove(vervang)
             except ValueError:
                 pass
-            self._mru_items["verv"].insert(0, vervang)
+            self.mru_items["verv"].insert(0, vervang)
             self.s = "\nen vervangen door {0}".format(vervang)
             self.p["vervang"] = vervang
         elif leeg:
@@ -531,10 +531,10 @@ class MainFrame():
         mld = ""
         if item:
             try:
-                self._mru_items["types"].remove(item)
+                self.mru_items["types"].remove(item)
             except ValueError:
                 pass
-            self._mru_items["types"].insert(0, item)
+            self.mru_items["types"].insert(0, item)
             self.s += "\nin bestanden van type {0}".format(item)
             exts = item.split(",")
             self.p["extlist"] = [x.lstrip().strip() for x in exts]
@@ -553,10 +553,10 @@ class MainFrame():
         else:
             mld = ""
             try:
-                self._mru_items["dirs"].remove(item)
+                self.mru_items["dirs"].remove(item)
             except ValueError:
                 pass
-            self._mru_items["dirs"].insert(0, item)
+            self.mru_items["dirs"].insert(0, item)
             self.s += "\nin {0}".format(item)
             self.p["pad"] = test  # item
             self.p['filelist'] = ''
@@ -679,8 +679,10 @@ class MainFrame():
                 mld = "Niks gevonden" if self.zoekvervang.ok else self.zoekvervang.rpt[0]
                 self.gui.meld(self.resulttitel, mld)
         else:
+            # print('creating Results instance')
             dlg = Results(self, common_part)
 
+            print('ready to show results')
             if self.extraopts['output_file']:
                 with self.extraopts['output_file'] as f_out:
                     for line in dlg.get_results():

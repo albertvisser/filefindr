@@ -11,11 +11,11 @@ TXTW = 200
 class SelectNamesGui(qtw.QDialog):
     """dialog for selecting directories/files
     """
-    def __init__(self, parent, root):
-        self.root = root
+    def __init__(self, parent, master):
+        self.master = master
         super().__init__(parent.gui)
-        self.setWindowTitle(root.title)
-        self.setWindowIcon(gui.QIcon(root.iconame))
+        self.setWindowTitle(master.title)
+        self.setWindowIcon(gui.QIcon(master.iconame))
 
     def setup_screen(self, captions):
         "build widgets"
@@ -42,8 +42,8 @@ class SelectNamesGui(qtw.QDialog):
         frm = qtw.QFrame(self)
         fvbox = qtw.QVBoxLayout()
         self.checklist = []
-        for item in self.root.parent.names:
-            if self.root.dofiles:
+        for item in self.master.parent.names:
+            if self.master.dofiles:
                 cb = qtw.QCheckBox(str(item), frm)
             else:
                 cb = qtw.QCheckBox(item, frm)
@@ -100,66 +100,67 @@ class SelectNamesGui(qtw.QDialog):
         dirs = []
         for cb in self.checklist:
             if cb.isChecked():
-                if self.root.dofiles:
+                if self.master.dofiles:
                     self.names.pop(cb.text())
                 else:
                     dirs.append(cb.text())
-        if self.root.dofiles:
-            self.root.names = [self.root.names[x] for x in sorted(self.root.names.keys())]
+        if self.master.dofiles:
+            self.master.names = [self.master.names[x] for x in sorted(self.root.names.keys())]
         else:
-            self.root.names = dirs
+            self.master.names = dirs
         super().accept()
 
 
 class ResultsGui(qtw.QDialog):
     """results screen
     """
-    def __init__(self, parent, root):
-        self.root = root
+    def __init__(self, parent, master):
+        self.master = master
         super().__init__(parent.gui)
         # qtw.QDialog.__init__(self)
         self.setWindowTitle(parent.resulttitel)
-        self.setWindowIcon(gui.QIcon(root.iconame))
+        self.setWindowIcon(gui.QIcon(master.iconame))
 
     def setup_screen(self, captions):
         "build widgets"
         def add_ampersand(text):
+            "& teken tussenvoegen t.b.v. accelerator"
             return '&'.join((text[0], text[1:]))
-        breedte = 50 if self.root.parent.apptype == "single" else 150  # qt versie
+        breedte = 50 if self.master.parent.apptype == "single" else 150  # qt versie
         vbox = qtw.QVBoxLayout()
         hbox = qtw.QHBoxLayout()
         self.txt = qtw.QLabel(captions['heading'], self)
         hbox.addWidget(self.txt)
         vbox.addLayout(hbox)
 
-        if not self.root.label_only:
+        if not self.master.label_only:
             hbox = qtw.QHBoxLayout()
             self.lijst = qtw.QTableWidget(self)
             self.lijst.verticalHeader().setVisible(False)
             self.lijst.setGridStyle(core.Qt.NoPen)
-            if self.root.show_context:
+            if self.master.show_context:
                 self.lijst.setColumnCount(3)
                 self.lijst.setColumnWidth(1, 200)
                 self.lijst.setColumnWidth(2, 340)
-                self.lijst.setHorizontalHeaderLabels((self.root.titel, captions['ctxt'],
+                self.lijst.setHorizontalHeaderLabels((self.master.titel, captions['ctxt'],
                                                       captions['txt']))
             else:
                 self.lijst.setColumnCount(2)
                 self.lijst.setColumnWidth(1, 520)
-                self.lijst.setHorizontalHeaderLabels((self.root.titel, captions['txt']))
+                self.lijst.setHorizontalHeaderLabels((self.master.titel, captions['txt']))
             self.lijst.setColumnWidth(0, breedte)
             self.lijst.horizontalHeader().setStretchLastSection(True)
 
             self.populate_list()
 
-            self.lijst.cellDoubleClicked[int, int].connect(self.root.goto_result)
+            self.lijst.cellDoubleClicked[int, int].connect(self.master.goto_result)
             act = qtw.QAction(captions['hlp'], self)
             act.setShortcut('F1')
-            act.triggered.connect(self.root.help)
+            act.triggered.connect(self.master.help)
             self.addAction(act)
             act = qtw.QAction(captions['rslt'], self)
             act.setShortcut('Ctrl+G')
-            act.triggered.connect(self.root.goto_result)
+            act.triggered.connect(self.to_result)
             self.addAction(act)
             hbox.addWidget(self.lijst)
             vbox.addLayout(hbox)
@@ -169,22 +170,22 @@ class ResultsGui(qtw.QDialog):
         btn = qtw.QPushButton(captions['exit'], self)
         btn.clicked.connect(self.klaar)
         hbox.addWidget(btn)
-        if not self.root.label_only:
+        if not self.master.label_only:
             btn = qtw.QPushButton(captions['rpt'], self)
-            btn.clicked.connect(self.root.refresh)
-            if self.root.parent.p['vervang']:
+            btn.clicked.connect(self.master.refresh)
+            if self.master.parent.p['vervang']:
                 btn.setEnabled(False)
             hbox.addWidget(btn)
             btn = qtw.QPushButton(captions['cpy'], self)
-            btn.clicked.connect(self.root.kopie)
+            btn.clicked.connect(self.master.kopie)
             hbox.addWidget(btn)
             btn = qtw.QPushButton(captions['clp'], self)
-            btn.clicked.connect(self.root.to_clipboard)
+            btn.clicked.connect(self.master.to_clipboard)
             hbox.addWidget(btn)
             gbox = qtw.QGridLayout()
             gbox.addWidget(qtw.QLabel(captions['fmt'], self), 0, 0)
             self.cb_path = qtw.QCheckBox('&' + captions['pth'], self)
-            if self.root.parent.apptype == "single":
+            if self.master.parent.apptype == "single":
                 self.cb_path.setEnabled(False)
             gbox.addWidget(self.cb_path, 1, 0)
             self.cb_delim = qtw.QCheckBox(add_ampersand(captions['dlm']), self)
@@ -196,14 +197,14 @@ class ResultsGui(qtw.QDialog):
         vbox.addLayout(hbox)
 
         self.setLayout(vbox)
-        if not self.root.label_only:
+        if not self.master.label_only:
             self.resize(574 + breedte, 480)
 
     def populate_list(self):
         """copy results to listbox
         """
-        print('in populate_list:', self.root.results[0])
-        for ix, result in enumerate(self.root.results[1:]):
+        print('in populate_list:', self.master.results[0])
+        for ix, result in enumerate(self.master.results[1:]):
 
             self.lijst.insertRow(ix)
             self.lijst.setRowHeight(ix, 18)
@@ -212,7 +213,7 @@ class ResultsGui(qtw.QDialog):
             item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
             self.lijst.setItem(ix, col, item)
 
-            if self.root.show_context:
+            if self.master.show_context:
                 col += 1
                 item = qtw.QTableWidgetItem(result[1])
                 item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
@@ -234,7 +235,7 @@ class ResultsGui(qtw.QDialog):
 
     def breekaf(self, message):
         "show reason and end dialog"
-        self.meld(self.root.resulttitel, message)
+        self.meld(self.master.resulttitel, message)
         super().done(0)
 
     def set_header(self, text):
@@ -262,7 +263,7 @@ class ResultsGui(qtw.QDialog):
             f_filter = 'Text files (*.txt)'
         f_filter = "{};;All files (*.*)".format(f_filter)
         dlg = qtw.QFileDialog.getSaveFileName(self, "Resultaat naar bestand kopieren",
-                                              str(self.root.parent.hier / fname), f_filter)
+                                              str(self.master.parent.hier / fname), f_filter)
         return dlg[0]
 
     def meld(self, title, message):
@@ -278,7 +279,8 @@ class ResultsGui(qtw.QDialog):
     def to_result(self):
         """show result in file
         """
-        self.root.goto_result(self.lijst.currentRow(), self.lijst.currentColumn())
+        print('in to_result:', self.lijst.currentRow(), self.lijst.currentColumn())
+        self.master.goto_result(self.lijst.currentRow(), self.lijst.currentColumn())
 
     def klaar(self):
         """finish dialog
@@ -289,89 +291,89 @@ class ResultsGui(qtw.QDialog):
 class MainFrameGui(qtw.QWidget):
     """main screen
     """
-    def __init__(self, root):
-        self.root = root        # verwijzing naar MainFrame - voor als het nodig is
+    def __init__(self, master):
+        self.master = master        # verwijzing naar MainFrame - voor als het nodig is
         self.app = qtw.QApplication(sys.argv)
         parent = None
         super().__init__(parent)
-        self.setWindowTitle(root.title)
-        self.setWindowIcon(gui.QIcon(root.iconame))
+        self.setWindowTitle(master.title)
+        self.setWindowIcon(gui.QIcon(master.iconame))
 
     def setup_screen(self, captions):
         "set up screen for the various modes"
         self.grid = qtw.QGridLayout()
         self.row = -1
         self.vraag_zoek = self.add_combobox_row(captions['vraag_zoek'],
-                                                self.root._mru_items["zoek"])
-        if self.root.p.get("zoek", ''):
-            self.vraag_zoek.setEditText(self.root.p['zoek'])
-        self.vraag_regex = self.add_checkbox_row(captions['regex'], self.root.extraopts['regex'])
-        self.vraag_case = self.add_checkbox_row(captions['case'], self.root.p["case"])
-        self.vraag_woord = self.add_checkbox_row(captions['woord'], self.root.p["woord"])
+                                                self.master.mru_items["zoek"])
+        if self.master.p.get("zoek", ''):
+            self.vraag_zoek.setEditText(self.master.p['zoek'])
+        self.vraag_regex = self.add_checkbox_row(captions['regex'], self.master.extraopts['regex'])
+        self.vraag_case = self.add_checkbox_row(captions['case'], self.master.p["case"])
+        self.vraag_woord = self.add_checkbox_row(captions['woord'], self.master.p["woord"])
 
         self.vraag_verv = self.add_combobox_row(captions['vraag_verv'],
-                                                self.root._mru_items["verv"])
-        if self.root.p.get("verv", ''):
-            self.vraag_verv.setEditText(self.root.p['verv'])
+                                                self.master.mru_items["verv"])
+        if self.master.p.get("verv", ''):
+            self.vraag_verv.setEditText(self.master.p['verv'])
         self.vraag_verv.completer().setCaseSensitivity(core.Qt.CaseSensitive)
-        self.vraag_leeg = self.add_checkbox_row(captions['empty'], self.root._vervleeg)
+        self.vraag_leeg = self.add_checkbox_row(captions['empty'], self.master.always_replace)
 
-        if self.root.apptype == "":
-            initial = str(self.root.fnames[0]) if self.root.fnames else ''
+        if self.master.apptype == "":
+            initial = str(self.master.fnames[0]) if self.master.fnames else ''
             self.zoek = qtw.QPushButton(captions['zoek'])
             self.zoek.clicked.connect(self.zoekdir)
-            self.vraag_dir = self.add_combobox_row(captions['in'], self.root._mru_items["dirs"],
+            self.vraag_dir = self.add_combobox_row(captions['in'], self.master.mru_items["dirs"],
                                                    initial=initial, button=self.zoek)
             self.vraag_dir.setCompleter(None)
             self.vraag_dir.editTextChanged[str].connect(self.check_loc)
-        elif self.root.apptype == "single":
+        elif self.master.apptype == "single":
             self.row += 1
             self.grid.addWidget(qtw.QLabel(captions['in_s']), self.row, 0)
             box = qtw.QHBoxLayout()
-            box.addWidget(qtw.QLabel(str(self.root.fnames[0])))
+            box.addWidget(qtw.QLabel(str(self.master.fnames[0])))
             box.addStretch()
             self.grid.addLayout(box, self.row, 1)
-        elif self.root.apptype == "multi":
+        elif self.master.apptype == "multi":
             self.row += 1
             self.grid.addWidget(qtw.QLabel(captions['in_m']), self.row, 0, 1, 2)
             self.row += 1
             self.lb = qtw.QListWidget(self)
-            self.lb.insertItems(0, [str(x) for x in self.root.fnames])
+            self.lb.insertItems(0, [str(x) for x in self.master.fnames])
             self.grid.addWidget(self.lb, self.row, 0, 1, 2)
 
-        if self.root.apptype != "single" or self.root.fnames[0].is_dir():
-            txt = captions['subs_m'] if self.root.apptype == "multi" else ""
-            self.vraag_subs = self.add_checkbox_row(txt + captions['subs'], self.root.p["subdirs"])
+        if self.master.apptype != "single" or self.master.fnames[0].is_dir():
+            txt = captions['subs_m'] if self.master.apptype == "multi" else ""
+            self.vraag_subs = self.add_checkbox_row(txt + captions['subs'], self.master.p["subdirs"])
             self.vraag_diepte = qtw.QSpinBox(self)
             self.vraag_diepte.setMinimum(-1)
             self.vraag_diepte.setValue(5)
             self.vraag_links = self.add_checkbox_row(captions['link'],
-                                                     toggler=self.root.extraopts['follow_symlinks'],
+                                                     toggler=self.master.extraopts['follow_symlinks'],
                                                      spinner=self.vraag_diepte)
             self.ask_skipdirs = self.add_checkbox_row(captions['skipdirs'],
-                                                      self.root.extraopts['select_subdirs'])
+                                                      self.master.extraopts['select_subdirs'])
             self.ask_skipfiles = self.add_checkbox_row(captions['skipfiles'],
-                                                       self.root.extraopts['select_files'])
+                                                       self.master.extraopts['select_files'])
             self.vraag_types = self.add_combobox_row(captions['ftypes'],
-                                                     self.root._mru_items["types"])
-            if self.root.p.get("extlist", ''):
-                self.vraag_types.setEditText(self.root.p['extlist'])
+                                                     self.master.mru_items["types"])
+            if self.master.p.get("extlist", ''):
+                self.vraag_types.setEditText(self.master.p['extlist'])
 
-        print(self.root.p['context'])
+        print(self.master.p['context'])
         self.vraag_context = self.add_checkbox_row(
-            "context tonen (waar mogelijk, anders overslaan)", self.root.p["context"])
+            "context tonen (waar mogelijk, anders overslaan)", self.master.p["context"])
         self.vraag_uitsluit = self.add_checkbox_row(
-            "commentaren en docstrings negeren", self.root.p["negeer"], indent=22)
+            "commentaren en docstrings negeren", self.master.p["negeer"], indent=22)
         self.vraag_backup = self.add_checkbox_row(
-            "gewijzigd(e) bestand(en) backuppen", self.root._backup)
+            "gewijzigd(e) bestand(en) backuppen", self.master.make_backups)
         self.vraag_exit = self.add_checkbox_row(
-            "direct afsluiten na vervangen", self.root._exit_when_ready)
+            "direct afsluiten na vervangen", self.master.exit_when_ready)
 
         self.row += 1
         hbox = qtw.QHBoxLayout()
         hbox.addStretch(1)
         self.b_doit = qtw.QPushButton(captions['exec'], self)
-        self.b_doit.clicked.connect(self.root.doe)
+        self.b_doit.clicked.connect(self.master.doe)
         hbox.addWidget(self.b_doit)
         self.b_cancel = qtw.QPushButton(captions['end'], self)
         self.b_cancel.clicked.connect(self.close)
@@ -530,19 +532,19 @@ class MainFrameGui(qtw.QWidget):
         """update location to get settings from
         """
         if os.path.exists(txt) and not txt.endswith(os.path.sep):
-            self.root.readini(txt)
+            self.master.readini(txt)
             self.vraag_zoek.clear()
-            self.vraag_zoek.addItems(self.root._mru_items["zoek"])
+            self.vraag_zoek.addItems(self.master.mru_items["zoek"])
             self.vraag_verv.clear()
-            self.vraag_verv.addItems(self.root._mru_items["verv"])
+            self.vraag_verv.addItems(self.master.mru_items["verv"])
             self.vraag_types.clear()
-            self.vraag_types.addItems(self.root._mru_items["types"])
+            self.vraag_types.addItems(self.master.mru_items["types"])
             ## self.vraag_dir.clear()
-            ## self.vraag_dir.addItems(self._mru_items["dirs"])
-            self.vraag_case.setChecked(self.root.p["case"])
-            self.vraag_woord.setChecked(self.root.p["woord"])
-            self.vraag_subs.setChecked(self.root.p["subdirs"])
-            self.vraag_context.setChecked(self.root.p["context"])
+            ## self.vraag_dir.addItems(self.master.mru_items["dirs"])
+            self.vraag_case.setChecked(self.master.p["case"])
+            self.vraag_woord.setChecked(self.master.p["woord"])
+            self.vraag_subs.setChecked(self.master.p["subdirs"])
+            self.vraag_context.setChecked(self.master.p["context"])
 
     def keyPressEvent(self, event):
         """event handler voor toetsaanslagen"""
