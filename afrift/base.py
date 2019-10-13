@@ -10,7 +10,7 @@ import subprocess
 import json
 import logging
 import pathlib
-from .afrift_gui import SelectNamesGui, ResultsGui, MainFrameGui
+from .gui import SelectNamesGui, ResultsGui, MainFrameGui
 from .findr_files import Finder, format_result
 BASE = pathlib.Path.home() / '.afrift'
 if not BASE.exists():

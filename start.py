@@ -2,7 +2,7 @@
 """Find And Replace in Files
 """
 import argparse
-from afrift.afrift_base import MainFrame
+from afrift.base import MainFrame
 
 
 def main(args):

@@ -410,10 +410,10 @@ class MainFrameGui(wx.Frame):
             row += 1
             gbsizer.Add(wx.StaticText(self.pnl, label=captions['in_s']), (row, 0),
                         flag=wx.EXPAND | wx.ALL, border=4)
-            gbsizer.Add(wx.StaticText(self.pnl, label=self.root.fnames[0]), (row, 1),
+            gbsizer.Add(wx.StaticText(self.pnl, label=str(self.root.fnames[0])), (row, 1),
                         flag=wx.EXPAND | wx.ALL, border=4)
-            gbsizer.Add(wx.StaticText(self.pnl, size=(120, -1)), (row, 2),
-                        flag=wx.EXPAND | wx.ALL, border=4)
+            # gbsizer.Add(wx.StaticText(self.pnl, size=(120, -1)), (row, 2),
+            #            flag=wx.EXPAND | wx.ALL, border=4)
         else:  # if self.root.apptype == "multi":
             t = captions['subs_m']
             row += 1
