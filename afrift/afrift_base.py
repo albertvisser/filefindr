@@ -668,7 +668,7 @@ class MainFrame():
                 return
 
         self.gui.set_waitcursor(True)
-        self.zoekvervang.do_action(search_python=self.p["context"])
+        self.zoekvervang.go()  # do_action()  # search_python=self.p["context"])
         self.gui.set_waitcursor(False)
 
         self.noescape = True    # wx versie: switch tbv afsluiten dialoog met Escape

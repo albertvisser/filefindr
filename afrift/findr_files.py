@@ -32,6 +32,8 @@ def determine_split_py(words):
     else:  # if words == 'module':
         end = 6
     return end
+
+
 determine_split = {None: determine_split_none,  # dispatch table
                    "py": determine_split_py}
 
@@ -81,16 +83,18 @@ def check_single_string(inp):
         try:
             ix = inp.index(test, 1)
         except IndexError:
-            return
+            return False
         inp = inp[ix + 1:].strip()
         if not inp:
             return True
         test = inp[0]
-    return
+    return False
 
 
 def pyread(file, fallback_encoding, negeer_docs):
     """context-aware search in Python files
+
+    this routine procduces a list of contexts
     """
     def pop_construct(last_line):
         """if needed, add construct(s) to list
@@ -107,45 +111,61 @@ def pyread(file, fallback_encoding, negeer_docs):
             with file.open("r", encoding=fallback_encoding) as f_in:
                 lines = f_in.readlines()
         except UnicodeDecodeError:
-            return
-    itemlist = [(1, len(lines), contains_default)]
+            return None
+    itemlist = []
+    modlevel_start = 1
     constructs = []
     in_construct = []
     docstring = ''
     docstring_start = 0
     indentpos = prev_lineno = 0
+    start_of_code = False
     for ix, line in enumerate(lines):
         if line.strip() == "":
             continue
         lineno = ix + 1
         test = line.lstrip()
         if test.startswith('#') and negeer_docs:
-            itemlist.append((lineno - 1, lineno, 'comment'))
+            itemlist.append(((lineno, 0), (lineno, -1), 'comment'))
+            if not start_of_code:
+                modlevel_start = lineno + 1
             continue
         else:
             indentpos = line.index(test)
         if negeer_docs:
             if docstring and line.rstrip().endswith(docstring):
                 docstring = ''
-                itemlist.append((docstring_start, lineno, "docstring"))
+                itemlist.append(((docstring_start, indentpos), (lineno, -1), "docstring"))
+                if not start_of_code:
+                    modlevel_start = lineno + 1
                 continue
             if test.startswith('"""') or test.startswith("'''"):
                 docstring = test[:3]
-                docstring_start = lineno - 1
+                docstring_start = lineno
                 if line.rstrip().endswith(docstring):
                     docstring = ''
-                    itemlist.append((docstring_start, lineno, "docstring"))
+                    itemlist.append(((docstring_start, indentpos), (lineno, -1), "docstring"))
+                if not start_of_code:
+                    modlevel_start = lineno + 1
                 continue
             if test.startswith('"') or test.startswith("'"):
                 if check_single_string(test.rstrip()):
-                    itemlist.append((lineno - 1, lineno, 'docstring'))
+                    itemlist.append(((lineno, indentpos), (lineno, -1), 'docstring'))
+                    if not start_of_code:
+                        modlevel_start = lineno + 1
                     continue
+        if not start_of_code:
+            start_of_code = True
+            itemlist.append(((modlevel_start, 0), (len(lines), -1), contains_default))
         pop_construct(prev_lineno)
         if test.startswith('def ') or test.startswith('class '):
             words = test.split()
             construct = (indentpos, words[0],
                          words[1].split(':')[0].split('(')[0], lineno)
             in_construct.append(construct)
+        if '#' in test and negeer_docs:
+            pos = test.index('#')
+            itemlist.append(((lineno, pos), (lineno, -1), 'comment'))
         prev_lineno = lineno
     indentpos = 0
     pop_construct(prev_lineno - 1)
@@ -160,11 +180,11 @@ def pyread(file, fallback_encoding, negeer_docs):
                 else:
                     type_ = "function"
             construct.extend([type_, name])
-        itemlist.append((start, end, " ".join(construct)))
+        itemlist.append(((start, 0), (end, -1), " ".join(construct)))
     return sorted(itemlist)
 
 
-class Finder(object):
+class Finder():
     """interpreteren van de parameters en aansturen van de zoek/vervang routine
     """
     def __init__(self, **parms):
@@ -275,7 +295,7 @@ class Finder(object):
         if self.p["maxdepth"] != -1:
             level += 1
             if level > self.p["maxdepth"]:
-                return
+                return ''
         ## if is_list:
         try:
             _list = (fname for fname in os.scandir(pad))
@@ -299,7 +319,7 @@ class Finder(object):
                 except AttributeError:
                     entry = pathlib.Path(entry.path)
                     ext = entry.suffix
-                if len(self.p['extlist']) == 0 or ext.upper() in self.extlist_upper:
+                if self.p['extlist'] == [] or ext.upper() in self.extlist_upper:
                     self.filenames.append(entry)
         return ''
 
@@ -394,19 +414,18 @@ class Finder(object):
         add_to_matches()
         return possible_matches, required_matches, forbidden_matches
 
-    def do_action(self, search_python=False):
+    def go(self):  # do_action(self)  # , search_python=False):
         """start the search
         """
         for entry in self.filenames:
             self.zoek(entry)
-        if not search_python:
+        if not self.p['context']:  # search_python:
             return
         results, self.rpt = self.rpt, []
         locations = {}
         for entry in self.filenames:
             if entry.suffix in ('.py', '.pyw'):
-                locations[str(entry)] = pyread(entry, self.p['fallback_encoding'],
-                                               self.p['negeer'])
+                locations[str(entry)] = pyread(entry, self.p['fallback_encoding'], self.p['negeer'])
             else:
                 locations[str(entry)] = []
         for item in results:
@@ -425,13 +444,19 @@ class Finder(object):
             contains = contains_default
             for loc in locations[best]:
                 lineno = int(lineno)
-                if loc[0] < lineno <= loc[1]:
+                if loc[0][0] <= lineno <= loc[1][0]:
+                    old_contains = contains
                     contains = loc[2]
-                if loc[0] > lineno or contains == 'docstring':
+                    if contains == 'comment':
+                        where = text.upper().find(self.p['zoek'].upper())
+                        if where < loc[0][1]:
+                            contains = old_contains
+                if loc[0][0] > lineno:
                     break
-            if contains not in ('comment', 'docstring'):
-                self.rpt.append('{} r. {} ({}): {}'.format(best, lineno, contains,
-                                                           text))
+            if self.p['negeer'] and contains in ('comment', 'docstring'):
+                continue
+            if contains != 'ignore':
+                self.rpt.append('{} r. {} ({}): {}'.format(best, lineno, contains, text))
 
     def zoek(self, best):
         "het daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
