@@ -258,14 +258,7 @@ class ResultsGui(wx.Dialog):
 
     def set_header(self, text):
         "set header for list"
-        self.txt.SetValue(text)
-
-    def check_option_combinations(self, title, message):
-        "see if chosen options make sense"
-        if self.get_pth() and self.get_sum():
-            self.meld(title, message)
-            return False
-        return True
+        self.txt.SetLabel(text)
 
     def get_pth(self):
         "get indicator to show path"
@@ -346,149 +339,65 @@ class MainFrameGui(wx.Frame):
         self.pnl = wx.Panel(self)
 
         bsizer = wx.BoxSizer(wx.VERTICAL)
-        gbsizer = wx.GridBagSizer(4)
-        row = 0
-        gbsizer.Add(wx.StaticText(self.pnl, label=captions['vraag_zoek']), (row, 0),
-                    flag=wx.EXPAND | wx.ALL, border=4)
-        self.vraag_zoek = wx.ComboBox(self.pnl, size=(TXTW, TXTH), style=wx.CB_DROPDOWN,
-                                      choices=self.master.mru_items["zoek"])
-        self.vraag_zoek.AutoComplete(self.master.mru_items['zoek'])
-        if self.master.p.get("zoek", ''):
-            self.vraag_zoek.SetValue(self.master.p['zoek'])
-        gbsizer.Add(self.vraag_zoek, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
-        gbsizer.Add(wx.StaticText(self.pnl, size=(20, -1)), (row, 2))
-        row += 1
-        vsizer = wx.BoxSizer(wx.VERTICAL)
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.vraag_regex = wx.CheckBox(self.pnl, label=captions['regex'])
-        hbsizer.Add(self.vraag_regex, 0)
-        hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
-        vsizer.Add(hsizer, 0, wx.EXPAND)
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.vraag_case = wx.CheckBox(self.pnl, -1, label=captions['case'])
-        self.vraag_case.SetValue(bool(self.master.p["case"]))
-        hbsizer.Add(self.vraag_case, 0)
-        hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
-        vsizer.Add(hsizer, 0, wx.EXPAND)
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.vraag_woord = wx.CheckBox(self.pnl, label=captions['woord'])
-        self.vraag_woord.SetValue(bool(self.master.p["woord"]))
-        hbsizer.Add(self.vraag_woord, 0)
-        hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
-        vsizer.Add(hsizer, 0, wx.EXPAND)
-        gbsizer.Add(vsizer, (row, 1))
+        self.grid = wx.GridBagSizer()
+        self.row = -1
 
-        row += 1
-        gbsizer.Add(wx.StaticText(self.pnl, label=captions['vraag_verv']), (row, 0),
-                    flag=wx.EXPAND | wx.ALL, border=4)
-        self.vraag_verv = wx.ComboBox(self.pnl, size=(TXTW, TXTH), style=wx.CB_DROPDOWN,
-                                      choices=self.master.mru_items["verv"])
-        self.vraag_verv.AutoComplete(self.master.mru_items['verv'])
-        if self.master.p.get("verv", ''):
-            self.vraag_verv.SetValue(self.master.p['verv'])
-        gbsizer.Add(self.vraag_verv, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
-        row += 1
-        vsizer = wx.BoxSizer(wx.VERTICAL)
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hbsizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.check_vervang = wx.CheckBox(self.pnl, label=captions['empty'])
-        self.check_vervang.SetValue(self.master.always_replace)
-        hbsizer.Add(self.check_vervang, 0)
-        hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
-        vsizer.Add(hsizer, 0, wx.EXPAND)
-        gbsizer.Add(vsizer, (row, 1))
+        self.vraag_zoek = self.add_combobox_row(captions['vraag_zoek'],
+                                                self.master.mru_items['zoek'],
+                                                initial=self.master.p.get("zoek", ''))
+        self.grid.Add(wx.StaticText(self.pnl, size=(20, -1)), (self.row, 2))
 
-        t = ""
+        self.vraag_regex = self.add_checkbox_row(captions['regex'], self.master.extraopts['regex'])
+        self.vraag_case = self.add_checkbox_row(captions['case'], self.master.p["case"])
+        self.vraag_woord = self.add_checkbox_row(captions['woord'], self.master.p["woord"])
+
+        self.vraag_verv = self.add_combobox_row(captions['vraag_verv'],
+                                                self.master.mru_items["verv"],
+                                                initial=self.master.p.get("verv", ''))
+        self.check_vervang = self.add_checkbox_row(captions['empty'], self.master.always_replace)
+
         if self.master.apptype == "":
-            row += 1
-            gbsizer.Add(wx.StaticText(self.pnl, label=captions['in']), (row, 0),
-                        flag=wx.EXPAND | wx.ALL, border=4)
-            self.vraag_dir = wx.ComboBox(self.pnl, size=(TXTW, TXTH), style=wx.CB_DROPDOWN,
-                                         choices=self.master.mru_items["dirs"])
-            self.vraag_dir.AutoComplete(self.master.mru_items['dirs'])
             initial = str(self.master.fnames[0]) if self.master.fnames else ''
-            self.vraag_dir.SetValue(initial)
-            self.vraag_dir.Bind(wx.EVT_TEXT, self.check_loc)
-            hsizer = wx.BoxSizer(wx.HORIZONTAL)
-            hsizer.Add(self.vraag_dir, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
             btn = wx.Button(self.pnl, label=captions['zoek'], size=(-1, TXTH))
             btn.Bind(wx.EVT_BUTTON, self.zoekdir)
-            hsizer.Add(btn, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 4)
-            gbsizer.Add(hsizer, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
+            self.vraag_dir = self.add_combobox_row(captions['in'], self.master.mru_items["dirs"],
+                                                   initial=initial, control=btn)
+            self.vraag_dir.Bind(wx.EVT_TEXT, self.check_loc)
+
         elif self.master.apptype == "single":
-            row += 1
-            gbsizer.Add(wx.StaticText(self.pnl, label=captions['in_s']), (row, 0),
-                        flag=wx.EXPAND | wx.ALL, border=4)
-            gbsizer.Add(wx.StaticText(self.pnl, label=str(self.master.fnames[0])), (row, 1),
-                        flag=wx.EXPAND | wx.ALL, border=4)
-            # gbsizer.Add(wx.StaticText(self.pnl, size=(120, -1)), (row, 2),
-            #            flag=wx.EXPAND | wx.ALL, border=4)
+            self.row += 1
+            self.grid.Add(wx.StaticText(self.pnl, label=captions['in_s']), (self.row, 0),
+                          flag=wx.EXPAND | wx.ALL, border=4)
+            self.grid.Add(wx.StaticText(self.pnl, label=str(self.master.fnames[0])), (self.row, 1),
+                          flag=wx.EXPAND | wx.ALL, border=4)
         else:  # if self.master.apptype == "multi":
-            t = captions['subs_m']
-            row += 1
-            gbsizer.Add(wx.StaticText(self.pnl, label=captions['in_m']), (row, 0), (1, 2),
-                        flag=wx.EXPAND | wx.LEFT | wx.TOP, border=4)
-            row += 1
-            self.lb = wx.ListBox(self.pnl, size=(TXTW, -1),
+            self.row += 1
+            self.grid.Add(wx.StaticText(self.pnl, label=captions['in_m']), (self.row, 0), (1, 2),
+                          flag=wx.EXPAND | wx.LEFT | wx.TOP, border=4)
+            self.row += 1
+            self.lb = wx.ListBox(self.pnl, size=(TXTW, 120),  # -1),
                                  choices=[str(x) for x in self.master.fnames])
-            gbsizer.Add(self.lb, (row, 0), (1, 2), flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=4)
+            self.grid.Add(self.lb, (self.row, 0), (1, 2), flag=wx.EXPAND | wx.LEFT | wx.RIGHT,
+                          border=4)
 
         if self.master.apptype != "single" or os.path.isdir(self.master.fnames[0]):
-            row += 1
-            self.vraag_subs = wx.CheckBox(self.pnl, -1, label=t + captions['subs'])
-            self.vraag_subs.SetValue(bool(self.master.p["subdirs"]))
-            gbsizer.Add(self.vraag_subs, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
-
-            row += 1
-            hsizer = wx.BoxSizer(wx.HORIZONTAL)
-            self.vraag_links = wx.CheckBox(self.pnl, -1, label=captions['link'])
-            hsizer.Add(self.vraag_links, 0, wx.ALIGN_CENTER_VERTICAL)  # wx.TOP | wx.BOTTOM, 4)
+            txt = captions['subs_m'] if self.master.apptype == "multi" else ""
+            self.vraag_subs = self.add_checkbox_row(txt + captions['subs'], self.master.p["subdirs"])
+            # NB flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
             self.vraag_diepte = wx.SpinCtrl(self.pnl, -1, min=-1, initial=5, size=(122, TXTH))
-            hsizer.Add(self.vraag_diepte, 0, wx.ALIGN_CENTER_VERTICAL)  # , 4)
-            gbsizer.Add(hsizer, (row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
+            self.vraag_links = self.add_checkbox_row(captions['link'], control=self.vraag_diepte)
+            self.ask_skipdirs = self.add_checkbox_row(captions['skipdirs'])
+            self.ask_skipfiles = self.add_checkbox_row(captions['skipfiles'])
+            self.vraag_types = self.add_combobox_row(captions['ftypes'],
+                                                     self.master.mru_items["types"])
 
-            row += 1
-            self.ask_skipdirs = wx.CheckBox(self.pnl, label=captions['skipdirs'])
-            gbsizer.Add(self.ask_skipdirs, (row, 1), flag=wx.EXPAND)
+        self.vraag_context = self.add_checkbox_row(captions['context'], self.master.p['context'])
+        self.vraag_negeer = self.add_checkbox_row(captions['negeer'], self.master.p['negeer'],
+                                                  indent=22)
+        self.vraag_backup = self.add_checkbox_row(captions['backup'], self.master.maak_backups)
+        self.vraag_exit = self.add_checkbox_row(captions['exit'], self.master.exit_when_ready)
 
-            row += 1
-            self.ask_skipfiles = wx.CheckBox(self.pnl, label=captions['skipfiles'])
-            gbsizer.Add(self.ask_skipfiles, (row, 1), flag=wx.EXPAND)
-
-            row += 1
-            gbsizer.Add(wx.StaticText(self.pnl, label=captions['ftypes']), (row, 0),
-                        flag=wx.EXPAND | wx.ALL, border=4)
-            self.vraag_types = wx.ComboBox(self.pnl, -1, size=(TXTW, TXTH),
-                                           choices=self.master.mru_items["types"],
-                                           style=wx.CB_DROPDOWN)
-            gbsizer.Add(self.vraag_types, (row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
-
-        row += 1
-        self.vraag_context = wx.CheckBox(self.pnl, label=captions['context'])
-        self.vraag_context.SetValue(self.master.p['context'])
-        gbsizer.Add(self.vraag_context, (row, 1), flag=wx.EXPAND)
-
-        row += 1
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hsizer.AddSpacer(22)
-        self.vraag_negeer = wx.CheckBox(self.pnl, label=captions['negeer'])
-        self.vraag_negeer.SetValue(self.master.p['negeer'])
-        hsizer.Add(self.vraag_negeer, 0)
-        gbsizer.Add(hsizer, (row, 1), flag=wx.EXPAND)
-
-        row += 1
-        self.vraag_backup = wx.CheckBox(self.pnl, label=captions['backup'])
-        self.vraag_backup.SetValue(bool(self.master.maak_backups))
-        gbsizer.Add(self.vraag_backup, (row, 1), flag=wx.EXPAND)
-        row += 1
-        self.vraag_exit = wx.CheckBox(self.pnl, label=captions['exit'])
-        self.vraag_exit.SetValue(bool(self.master.exit_when_ready))
-        gbsizer.Add(self.vraag_exit, (row, 1), flag=wx.EXPAND)
-
-        row += 1
+        self.row += 1
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         self.DoIt = wx.Button(self.pnl, -1, size=(-1, TXTH), label=captions['exec'])
         self.DoIt.Bind(wx.EVT_BUTTON, self.doe)
@@ -496,9 +405,9 @@ class MainFrameGui(wx.Frame):
         self.Cancel = wx.Button(self.pnl, -1, size=(-1, TXTH), label=captions['end'])
         self.Cancel.Bind(wx.EVT_BUTTON, self.einde)
         hsizer.Add(self.Cancel, 0, wx.EXPAND | wx.ALL, 4)
-        gbsizer.Add(hsizer, (row, 0), (1, 3), flag=wx.ALIGN_BOTTOM | wx.ALIGN_CENTER_HORIZONTAL,
-                    border=0)
-        bsizer.Add(gbsizer, 0, wx.ALL, 4)
+        self.grid.Add(hsizer, (self.row, 0), (1, 3),
+                      flag=wx.ALIGN_BOTTOM | wx.ALIGN_CENTER_HORIZONTAL, border=0)
+        bsizer.Add(self.grid, 0, wx.ALL, 4)
 
         ## self.pnl.SetAutoLayout(True)
         self.pnl.SetSizer(bsizer)
@@ -566,9 +475,14 @@ class MainFrameGui(wx.Frame):
         "show an error message"
         wx.MessageBox(message, titel, wx.OK | wx.ICON_ERROR, self)
 
-    def meld(self, titel, message):
+    def meld(self, titel, message, additional=None):
         "show an informational message"
-        wx.MessageBox(message, titel, wx.OK | wx.ICON_INFORMATION, self)
+        if additional:
+            with wx.MessageDialog(self, message, titel, wx.OK | wx.ICON_INFORMATION) as dlg:
+                dlg.SetExtendedMessage('\n'.join(additional))
+                dlg.ShowModal()
+        else:
+            wx.MessageBox(message, titel, wx.OK | wx.ICON_INFORMATION, self)
 
     def add_item_to_searchlist(self, item):
         "add string to list of items searched for"
@@ -607,6 +521,45 @@ class MainFrameGui(wx.Frame):
     def einde(self, event=None):
         """applicatie afsluiten"""
         self.Close(True)
+
+    def add_combobox_row(self, label, choices, initial='', control=None):
+        "add a line with a combobox on it"
+        self.row += 1
+        lbl = wx.StaticText(self.pnl, label=label)
+        self.grid.Add(lbl, (self.row, 0), flag=wx.EXPAND | wx.ALL, border=4)
+        cmb = wx.ComboBox(self.pnl, size=(TXTW, TXTH), style=wx.CB_DROPDOWN, choices=choices)
+        cmb.AutoComplete(choices)
+        if initial:
+            cmb.SetValue(initial)
+        if control:
+            hsizer = wx.BoxSizer(wx.HORIZONTAL)
+            hsizer.Add(cmb, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
+            hsizer.Add(control, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 4)
+            self.grid.Add(hsizer, (self.row, 1), flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
+        else:
+            self.grid.Add(cmb, (self.row, 1), flag=wx.ALIGN_CENTER_VERTICAL)
+        return cmb
+
+    def add_checkbox_row(self, labeltext, value=None, indent=0, control=None):
+        "add a line with a checkbox on it"
+        self.row += 1
+        vsizer = wx.BoxSizer(wx.VERTICAL)
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        hbsizer = wx.BoxSizer(wx.HORIZONTAL)
+        cb = wx.CheckBox(self.pnl, label=labeltext)
+        if value:
+            cb.SetValue(value)
+        if control:
+            hbsizer.Add(cb, 0, wx.ALIGN_CENTER_VERTICAL)  # wx.TOP | wx.BOTTOM, 4)
+            hbsizer.Add(control, 0, wx.ALIGN_CENTER_VERTICAL)  # , 4)
+        elif indent:
+            hbsizer.Add(cb, 0, wx.LEFT, indent)
+        else:
+            hbsizer.Add(cb, 0)
+        hsizer.Add(hbsizer, 0, wx.TOP | wx.BOTTOM, 4)
+        vsizer.Add(hsizer, 0, wx.EXPAND)
+        self.grid.Add(vsizer, (self.row, 1), flag=wx.EXPAND)
+        return cb
 
     def check_loc(self, event):
         """update location to get settings from

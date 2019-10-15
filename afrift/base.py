@@ -199,7 +199,7 @@ class Results():
         self.gui.clear_contents()
         self.parent.zoekvervang.rpt = ["".join(self.parent.zoekvervang.specs)]
         self.parent.gui.set_waitcursor(True)
-        self.parent.zoekvervang.do_action(search_python=self.parent.p["context"])
+        self.parent.zoekvervang.go()
         self.parent.gui.set_waitcursor(False)
         if len(self.parent.zoekvervang.rpt) == 1:
             self.gui.breekaf("Niks gevonden")
