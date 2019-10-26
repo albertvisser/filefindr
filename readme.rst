@@ -17,28 +17,20 @@ The search results are shown in a dialog box and they can also be saved to a fil
 Usage
 -----
 
-+ ``python afrift.pyw`` to call the primary version
-+ ``python afrift_multi.pyw <filename>`` to call the version working on multiple files and directories; the argument is the name of a file containing those
-+ ``python afrift_single.pyw <filename>`` to call the version working on a single file.
+``python(3) start.py`` from the program directory starts up the primary version. There's a host of options you can either select in the gui or enter on the command line. Help is provided through the use of ``argparse`` in the startup script.
 
-For the single file version, I've tweaked my favourite text editor SciTE to call
-it from within the file I'm currently editing.
+Originally this tool was intended to work on a directory, but I added some extra modes to make this work with other tools I use: a ``single`` mode makes it work on a single file instead of a directoryand a ``multi`` mode makes it possible to specify multiple files and directories to start from.
 
-The multiple file version I've set up to be called on the file(s) and/or directories
-I mark in my file manager .
+The single file version iwas intended to be called from within my favourite text editor SciTE to use on the current file, and the multiple file version was meant to be called from a graphical file manager after marking the entries to work with, but you can also specify these on the command line.
 
 
 Dependencies
 ------------
 
-- Python
-- wxPython for the current GUI version
-- Tkinter, PyQt4 for older GUI versions and current Python3 GUI versions
-- PocketPyGUI for a PocketPC version
+- Python(3)
+- PyQt (5) or wxPython (Phoenix) for the current GUI version
+- Tkinter for the first GUI version and also for the first Python3 version, and PocketPyGUI for a PocketPC version - these are included for curiosity's sake.
 
-Note that for saving previousy entered values between sessions, the previous
-implementation used *pickle*. The most up-to-date version uses *json* and *pathlib*
-for this; to keep things simple I've decided to drop Python 2 support.
-Maybe I'll reinstate it by reviving and older version and backport the latest
-changes, but not for the time being.
+Note that for saving previousy entered values between sessions, the previous implementation used *pickle*. The most up-to-date version uses *json* and *pathlib* for this; to keep things simple I've decided to drop Python 2 support.
+Maybe I'll reinstate it by reviving and older version and backport the latest changes, but not for the time being.
 
