@@ -91,7 +91,7 @@ def check_single_string(inp):
     return False
 
 
-def pyread(file, fallback_encoding, negeer_docs):
+def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
     """context-aware search in Python files
 
     this routine procduces a list of contexts
@@ -444,7 +444,7 @@ class Finder():
             contains = contains_default
             for loc in locations[best]:
                 lineno = int(lineno)
-                if loc[0][0] <= lineno <= loc[1][0]:
+                if loc[0][0] < lineno <= loc[1][0]:
                     old_contains = contains
                     contains = loc[2]
                     if contains == 'comment':
