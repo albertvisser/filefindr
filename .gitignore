@@ -5,3 +5,5 @@ __pycache__/
 
 # development stuff
 logs/
+*.swp
+*.swo
