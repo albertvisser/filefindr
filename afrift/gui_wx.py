@@ -510,8 +510,8 @@ class MainFrameGui(wx.Frame):
             wx.EndBusyCursor()
 
     def get_exit(self):
-        "get indicator to exot program when ready"
-        self.vraag_exit.GetValue()
+        "get indicator to exit program when ready"
+        return self.vraag_exit.GetValue()
 
     def go(self):
         "show screen and handle events"

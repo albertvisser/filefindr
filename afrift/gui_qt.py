@@ -359,15 +359,11 @@ class MainFrameGui(qtw.QWidget):
             if self.master.p.get("extlist", ''):
                 self.vraag_types.setEditText(self.master.p['extlist'])
 
-        print(self.master.p['context'])
-        self.vraag_context = self.add_checkbox_row(
-            "context tonen (waar mogelijk, anders overslaan)", self.master.p["context"])
-        self.vraag_uitsluit = self.add_checkbox_row(
-            "commentaren en docstrings negeren", self.master.p["negeer"], indent=22)
-        self.vraag_backup = self.add_checkbox_row(
-            "gewijzigd(e) bestand(en) backuppen", self.master.make_backups)
-        self.vraag_exit = self.add_checkbox_row(
-            "direct afsluiten na vervangen", self.master.exit_when_ready)
+        self.vraag_context = self.add_checkbox_row(captions["context"], self.master.p["context"])
+        self.vraag_uitsluit = self.add_checkbox_row(captions["negeer"], self.master.p["negeer"],
+                                                    indent=22)
+        self.vraag_backup = self.add_checkbox_row(captions["backup"], self.master.maak_backups)
+        self.vraag_exit = self.add_checkbox_row(captions['exit'], self.master.exit_when_ready)
 
         self.row += 1
         hbox = qtw.QHBoxLayout()
@@ -461,8 +457,8 @@ class MainFrameGui(qtw.QWidget):
             self.app.restoreOverrideCursor()
 
     def get_exit(self):
-        "get indicator to exot program when ready"
-        self.vraag_exit.isChecked()
+        "get indicator to exit program when ready"
+        return self.vraag_exit.isChecked()
 
     def go(self):
         "show screen and handle events"
