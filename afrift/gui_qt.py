@@ -185,12 +185,15 @@ class ResultsGui(qtw.QDialog):
             gbox = qtw.QGridLayout()
             gbox.addWidget(qtw.QLabel(captions['fmt'], self), 0, 0)
             self.cb_path = qtw.QCheckBox('&' + captions['pth'], self)
+            self.cb_path.setChecked(self.master.parent.outopts['full_path'])
             if self.master.parent.apptype == "single":
                 self.cb_path.setEnabled(False)
             gbox.addWidget(self.cb_path, 1, 0)
             self.cb_delim = qtw.QCheckBox(add_ampersand(captions['dlm']), self)
-            self.cb_smrz = qtw.QCheckBox(add_ampersand(captions['sum']), self)
+            self.cb_delim.setChecked(self.master.parent.outopts['as_csv'])
             gbox.addWidget(self.cb_delim, 0, 1)
+            self.cb_smrz = qtw.QCheckBox(add_ampersand(captions['sum']), self)
+            self.cb_smrz.setChecked(self.master.parent.outopts['summarize'])
             gbox.addWidget(self.cb_smrz, 1, 1)
             hbox.addLayout(gbox)
             hbox.addStretch(1)
@@ -203,9 +206,7 @@ class ResultsGui(qtw.QDialog):
     def populate_list(self):
         """copy results to listbox
         """
-        print('in populate_list:', self.master.results[0])
         for ix, result in enumerate(self.master.results[1:]):
-
             self.lijst.insertRow(ix)
             self.lijst.setRowHeight(ix, 18)
             col = 0
@@ -279,8 +280,14 @@ class ResultsGui(qtw.QDialog):
     def to_result(self):
         """show result in file
         """
-        print('in to_result:', self.lijst.currentRow(), self.lijst.currentColumn())
         self.master.goto_result(self.lijst.currentRow(), self.lijst.currentColumn())
+
+    def remember_settings(self):
+        ""
+        self.master.parent.outopts['full_path'] = self.get_pth()
+        self.master.parent.outopts['as_csv'] = self.get_csv()
+        self.master.parent.outopts['summarize'] = self.get_sum()
+        self.master.parent.schrijfini()
 
     def klaar(self):
         """finish dialog

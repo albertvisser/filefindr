@@ -238,6 +238,7 @@ class Results():
         f_nam = f_nam.join(("files-containing-", ext))
         savename = self.gui.get_savefile(f_nam, ext)
         if savename:
+            self.gui.remember_settings()
             with open(savename, "w") as f_out:
                 for line in self.get_results():
                     f_out.write(line + "\n")
@@ -252,9 +253,9 @@ class Results():
     def to_clipboard(self, *args):
         """callback for button 'Copy to clipboard'
         """
-        if not self.check_option_combinations_ok():
-            return
-        self.gui.copy_to_clipboard('\n'.join(self.get_results()))
+        if self.check_option_combinations_ok():
+            self.gui.remember_settings()
+            self.gui.copy_to_clipboard('\n'.join(self.get_results()))
 
     def goto_result(self, row, col):
         """open the file containing the selected item
@@ -343,6 +344,7 @@ class MainFrame():
         self._sections = ('zoek', 'vervang', 'filetypes', 'dirs')
         self._words = ('woord', 'woord', 'spec', 'pad', )
         self._optkeys = ("case", "woord", "subdirs", "context", "negeer")
+        self.outopts = {'full_path': False, 'as_csv': False, 'summarize': False}
         for key in self._optkeys:
             self.p[key] = False
         self._options = ("matchcase", "matchwords", "searchsubdirs", "showcontext")
@@ -413,6 +415,8 @@ class MainFrame():
                 self.mru_items = json.load(_in)
             with ofile.open() as _in:
                 opts = json.load(_in)
+                for key in self. outopts:
+                    self.outopts[key] = opts.pop(key, '') or self.outopts[key]
                 for key, value in opts.items():
                     if value is None:
                         opts[key] = False
@@ -432,7 +436,10 @@ class MainFrame():
             self.p["extlist"] = []
         for arg in ('regex', 'follow_symlinks', 'select_subdirs', 'select_files',
                     'dont_save', 'no_gui', 'output_file', 'full_path', 'as_csv', 'summarize'):
-            self.extraopts[arg] = kwargs.pop(arg, '')
+            if arg in self.outopts:
+                self.outopts[arg] = kwargs.pop(arg, '') or self.outopts[arg]
+            else:
+                self.extraopts[arg] = kwargs.pop(arg, '')
         self.extraopts['use_saved'] = kwargs.pop('use_saved', False)
         if not self.extraopts['use_saved']:
             for arg, key in (('case_sensitive', "case"),
@@ -451,6 +458,7 @@ class MainFrame():
         with mfile.open("w") as _out:
             json.dump(self.mru_items, _out, indent=4)
         opts = {key: self.p[key] for key in self._optkeys}
+        opts.update(self.outopts)
         with ofile.open("w") as _out:
             json.dump(opts, _out, indent=4)
 
@@ -679,10 +687,8 @@ class MainFrame():
                 mld = "Niks gevonden" if self.zoekvervang.ok else self.zoekvervang.rpt[0]
                 self.gui.meld(self.resulttitel, mld)
         else:
-            # print('creating Results instance')
             dlg = Results(self, common_part)
 
-            print('ready to show results')
             if self.extraopts['output_file']:
                 with self.extraopts['output_file'] as f_out:
                     for line in dlg.get_results():

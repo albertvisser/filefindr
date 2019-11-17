@@ -97,7 +97,6 @@ class SelectNamesGui(wx.Dialog):
         "dialoog afsluiten"
         dirs = []
         for checked in self.frm.CheckedStrings:
-            print(checked)
             if self.master.dofiles:
                 self.master.names.remove(checked)
             else:
@@ -188,7 +187,7 @@ class ResultsGui(wx.Dialog):
             ok = accel.FromString('Alt+O')
             if ok:
                 accel_list.append(accel)
-            cb.SetValue(False)
+            cb.SetValue(self.master.parent.outopts['as_csv'])
             self.cb_delim = cb
             gsizer.Add(cb)
 
@@ -197,7 +196,7 @@ class ResultsGui(wx.Dialog):
             ok = accel.FromString('Alt+P')
             if ok:
                 accel_list.append(accel)
-            cb.SetValue(False)
+            cb.SetValue(self.master.parent.outopts['full_path'])
             if self.master.parent.apptype == "single":
                 cb.Enable(False)
             self.cb_path = cb
@@ -208,7 +207,7 @@ class ResultsGui(wx.Dialog):
             ok = accel.FromString('Alt+U')
             if ok:
                 accel_list.append(accel)
-            cb.SetValue(False)
+            cb.SetValue(self.master.parent.outopts['summarize'])
             self.cb_smrz = cb
             gsizer.Add(cb)
 
@@ -281,9 +280,9 @@ class ResultsGui(wx.Dialog):
             f_filter = 'Text files (*.txt)|*.txt;;'
         fn = ''
         with wx.FileDialog(self, message="Resultaat naar bestand kopieren",
-                           defaultDir=str(self.master.hier),
+                           defaultDir=str(self.master.parent.hier),
                            defaultFile=fname.join(('searchfor_', ".txt")),
-                           wildcard="{}All files (*.*)|*.*".format(f_filter),
+                           wildcard="{}|All files (*.*)|*.*".format(f_filter),
                            style=wx.FD_SAVE) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 fn = dlg.GetPath()
@@ -318,8 +317,15 @@ class ResultsGui(wx.Dialog):
             row = 0
         self.master.goto_result(row, -1)
 
+    def remember_settings(self):
+        ""
+        self.master.parent.outopts['full_path'] = self.get_pth()
+        self.master.parent.outopts['as_csv'] = self.get_csv()
+        self.master.parent.outopts['summarize'] = self.get_sum()
+        self.master.parent.schrijfini()
+
     def klaar(self):
-        """finish dialog
+        """finish dialog - never called
         """
         self.EndModal(0)
 
