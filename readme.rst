@@ -32,5 +32,3 @@ Dependencies
 - Tkinter for the first GUI version and also for the first Python3 version, and PocketPyGUI for a PocketPC version - these are included for curiosity's sake.
 
 Note that for saving previousy entered values between sessions, the previous implementation used *pickle*. The most up-to-date version uses *json* and *pathlib* for this; to keep things simple I've decided to drop Python 2 support.
-Maybe I'll reinstate it by reviving and older version and backport the latest changes, but not for the time being.
-
