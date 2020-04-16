@@ -49,7 +49,7 @@ class SelectNamesGui(wx.Dialog):
         vbox.Add(hbox, 0, wx.EXPAND)
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
-        self.frm = wx.CheckListBox(self, -1, choices=self.parent.names)
+        self.frm = wx.CheckListBox(self, -1, choices=[str(x) for x in self.master.parent.names])
         self.checklist = self.frm.GetItems()
         hbox.Add(self.frm, 0, wx.LEFT | wx.RIGHT, 7)
         vbox.Add(hbox, 0)
@@ -97,13 +97,15 @@ class SelectNamesGui(wx.Dialog):
         "dialoog afsluiten"
         dirs = []
         for checked in self.frm.CheckedStrings:
-            if self.master.dofiles:
-                self.master.names.remove(checked)
+            if self.master.do_files:
+                self.master.names.pop(checked)
             else:
                 dirs.append(checked)
-        if not self.master.dofiles:
+        if self.master.do_files:
+            self.master.names = [self.master.names[x] for x in sorted(self.master.names.keys())]
+        else:
             self.master.names = dirs
-        self.EndModal(0)
+        self.EndModal(wx.ID_OK)
 
 
 class ResultsGui(wx.Dialog):

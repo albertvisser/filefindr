@@ -60,7 +60,7 @@ class SelectNames():
     GUI-toolkit
     """
     def __init__(self, parent, files=True):
-        self.dofiles = files
+        self.do_files = files
         self.parent = parent
         self.title = self.parent.title + " - file list"
         self.iconame = iconame
@@ -69,7 +69,7 @@ class SelectNames():
             self.names = {str(x): x for x in self.parent.names}
         else:
             text = "Selecteer de directories die je *niet* wilt verwerken"
-        self.gui = SelectNamesGui(parent, self)   # te definieren in gui specifieke module
+        self.gui = SelectNamesGui(parent, self)
         captions = {'heading': text, 'sel_all': 'Select/Unselect All', 'invert': 'Invert selection',
                     'exit': "&Terug", 'execute': "&Klaar"}
         self.gui.setup_screen(captions)

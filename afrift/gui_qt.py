@@ -43,7 +43,7 @@ class SelectNamesGui(qtw.QDialog):
         fvbox = qtw.QVBoxLayout()
         self.checklist = []
         for item in self.master.parent.names:
-            if self.master.dofiles:
+            if self.master.do_files:
                 cb = qtw.QCheckBox(str(item), frm)
             else:
                 cb = qtw.QCheckBox(item, frm)
@@ -100,12 +100,12 @@ class SelectNamesGui(qtw.QDialog):
         dirs = []
         for cb in self.checklist:
             if cb.isChecked():
-                if self.master.dofiles:
-                    self.names.pop(cb.text())
+                if self.master.do_files:
+                    self.master.names.pop(cb.text())
                 else:
                     dirs.append(cb.text())
-        if self.master.dofiles:
-            self.master.names = [self.master.names[x] for x in sorted(self.root.names.keys())]
+        if self.master.do_files:
+            self.master.names = [self.master.names[x] for x in sorted(self.master.names.keys())]
         else:
             self.master.names = dirs
         super().accept()
