@@ -9,6 +9,7 @@ import pathlib
 import re
 import shutil
 import collections
+import subprocess
 contains_default = 'module level code'
 special_chars = ('.', '^', '$', '*', '+', '?', '{', '}', '[', ']', '(', ')', '|', '\\')
 
@@ -89,6 +90,17 @@ def check_single_string(inp):
             return True
         test = inp[0]
     return False
+
+
+def determine_filetype(entry):
+    """Try to discover what kind of file this is and return which context-sensitive search to use
+    """
+    if entry.suffix in ('.py', '.pyw'):
+        return 'py'
+    result = subprocess.run(['file', entry], stdout=subprocess.PIPE)
+    if 'python' in str(result.stdout.lower()):
+        return 'py'
+    return ''
 
 
 def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
@@ -424,7 +436,8 @@ class Finder():
         results, self.rpt = self.rpt, []
         locations = {}
         for entry in self.filenames:
-            if entry.suffix in ('.py', '.pyw'):
+            ftype = determine_filetype(entry)
+            if ftype == 'py':
                 locations[str(entry)] = pyread(entry, self.p['fallback_encoding'], self.p['negeer'])
             else:
                 locations[str(entry)] = []
