@@ -185,10 +185,10 @@ class Results():
         if context:
             context = 'py' if self.show_context else None
             if self.parent.apptype == 'single':
-                text = [('{} {}'.format(self.parent.fnames[0], x) if x else '') for x in text]
+                text = ['{} {}'.format(self.parent.p['filelist'][0], x) if x else '' for x in text]
             text = format_result(text, context)
             if self.parent.apptype == 'single' and not toonpad:
-                text = [x.replace(str(self.parent.fnames[0]), '', 1).strip() for x in text]
+                text = [x.replace(str(self.parent.p['filelist'][0]), '', 1).strip() for x in text]
 
         return text
 
@@ -278,109 +278,40 @@ class MainFrame():
     """
     def __init__(self, **kwargs):
         """attributen die altijd nodig zijn
-
-        self.pickled geeft aan of het op de nieuwe manier (met pickle) lezen
-        van de mru-settings gelukt is of niet.
         """
         log('in MainFrame.init: cwd is {}'.format(pathlib.Path.cwd()))
         log('  kwargs is {}'.format(kwargs))
-        apptype = kwargs.pop('apptype', '')
+        self.apptype = kwargs.pop('apptype', '')
         fnaam = kwargs.pop('fnaam', '')
         flist = kwargs.pop('flist', None)
         self.title = "Albert's find-replace in files tool"
         self.iconame = iconame
         self.fouttitel = self.title + "- fout"
         self.resulttitel = self.title + " - Resultaten"
-        self.apptype = apptype
+        # self.apptype = apptype
         self.hier = pathlib.Path.cwd()  # os.getcwd()
-        self.mru_items = {}
-        fnaam_given = bool(fnaam)
-        fnaam = pathlib.Path(fnaam).expanduser().resolve()
-        if self.apptype == "" and fnaam.exists() and not fnaam.is_dir():
+        self.mru_items = {"zoek": [], "verv": [], "types": [], "dirs": []}
+        self.save_option_keys = ("case", "woord", "subdirs", "context", "negeer")
+        self.outopts = {'full_path': False, 'as_csv': False, 'summarize': False)
+        self.screen_choices = {'regex': False, 'case': False, 'woord': False,
+                               'subdirs': False,'follow_symlinks': False, 'select_subdirs': False,
+                               'select_files': False, 'context': False, 'negeer': False,
+                               'dont_save': False, 'no_gui': False,
+                               'output_file': False, 'full_path': False, 'as_csv': False,
+                               'summarize': False):
+        # het idee achter bovenstaande dict is om alle keuzes op het scherm te verzamelen
+        # en ze eerst vanuit de opgeslagen waarden en daarna vanuit de
+        # opgegeven startup-opties te vullen - zie ook onderstaande captions en read_kwargs()
+        fnpath = pathlib.Path(fnaam).expanduser().resolve()
+        if self.apptype == "" and fnpath.exists() and not fnpath.is_dir():
             self.apptype = 'single'
-        if self.apptype == "":
-            self.fnames = []
-            # self.hier = pathlib.Path.cwd()  # os.getcwd()
-            if fnaam_given:
-                self.fnames = [fnaam]
-                # self.hier = fnaam.parent
-        elif self.apptype == "single":
-            self.title += " - single file version"
-            if not fnaam_given:
-                raise ValueError('Need filename for application type "single"')
-            fnaam = pathlib.Path(fnaam).expanduser().resolve()
-            self.fnames = [fnaam]
-            # self.hier = fnaam.parent
-        elif self.apptype == "multi":
-            self.fnames = []
-            if fnaam_given:
-                if fnaam.is_dir():
-                    self.fnames = [fnaam]
-                else:
-                    with fnaam.open() as f_in:
-                        for line in f_in:
-                            line = line.strip()
-                            if line.endswith("\\") or line.endswith("/"):
-                                line = line[:-1]
-                            line = pathlib.Path(line).expanduser().resolve()
-                            # if not self.hier:
-                            #     self.hier = line.parent
-                            self.fnames.append(line)
-            elif flist:
-                self.fnames = [pathlib.Path(x) for x in flist]
-            else:
-                raise ValueError('Need filename or list of files for application '
-                                 'type "multi"')
-        else:
-            raise ValueError('application type should be empty, "single" or "multi"')
+
+        fnames = self.get_filename_list(fnaam, fnpath, flist)
         self.s = ""
         self.p = {'filelist': []}
-        if self.fnames:
-            self.p["filelist"] = self.fnames
-        self._keys = ("zoek", "verv", "types", "dirs")
-        for key in self._keys:
-            self.mru_items[key] = []
-        self._optionskey = "options"
-        self._sections = ('zoek', 'vervang', 'filetypes', 'dirs')
-        self._words = ('woord', 'woord', 'spec', 'pad', )
-        self._optkeys = ("case", "woord", "subdirs", "context", "negeer")
-        self.outopts = {'full_path': False, 'as_csv': False, 'summarize': False}
-        for key in self._optkeys:
-            self.p[key] = False
-        self._options = ("matchcase", "matchwords", "searchsubdirs", "showcontext")
-        if self.p['filelist']:
-            if self.apptype == 'single':
-                self.readini(self.p['filelist'][0].parent)
-            elif self.apptype == 'multi':
-                test = os.path.commonpath([str(x) for x in self.p['filelist']])
-                self.readini(os.path.abspath(test))
-            else:
-                self.readini(self.p['filelist'][0])
-        else:
-            self.readini()
-        encfile = BASE / 'fallback_encoding'
-        try:
-            test = encfile.read_text()
-        except FileNotFoundError:
-            test = 'latin-1\n'
-            encfile.write_text(test)
-        self._fallback_encoding = test.strip()
-        edfile = BASE / 'open_result'
-        try:
-            test = edfile.read_text()
-        except FileNotFoundError:
-            test = '\n'.join(("program = 'SciTE'",
-                              "file-option = '-open:{}'",
-                              "line-option = '-goto:{}'",
-                              ""))
-            edfile.write_text(test)
-        self.editor_option = [x.split(' = ')[1].strip("'")
-                              for x in test.strip().split('\n')]
-        self.always_replace = False
-        self.maak_backups = True
-        self.exit_when_ready = False
-        self.extraopts = collections.defaultdict(lambda: False)
-        self.read_kwargs(kwargs)
+        if fnames:
+            self.p["filelist"] = fnames
+        self.setup_options(kwargs)
         self.gui = MainFrameGui(self)
         captions = {'vraag_zoek': 'Zoek naar:', 'regex': "regular expression (Python format)",
                     'case': "hoofd/kleine letters gelijk", 'woord': "hele woorden",
@@ -404,6 +335,76 @@ class MainFrame():
         else:
             self.gui.go()
 
+    def get_filename_list(self, fn_orig, fnaam, flist):
+        fnames = []
+        if self.apptype == "":
+            if fn_orig:
+                fnames = [fnaam]
+        elif self.apptype == "single":
+            self.title += " - single file version"
+            if not fn_orig:
+                raise ValueError('Need filename for application type "single"')
+            fnames = [fnaam]
+        elif self.apptype == "multi":
+            self.title += " - multi-file version"
+            if fn_orig:
+                if fnaam.is_dir():
+                    fnames = [fnaam]
+                else:
+                    with fnaam.open() as f_in:
+                        for line in f_in:
+                            line = line.strip()
+                            if line.endswith("\\") or line.endswith("/"):
+                                line = line[:-1]
+                            line = pathlib.Path(line).expanduser().resolve()
+                            fnames.append(line)
+            elif flist:
+                fnames = [pathlib.Path(x) for x in flist]
+            else:
+                raise ValueError('Need filename or list of files for application '
+                                 'type "multi"')
+        else:
+            raise ValueError('application type should be empty, "single" or "multi"')
+        return fnames
+
+    def setup_options(self, kwargs):
+        if self.p['filelist']:
+            if self.apptype == 'single':
+                self.readini(self.p['filelist'][0].parent)
+            elif self.apptype == 'multi':
+                test = os.path.commonpath([str(x) for x in self.p['filelist']])
+                self.readini(os.path.abspath(test))
+            else:
+                self.readini(self.p['filelist'][0])
+        else:
+            self.readini()
+
+        encfile = BASE / 'fallback_encoding'
+        try:
+            test = encfile.read_text()
+        except FileNotFoundError:
+            test = 'latin-1\n'
+            encfile.write_text(test)
+        self.p['fallback_encoding'] = test.strip()
+
+        edfile = BASE / 'open_result'
+        try:
+            test = edfile.read_text()
+        except FileNotFoundError:
+            test = '\n'.join(("program = 'SciTE'",
+                              "file-option = '-open:{}'",
+                              "line-option = '-goto:{}'",
+                              ""))
+            edfile.write_text(test)
+        self.editor_option = [x.split(' = ')[1].strip("'")
+                              for x in test.strip().split('\n')]
+
+        self.always_replace = False
+        self.maak_backups = True
+        self.exit_when_ready = False
+        self.extraopts = collections.defaultdict(lambda: False)
+        self.read_kwargs(kwargs)
+
     def readini(self, path=None):
         """lees ini file (met eerder gebruikte zoekinstellingen)
 
@@ -415,12 +416,11 @@ class MainFrame():
                 self.mru_items = json.load(_in)
             with ofile.open() as _in:
                 opts = json.load(_in)
-                for key in self. outopts:
-                    self.outopts[key] = opts.pop(key, '') or self.outopts[key]
-                for key, value in opts.items():
-                    if value is None:
-                        opts[key] = False
-            self.p.update(opts)
+                for key, value in self.outopts.items():
+                    self.outopts[key] = opts.pop(key, '') or value
+                for key in self.save_options_keys:
+                    self.p[key] = opts.pop(key, '') or value
+            # self.p.update(self.save_options)
 
     def read_kwargs(self, kwargs):
         """lees settings opties vanuit invoer; override waar opgegeven
@@ -434,6 +434,7 @@ class MainFrame():
         self.p["extlist"] = kwargs.pop('extensions', '')
         if not self.p["extlist"]:
             self.p["extlist"] = []
+
         for arg in ('regex', 'follow_symlinks', 'select_subdirs', 'select_files',
                     'dont_save', 'no_gui', 'output_file', 'full_path', 'as_csv', 'summarize'):
             if arg in self.outopts:
@@ -448,7 +449,7 @@ class MainFrame():
                              ('python_context', "context"), ):
                 self.p[key] = kwargs.pop(arg, self.p[key])
         self.maak_backups = kwargs.pop('backup_originals', '')
-        self.exit_when_ready = True
+        self.exit_when_ready = True   # altijd aan?
 
     def schrijfini(self, path=None):
         """huidige settings toevoegen dan wel vervangen in ini file"""
@@ -457,7 +458,7 @@ class MainFrame():
             loc.mkdir()
         with mfile.open("w") as _out:
             json.dump(self.mru_items, _out, indent=4)
-        opts = {key: self.p[key] for key in self._optkeys}
+        opts = {key: self.p[key] for key in self.saved_options_keys}
         opts.update(self.outopts)
         with ofile.open("w") as _out:
             json.dump(opts, _out, indent=4)
@@ -466,10 +467,10 @@ class MainFrame():
         """determine common part of filenames
         """
         if self.apptype == 'single':
-            test = self.fnames[0]
+            test = self.p['filelist'][0]
         elif self.apptype == 'multi':
-            test = os.path.commonpath([str(x) for x in self.fnames])
-            ## if test in self.fnames:
+            test = os.path.commonpath([str(x) for x in self.p['filelist']])
+            ## if test in self.p['filelist']:
                 ## pass
             ## else:
                 ## while test and not os.path.exists(test):
@@ -587,7 +588,7 @@ class MainFrame():
             self.checkverv(self.gui.get_replace_args())
             self.checkattr(self.gui.get_search_attr())
             # volgens qt versie
-            if self.apptype != "single" or self.fnames[0].is_dir():
+            if self.apptype != "single" or self.p['filelist'][0].is_dir():
                 self.checktype(self.gui.get_types_to_search())
             # volgens wx versie
             # try:
@@ -600,9 +601,9 @@ class MainFrame():
                 mld = self.checkpath(self.gui.get_dir_to_search())
         if not mld:
             # volgens qt versie
-            if self.apptype != "single" or self.fnames[0].is_dir():
+            if self.apptype != "single" or self.p['filelist'][0].is_dir():
                 self.checksubs(self.gui.get_subdirs_to_search())
-            elif self.apptype == "single" and self.fnames[0].is_symlink():
+            elif self.apptype == "single" and self.p['filelist'][0].is_symlink():
                 self.p["follow_symlinks"] = True
             # volgens wx versie
             # try:
@@ -612,7 +613,6 @@ class MainFrame():
         self.p["backup"] = self.gui.get_backup()
         self.p["negeer"] = self.gui.get_ignore()
         self.p["context"] = self.gui.get_context()
-        self.p["fallback_encoding"] = self._fallback_encoding
 
         if mld:
             self.gui.error(self.fouttitel, mld)
@@ -634,7 +634,8 @@ class MainFrame():
             return
 
         common_part = self.determine_common()
-        if self.apptype == "single" or (len(self.fnames) == 1 and self.fnames[0].is_file()):
+        if self.apptype == "single" or (
+                len(self.p['filelist']) == 1 and self.p['filelist'][0].is_file()):
             pass
         else:
             skip_dirs = self.gui.get_skipdirs()

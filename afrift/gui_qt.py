@@ -326,7 +326,7 @@ class MainFrameGui(qtw.QWidget):
         self.vraag_leeg = self.add_checkbox_row(captions['empty'], self.master.always_replace)
 
         if self.master.apptype == "":
-            initial = str(self.master.fnames[0]) if self.master.fnames else ''
+            initial = str(self.master.p['filelist'][0]) if self.master.p['filelist'] else ''
             self.zoek = qtw.QPushButton(captions['zoek'])
             self.zoek.clicked.connect(self.zoekdir)
             self.vraag_dir = self.add_combobox_row(captions['in'], self.master.mru_items["dirs"],

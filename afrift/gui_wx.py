@@ -365,7 +365,7 @@ class MainFrameGui(wx.Frame):
         self.check_vervang = self.add_checkbox_row(captions['empty'], self.master.always_replace)
 
         if self.master.apptype == "":
-            initial = str(self.master.fnames[0]) if self.master.fnames else ''
+            initial = str(self.master.p['filelist'][0]) if self.master.p['filelist'] else ''
             btn = wx.Button(self.pnl, label=captions['zoek'], size=(-1, TXTH))
             btn.Bind(wx.EVT_BUTTON, self.zoekdir)
             self.vraag_dir = self.add_combobox_row(captions['in'], self.master.mru_items["dirs"],
@@ -376,19 +376,19 @@ class MainFrameGui(wx.Frame):
             self.row += 1
             self.grid.Add(wx.StaticText(self.pnl, label=captions['in_s']), (self.row, 0),
                           flag=wx.EXPAND | wx.ALL, border=4)
-            self.grid.Add(wx.StaticText(self.pnl, label=str(self.master.fnames[0])), (self.row, 1),
-                          flag=wx.EXPAND | wx.ALL, border=4)
+            self.grid.Add(wx.StaticText(self.pnl, label=str(self.master.p['filelist'][0])),
+                          (self.row, 1), flag=wx.EXPAND | wx.ALL, border=4)
         else:  # if self.master.apptype == "multi":
             self.row += 1
             self.grid.Add(wx.StaticText(self.pnl, label=captions['in_m']), (self.row, 0), (1, 2),
                           flag=wx.EXPAND | wx.LEFT | wx.TOP, border=4)
             self.row += 1
             self.lb = wx.ListBox(self.pnl, size=(TXTW, 120),  # -1),
-                                 choices=[str(x) for x in self.master.fnames])
+                                 choices=[str(x) for x in self.master.p['filelist']])
             self.grid.Add(self.lb, (self.row, 0), (1, 2), flag=wx.EXPAND | wx.LEFT | wx.RIGHT,
                           border=4)
 
-        if self.master.apptype != "single" or os.path.isdir(self.master.fnames[0]):
+        if self.master.apptype != "single" or os.path.isdir(self.master.p['filelist'][0]):
             txt = captions['subs_m'] if self.master.apptype == "multi" else ""
             self.vraag_subs = self.add_checkbox_row(txt + captions['subs'], self.master.p["subdirs"])
             # NB flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=2)
