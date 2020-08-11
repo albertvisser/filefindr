@@ -324,7 +324,7 @@ class ResultsGui(wx.Dialog):
         self.master.parent.outopts['full_path'] = self.get_pth()
         self.master.parent.outopts['as_csv'] = self.get_csv()
         self.master.parent.outopts['summarize'] = self.get_sum()
-        self.master.parent.schrijfini()
+        self.master.parent.write_to_ini()
 
     def klaar(self):
         """finish dialog - never called
@@ -574,7 +574,7 @@ class MainFrameGui(wx.Frame):
         """
         txt = event.GetEventObject().GetValue()
         if os.path.exists(txt) and not txt.endswith(os.path.sep):
-            self.master.readini(txt)
+            self.master.read_from_ini(txt)
             self.vraag_zoek.Clear()
             self.vraag_zoek.AppendItems(self.master.mru_items["zoek"])
             if self.master.mru_items["zoek"]:

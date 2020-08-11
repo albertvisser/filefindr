@@ -292,16 +292,17 @@ class MainFrame():
         self.hier = pathlib.Path.cwd()  # os.getcwd()
         self.mru_items = {"zoek": [], "verv": [], "types": [], "dirs": []}
         self.save_option_keys = ("case", "woord", "subdirs", "context", "negeer")
-        self.outopts = {'full_path': False, 'as_csv': False, 'summarize': False)
+        self.outopts = {'full_path': False, 'as_csv': False, 'summarize': False}
         self.screen_choices = {'regex': False, 'case': False, 'woord': False,
                                'subdirs': False,'follow_symlinks': False, 'select_subdirs': False,
                                'select_files': False, 'context': False, 'negeer': False,
                                'dont_save': False, 'no_gui': False,
                                'output_file': False, 'full_path': False, 'as_csv': False,
-                               'summarize': False):
+                               'summarize': False}
         # het idee achter bovenstaande dict is om alle keuzes op het scherm te verzamelen
         # en ze eerst vanuit de opgeslagen waarden en daarna vanuit de
         # opgegeven startup-opties te vullen - zie ook onderstaande captions en read_kwargs()
+
         fnpath = pathlib.Path(fnaam).expanduser().resolve()
         if self.apptype == "" and fnpath.exists() and not fnpath.is_dir():
             self.apptype = 'single'
@@ -311,7 +312,8 @@ class MainFrame():
         self.p = {'filelist': []}
         if fnames:
             self.p["filelist"] = fnames
-        self.setup_options(kwargs)
+        self.cmdline_options = kwargs  # remember which options come from the command line
+        self.setup_options()
         self.gui = MainFrameGui(self)
         captions = {'vraag_zoek': 'Zoek naar:', 'regex': "regular expression (Python format)",
                     'case': "hoofd/kleine letters gelijk", 'woord': "hele woorden",
@@ -367,17 +369,17 @@ class MainFrame():
             raise ValueError('application type should be empty, "single" or "multi"')
         return fnames
 
-    def setup_options(self, kwargs):
+    def setup_options(self):
         if self.p['filelist']:
             if self.apptype == 'single':
-                self.readini(self.p['filelist'][0].parent)
+                self.read_from_ini(self.p['filelist'][0].parent)
             elif self.apptype == 'multi':
                 test = os.path.commonpath([str(x) for x in self.p['filelist']])
-                self.readini(os.path.abspath(test))
+                self.read_from_ini(os.path.abspath(test))
             else:
-                self.readini(self.p['filelist'][0])
+                self.read_from_ini(self.p['filelist'][0])
         else:
-            self.readini()
+            self.read_from_ini()
 
         encfile = BASE / 'fallback_encoding'
         try:
@@ -403,12 +405,12 @@ class MainFrame():
         self.maak_backups = True
         self.exit_when_ready = False
         self.extraopts = collections.defaultdict(lambda: False)
-        self.read_kwargs(kwargs)
+        self.apply_cmdline_options()
 
-    def readini(self, path=None):
+    def read_from_ini(self, path=None):
         """lees ini file (met eerder gebruikte zoekinstellingen)
 
-        geen settings file of niet te lezen dan initieel laten
+        als geen settings file of niet te lezen dan initieel laten
         """
         loc, mfile, ofile = get_iniloc(path)
         if loc.exists():
@@ -420,39 +422,41 @@ class MainFrame():
                     self.outopts[key] = opts.pop(key, '') or value
                 for key in self.save_options_keys:
                     self.p[key] = opts.pop(key, '') or value
-            # self.p.update(self.save_options)
 
-    def read_kwargs(self, kwargs):
+    def apply_cmdline_options(self):
         """lees settings opties vanuit invoer; override waar opgegeven
         """
-        self.p['zoek'] = kwargs.pop('search', '')
-        test = kwargs.pop('replace', None)
+        self.p['zoek'] = self.cmdline_options.pop('search', '')
+        test = self.cmdline_options.pop('replace', None)
         if test is not None:
             self.p['vervang'] = test
             if test == '':
                 self.always_replace = True
-        self.p["extlist"] = kwargs.pop('extensions', '')
+        self.p["extlist"] = self.cmdline_options.pop('extensions', '')
         if not self.p["extlist"]:
             self.p["extlist"] = []
 
         for arg in ('regex', 'follow_symlinks', 'select_subdirs', 'select_files',
                     'dont_save', 'no_gui', 'output_file', 'full_path', 'as_csv', 'summarize'):
             if arg in self.outopts:
-                self.outopts[arg] = kwargs.pop(arg, '') or self.outopts[arg]
+                self.outopts[arg] = self.cmdline_options.pop(arg, '') or self.outopts[arg]
             else:
-                self.extraopts[arg] = kwargs.pop(arg, '')
-        self.extraopts['use_saved'] = kwargs.pop('use_saved', False)
+                self.extraopts[arg] = self.cmdline_options.pop(arg, '')
+        self.extraopts['use_saved'] = self.cmdline_options.pop('use_saved', False)
         if not self.extraopts['use_saved']:
             for arg, key in (('case_sensitive', "case"),
                              ('whole_words', "woord"),
                              ('recursive', "subdirs"),
                              ('python_context', "context"), ):
-                self.p[key] = kwargs.pop(arg, self.p[key])
-        self.maak_backups = kwargs.pop('backup_originals', '')
+                self.p[key] = self.cmdline_options.pop(arg, self.p[key])
+        self.maak_backups = self.cmdline_options.pop('backup_originals', '')
         self.exit_when_ready = True   # altijd aan?
 
-    def schrijfini(self, path=None):
-        """huidige settings toevoegen dan wel vervangen in ini file"""
+    def write_to_ini(self, path=None):
+        """huidige settings toevoegen dan wel vervangen in ini file
+
+        indien opgegeven op de cmdline, dan niet onthouden (zie self.cmdline_options)
+        """
         loc, mfile, ofile = get_iniloc(path)
         if not loc.exists():
             loc.mkdir()
@@ -621,7 +625,7 @@ class MainFrame():
         self.gui.add_item_to_searchlist(item)
         if not self.extraopts['dont_save']:
             loc = self.p.get('pad', '') or str(self.p['filelist'][0].parent)
-            self.schrijfini(os.path.abspath(loc))
+            self.write_to_ini(os.path.abspath(loc))
         self.zoekvervang = Finder(**self.p)
 
         if not self.zoekvervang.ok:
