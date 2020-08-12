@@ -105,8 +105,20 @@ class TestMainFrame:
                                            'called apply_cmdline_options\n')
         (pathlib.Path.home() / 'fallback_encoding').unlink()
         (pathlib.Path.home() / 'open_result').unlink()
-        testsubj.p = {'filelist': 'x'}
-        base.BASE = pathlib.Path.home() / '.afrift'
+        testsubj.p = {'filelist': [pathlib.Path.home() / 'x']}
+        testsubj.apptype = ''
+        testsubj.setup_options()
+        assert capsys.readouterr().out == ('called read_from_ini with `{}/x`\ncalled '
+                                           'apply_cmdline_options\n' .format(pathlib.Path.home()))
+        testsubj.apptype = 'single'
+        testsubj.setup_options()
+        assert capsys.readouterr().out == ('called read_from_ini with `{}`\ncalled '
+                                           'apply_cmdline_options\n' .format(pathlib.Path.home()))
+        testsubj.apptype = 'multi'
+        testsubj.p = {'filelist': [pathlib.Path.home() / 'x', pathlib.Path.home() / 'y' / 'x']}
+        testsubj.setup_options()
+        assert capsys.readouterr().out == ('called read_from_ini with `{}`\ncalled '
+                                           'apply_cmdline_options\n' .format(pathlib.Path.home()))
 
     def test_read_from_ini(self, monkeypatch, capsys):
         def mock_get_iniloc(*args):
@@ -114,34 +126,40 @@ class TestMainFrame:
             return loc, loc / 'mfile', loc / 'ofile'
         def mock_setup_class(*args):
             return
+        def clear_path(path):
+            if not path.exists():
+                return
+            if (path / 'mfile').exists():
+                (path / 'mfile').unlink()  # missing_ok=True)
+            if (path / 'ofile').exists():
+                (path / 'ofile').unlink()  # missing_ok=True)
+            path.rmdir()
         monkeypatch.setattr(base.MainFrame, '__init__', mock_setup_class)
         testsubj = base.MainFrame()
+        path = pathlib.Path.home() / 'testloc'
+        clear_path(path)
         testsubj.mru_items = None
-        testsubj.outopts = testsubj.p = {}
+        testsubj.outopts, testsubj.p = {}, {}
+        testsubj.save_options_keys = ('tast',)
         monkeypatch.setattr(base, 'get_iniloc', mock_get_iniloc)
         testsubj.read_from_ini()
         assert testsubj.mru_items == None
         assert testsubj.outopts == {}
         assert testsubj.p == {}
         # setup
-        path = pathlib.Path.home() / 'testloc'
         path.mkdir(exist_ok=True)
         (path / 'mfile').write_text("""{"test": []}""")
         (path / 'ofile').write_text("""{"test": true, "tast": "y"}""")
-        testsubj.outopts['test'] = False
-        testsubj.save_options_keys = ('tast',)
         #test
+        testsubj.outopts['test'] = False
         testsubj.read_from_ini()
         assert testsubj.mru_items == {'test': []}
         assert testsubj.outopts == {'test': True}
         assert testsubj.p == {'tast': 'y'}
         # teardown
-        (path / mfile).unlink()
-        (path / ofile).unlink()
-        path.rmdir()
+        clear_path(path)
 
-
-    def apply_cmdline_options(self, monkeypatch, capsys):
+    def test_apply_cmdline_options(self, monkeypatch, capsys):
         def mock_setup_class(*args):
             return
         monkeypatch.setattr(base.MainFrame, '__init__', mock_setup_class)
@@ -150,8 +168,16 @@ class TestMainFrame:
         testsubj.outopts = testsubj.extraopts = {}
         testsubj.cmdline_options = {}
         testsubj.always_replace = testsubj.maak_backups = testsubj.exit_when_ready = False
+        testsubj.save_options_keys = ()
         testsubj.apply_cmdline_options()
-        assert testsubj.p == {'zoek': '', 'extlist': []}
+        assert testsubj.p == {'zoek': '', 'extlist': [], 'case': False, 'woord': False,
+                              'subdirs': False, 'context': False}
+        testsubj.cmdline_options = {'search': 'zoek', 'replace': '', 'summarize': True}
+        testsubj.outopts['summarize'] = False
+        testsubj.apply_cmdline_options()
+        assert testsubj.p == {'zoek': 'zoek', 'vervang': '', 'extlist': [], 'case': False,
+                              'woord': False, 'subdirs': False, 'context': False}
+        assert testsubj.outopts['summarize'] == True
 
     def write_to_ini(self, monkeypatch, capsysy):
         pass

@@ -448,7 +448,7 @@ class MainFrame():
                              ('whole_words', "woord"),
                              ('recursive', "subdirs"),
                              ('python_context', "context"), ):
-                self.p[key] = self.cmdline_options.pop(arg, self.p[key])
+                self.p[key] = self.cmdline_options.pop(arg, self.p.get(key, False))
         self.maak_backups = self.cmdline_options.pop('backup_originals', '')
         self.exit_when_ready = True   # altijd aan?
 
