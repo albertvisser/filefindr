@@ -291,7 +291,9 @@ class MainFrame():
         # self.apptype = apptype
         self.hier = pathlib.Path.cwd()  # os.getcwd()
         self.mru_items = {"zoek": [], "verv": [], "types": [], "dirs": []}
-        self.save_option_keys = ("case", "woord", "subdirs", "context", "negeer")
+        self.save_option_keys = (("case", 'case_sensitive'), ("woord", 'whole_words'),
+                                 ("subdirs", 'recursive'), ("context", 'python_context'),
+                                 ("negeer", 'ignore_comments'))
         self.outopts = {'full_path': False, 'as_csv': False, 'summarize': False}
         self.screen_choices = {'regex': False, 'case': False, 'woord': False,
                                'subdirs': False,'follow_symlinks': False, 'select_subdirs': False,
@@ -420,7 +422,7 @@ class MainFrame():
                 opts = json.load(_in)
                 for key, value in self.outopts.items():
                     self.outopts[key] = opts.pop(key, '') or value
-                for key in self.save_options_keys:
+                for key in [x[0] for x in self.save_options_keys]:
                     self.p[key] = opts.pop(key, '') or value
 
     def apply_cmdline_options(self):
@@ -436,19 +438,18 @@ class MainFrame():
         if not self.p["extlist"]:
             self.p["extlist"] = []
 
+        # saved_options alleen toepassen als use-saved is opgegeven?
+        self.extraopts['use_saved'] = self.cmdline_options.pop('use_saved', False)
+        if not self.extraopts['use_saved']:
+            for key, argname in self.save_options_keys:
+                self.p[key] = self.cmdline_options.pop(argname, self.p.get(key, False))
+
         for arg in ('regex', 'follow_symlinks', 'select_subdirs', 'select_files',
                     'dont_save', 'no_gui', 'output_file', 'full_path', 'as_csv', 'summarize'):
             if arg in self.outopts:
                 self.outopts[arg] = self.cmdline_options.pop(arg, '') or self.outopts[arg]
             else:
                 self.extraopts[arg] = self.cmdline_options.pop(arg, '')
-        self.extraopts['use_saved'] = self.cmdline_options.pop('use_saved', False)
-        if not self.extraopts['use_saved']:
-            for arg, key in (('case_sensitive', "case"),
-                             ('whole_words', "woord"),
-                             ('recursive', "subdirs"),
-                             ('python_context', "context"), ):
-                self.p[key] = self.cmdline_options.pop(arg, self.p.get(key, False))
         self.maak_backups = self.cmdline_options.pop('backup_originals', '')
         self.exit_when_ready = True   # altijd aan?
 
@@ -457,12 +458,14 @@ class MainFrame():
 
         indien opgegeven op de cmdline, dan niet onthouden (zie self.cmdline_options)
         """
+        if self.extraopts['dont_save']:
+            return
         loc, mfile, ofile = get_iniloc(path)
         if not loc.exists():
             loc.mkdir()
         with mfile.open("w") as _out:
             json.dump(self.mru_items, _out, indent=4)
-        opts = {key: self.p[key] for key in self.saved_options_keys}
+        opts = {key: self.p[key] for key, argname in self.saved_options_keys}
         opts.update(self.outopts)
         with ofile.open("w") as _out:
             json.dump(opts, _out, indent=4)

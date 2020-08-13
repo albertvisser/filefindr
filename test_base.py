@@ -140,7 +140,7 @@ class TestMainFrame:
         clear_path(path)
         testsubj.mru_items = None
         testsubj.outopts, testsubj.p = {}, {}
-        testsubj.save_options_keys = ('tast',)
+        testsubj.save_options_keys = (('tast',),)
         monkeypatch.setattr(base, 'get_iniloc', mock_get_iniloc)
         testsubj.read_from_ini()
         assert testsubj.mru_items == None
@@ -160,23 +160,29 @@ class TestMainFrame:
         clear_path(path)
 
     def test_apply_cmdline_options(self, monkeypatch, capsys):
-        def mock_setup_class(*args):
+        def mock_setup_class(self, *args):
+            self.p = {}
+            self.mru_items = {"zoek": [], "verv": [], "types": [], "dirs": []}
+            self.save_options_keys = (("case", 'case_sensitive'), ("woord", 'whole_words'),
+                                     ("subdirs", 'recursive'), ("context", 'python_context'),
+                                     ("negeer", 'ignore_comments'))
+            self.outopts = {'full_path': False, 'as_csv': False, 'summarize': False}
+            self.extraopts = {}
+            self.always_replace = self.maak_backups = self.exit_when_ready = False
             return
         monkeypatch.setattr(base.MainFrame, '__init__', mock_setup_class)
         testsubj = base.MainFrame()
-        testsubj.p = {}
-        testsubj.outopts = testsubj.extraopts = {}
         testsubj.cmdline_options = {}
-        testsubj.always_replace = testsubj.maak_backups = testsubj.exit_when_ready = False
-        testsubj.save_options_keys = ()
         testsubj.apply_cmdline_options()
         assert testsubj.p == {'zoek': '', 'extlist': [], 'case': False, 'woord': False,
-                              'subdirs': False, 'context': False}
+                              'subdirs': False, 'context': False, 'negeer': False}
+
+        monkeypatch.setattr(base.MainFrame, '__init__', mock_setup_class)
+        testsubj = base.MainFrame()
         testsubj.cmdline_options = {'search': 'zoek', 'replace': '', 'summarize': True}
-        testsubj.outopts['summarize'] = False
         testsubj.apply_cmdline_options()
         assert testsubj.p == {'zoek': 'zoek', 'vervang': '', 'extlist': [], 'case': False,
-                              'woord': False, 'subdirs': False, 'context': False}
+                'woord': False, 'subdirs': False, 'context': False, 'negeer': False}
         assert testsubj.outopts['summarize'] == True
 
     def write_to_ini(self, monkeypatch, capsysy):
