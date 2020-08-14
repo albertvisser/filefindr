@@ -291,7 +291,7 @@ class MainFrame():
         # self.apptype = apptype
         self.hier = pathlib.Path.cwd()  # os.getcwd()
         self.mru_items = {"zoek": [], "verv": [], "types": [], "dirs": []}
-        self.save_option_keys = (("case", 'case_sensitive'), ("woord", 'whole_words'),
+        self.save_options_keys = (("case", 'case_sensitive'), ("woord", 'whole_words'),
                                  ("subdirs", 'recursive'), ("context", 'python_context'),
                                  ("negeer", 'ignore_comments'))
         self.outopts = {'full_path': False, 'as_csv': False, 'summarize': False}
@@ -465,7 +465,7 @@ class MainFrame():
             loc.mkdir()
         with mfile.open("w") as _out:
             json.dump(self.mru_items, _out, indent=4)
-        opts = {key: self.p[key] for key, argname in self.saved_options_keys}
+        opts = {key: self.p[key] for key, argname in self.save_options_keys}
         opts.update(self.outopts)
         with ofile.open("w") as _out:
             json.dump(opts, _out, indent=4)
