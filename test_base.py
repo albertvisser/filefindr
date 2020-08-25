@@ -11,12 +11,14 @@ class TestMainFrame:
             return ['x', 'y', 'z']
         def mock_get_filename_list_empty(*args):
             return []
-        def mock_setup_options(self, *args):
+        def mock_setup_options(*args):
             print('called setup_options')
-            self.extraopts = {'no_gui': False}
-        def mock_setup_options_nogui(self, *args):
-            print('called setup_options')
+        def mock_apply_cmdline_options_nogui(self, *args):
+            print('called apply_cmdline_options')
             self.extraopts = {'no_gui': True}
+        def mock_apply_cmdline_options(self, *args):
+            print('called apply_cmdline_options')
+            self.extraopts = {'no_gui': False}
         def mock_gui(*args):
             print('called gui instantiation')
         def mock_gui_setup_screen(*args):
@@ -27,6 +29,7 @@ class TestMainFrame:
             print('called gui.go')
         monkeypatch.setattr(base.MainFrame, 'get_filename_list', mock_get_filename_list)
         monkeypatch.setattr(base.MainFrame, 'setup_options', mock_setup_options)
+        monkeypatch.setattr(base.MainFrame, 'apply_cmdline_options', mock_apply_cmdline_options)
         monkeypatch.setattr(base.MainFrameGui, '__init__', mock_gui)
         monkeypatch.setattr(base.MainFrameGui, 'setup_screen', mock_gui_setup_screen)
         monkeypatch.setattr(base.MainFrameGui, 'go', mock_gui_go)
@@ -35,15 +38,16 @@ class TestMainFrame:
         testsubj = base.MainFrame()
         assert testsubj.apptype == ''
         assert testsubj.p['filelist'] == ['x', 'y', 'z']
-        assert capsys.readouterr().out == ('called setup_options\ncalled gui instantiation\n'
-                                           'called gui.setup_screen\ncalled gui.go\n')
+        assert capsys.readouterr().out == ('called setup_options\ncalled apply_cmdline_options\n'
+                'called gui instantiation\ncalled gui.setup_screen\ncalled gui.go\n')
         monkeypatch.setattr(base.MainFrame, 'get_filename_list', mock_get_filename_list_empty)
-        monkeypatch.setattr(base.MainFrame, 'setup_options', mock_setup_options_nogui)
+        monkeypatch.setattr(base.MainFrame, 'apply_cmdline_options',
+                            mock_apply_cmdline_options_nogui)
         testsubj = base.MainFrame()
         assert testsubj.apptype == ''
         assert testsubj.p['filelist'] == []
-        assert capsys.readouterr().out == ('called setup_options\ncalled gui instantiation\n'
-                                           'called gui.setup_screen\ncalled doe\n')
+        assert capsys.readouterr().out == ('called setup_options\ncalled apply_cmdline_options\n'
+                'called gui instantiation\ncalled gui.setup_screen\ncalled doe\n')
 
     def test_get_filename_list(self, monkeypatch):
         def mock_setup_class(*args):
@@ -84,9 +88,10 @@ class TestMainFrame:
                 print('called read_from_ini with `{}`'.format(args[1]))
             else:
                 print('called read_from_ini with no args')
-        def mock_apply_cmdline_options(*args):
-            print('called apply_cmdline_options')
-        def mock_setup_class(*args):
+        def mock_setup_class(self, *args):
+            self.save_options_keys = (("case", 'case_sensitive'), ("woord", 'whole_words'),
+                                     ("subdirs", 'recursive'), ("context", 'python_context'),
+                                     ("negeer", 'ignore_comments'))
             return
         monkeypatch.setattr(base.MainFrame, '__init__', mock_setup_class)
         testsubj = base.MainFrame()
@@ -94,31 +99,29 @@ class TestMainFrame:
         testsubj.p = {'filelist': []}
         base.BASE = pathlib.Path.home()
         monkeypatch.setattr(base.MainFrame, 'read_from_ini', mock_read_from_ini)
-        monkeypatch.setattr(base.MainFrame, 'apply_cmdline_options', mock_apply_cmdline_options)
         testsubj.setup_options()
         assert testsubj.p['fallback_encoding'] == 'latin-1'
         assert testsubj.editor_option == ['SciTE', '-open:{}', '-goto:{}']
         assert not testsubj.always_replace
         assert testsubj.maak_backups
         assert not testsubj.exit_when_ready
-        assert capsys.readouterr().out == ('called read_from_ini with no args\n'
-                                           'called apply_cmdline_options\n')
+        assert capsys.readouterr().out == ('called read_from_ini with no args\n')
         (pathlib.Path.home() / 'fallback_encoding').unlink()
         (pathlib.Path.home() / 'open_result').unlink()
         testsubj.p = {'filelist': [pathlib.Path.home() / 'x']}
         testsubj.apptype = ''
         testsubj.setup_options()
-        assert capsys.readouterr().out == ('called read_from_ini with `{}/x`\ncalled '
-                                           'apply_cmdline_options\n' .format(pathlib.Path.home()))
+        assert capsys.readouterr().out == ('called read_from_ini with `{}/x`\n' .format(
+            pathlib.Path.home()))
         testsubj.apptype = 'single'
         testsubj.setup_options()
-        assert capsys.readouterr().out == ('called read_from_ini with `{}`\ncalled '
-                                           'apply_cmdline_options\n' .format(pathlib.Path.home()))
+        assert capsys.readouterr().out == ('called read_from_ini with `{}`\n' .format(
+            pathlib.Path.home()))
         testsubj.apptype = 'multi'
         testsubj.p = {'filelist': [pathlib.Path.home() / 'x', pathlib.Path.home() / 'y' / 'x']}
         testsubj.setup_options()
-        assert capsys.readouterr().out == ('called read_from_ini with `{}`\ncalled '
-                                           'apply_cmdline_options\n' .format(pathlib.Path.home()))
+        assert capsys.readouterr().out == ('called read_from_ini with `{}`\n' .format(
+            pathlib.Path.home()))
 
     def test_read_from_ini(self, monkeypatch, capsys):
         def mock_get_iniloc(*args):
@@ -172,15 +175,13 @@ class TestMainFrame:
             return
         monkeypatch.setattr(base.MainFrame, '__init__', mock_setup_class)
         testsubj = base.MainFrame()
-        testsubj.cmdline_options = {}
-        testsubj.apply_cmdline_options()
+        testsubj.apply_cmdline_options({})
         assert testsubj.p == {'zoek': '', 'extlist': [], 'case': False, 'woord': False,
                               'subdirs': False, 'context': False, 'negeer': False}
 
         monkeypatch.setattr(base.MainFrame, '__init__', mock_setup_class)
         testsubj = base.MainFrame()
-        testsubj.cmdline_options = {'search': 'zoek', 'replace': '', 'summarize': True}
-        testsubj.apply_cmdline_options()
+        testsubj.apply_cmdline_options({'search': 'zoek', 'replace': '', 'summarize': True})
         assert testsubj.p == {'zoek': 'zoek', 'vervang': '', 'extlist': [], 'case': False,
                 'woord': False, 'subdirs': False, 'context': False, 'negeer': False}
         assert testsubj.outopts['summarize'] == True

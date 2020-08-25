@@ -309,13 +309,11 @@ class MainFrame():
         if self.apptype == "" and fnpath.exists() and not fnpath.is_dir():
             self.apptype = 'single'
 
-        fnames = self.get_filename_list(fnaam, fnpath, flist)
+        self.p = {'filelist': self.get_filename_list(fnaam, fnpath, flist)}
         self.s = ""
-        self.p = {'filelist': []}
-        if fnames:
-            self.p["filelist"] = fnames
-        self.cmdline_options = kwargs  # remember which options come from the command line
         self.setup_options()
+        self.extraopts = collections.defaultdict(lambda: False)
+        self.apply_cmdline_options(kwargs)
         self.gui = MainFrameGui(self)
         captions = {'vraag_zoek': 'Zoek naar:', 'regex': "regular expression (Python format)",
                     'case': "hoofd/kleine letters gelijk", 'woord': "hele woorden",
@@ -340,6 +338,8 @@ class MainFrame():
             self.gui.go()
 
     def get_filename_list(self, fn_orig, fnaam, flist):
+        """determine the files to search in
+        """
         fnames = []
         if self.apptype == "":
             if fn_orig:
@@ -372,6 +372,11 @@ class MainFrame():
         return fnames
 
     def setup_options(self):
+        """update self.p with default and other options
+        """
+        for key in [x[0] for x in self.save_options_keys]:
+            self.p[key] = False
+
         if self.p['filelist']:
             if self.apptype == 'single':
                 self.read_from_ini(self.p['filelist'][0].parent)
@@ -406,8 +411,6 @@ class MainFrame():
         self.always_replace = False
         self.maak_backups = True
         self.exit_when_ready = False
-        self.extraopts = collections.defaultdict(lambda: False)
-        self.apply_cmdline_options()
 
     def read_from_ini(self, path=None):
         """lees ini file (met eerder gebruikte zoekinstellingen)
@@ -425,32 +428,32 @@ class MainFrame():
                 for key in [x[0] for x in self.save_options_keys]:
                     self.p[key] = opts.pop(key, '') or value
 
-    def apply_cmdline_options(self):
+    def apply_cmdline_options(self, cmdline_options):
         """lees settings opties vanuit invoer; override waar opgegeven
         """
-        self.p['zoek'] = self.cmdline_options.pop('search', '')
-        test = self.cmdline_options.pop('replace', None)
+        self.p['zoek'] = cmdline_options.pop('search', '')
+        test = cmdline_options.pop('replace', None)
         if test is not None:
             self.p['vervang'] = test
             if test == '':
                 self.always_replace = True
-        self.p["extlist"] = self.cmdline_options.pop('extensions', '')
+        self.p["extlist"] = cmdline_options.pop('extensions', '')
         if not self.p["extlist"]:
             self.p["extlist"] = []
 
         # saved_options alleen toepassen als use-saved is opgegeven?
-        self.extraopts['use_saved'] = self.cmdline_options.pop('use_saved', False)
+        self.extraopts['use_saved'] = cmdline_options.pop('use_saved', False)
         if not self.extraopts['use_saved']:
             for key, argname in self.save_options_keys:
-                self.p[key] = self.cmdline_options.pop(argname, self.p.get(key, False))
+                self.p[key] = cmdline_options.pop(argname, self.p.get(key, False))
 
         for arg in ('regex', 'follow_symlinks', 'select_subdirs', 'select_files',
                     'dont_save', 'no_gui', 'output_file', 'full_path', 'as_csv', 'summarize'):
             if arg in self.outopts:
-                self.outopts[arg] = self.cmdline_options.pop(arg, '') or self.outopts[arg]
+                self.outopts[arg] = cmdline_options.pop(arg, '') or self.outopts[arg]
             else:
-                self.extraopts[arg] = self.cmdline_options.pop(arg, '')
-        self.maak_backups = self.cmdline_options.pop('backup_originals', '')
+                self.extraopts[arg] = cmdline_options.pop(arg, '')
+        self.maak_backups = cmdline_options.pop('backup_originals', '')
         self.exit_when_ready = True   # altijd aan?
 
     def write_to_ini(self, path=None):
