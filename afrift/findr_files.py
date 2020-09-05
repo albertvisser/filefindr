@@ -103,6 +103,20 @@ def determine_filetype(entry):
     return ''
 
 
+def read_input_file(file, fallback_encoding):
+    """return contents of the specified file as a list or None if it can't be read
+    """
+    try:
+        with file.open() as f_in:
+            return f_in.readlines()
+    except UnicodeDecodeError:
+        try:
+            with file.open("r", encoding=fallback_encoding) as f_in:
+                return f_in.readlines()
+        except UnicodeDecodeError:
+            return None
+
+
 def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
     """context-aware search in Python files
 
@@ -115,15 +129,9 @@ def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
             construct = list(in_construct.pop())
             construct.append(last_line)
             constructs.append(in_construct + [construct])
-    try:
-        with file.open() as f_in:
-            lines = f_in.readlines()
-    except UnicodeDecodeError:
-        try:
-            with file.open("r", encoding=fallback_encoding) as f_in:
-                lines = f_in.readlines()
-        except UnicodeDecodeError:
-            return None
+    lines = read_input_file(file, fallback_encoding)
+    if lines is None:
+        return lines
     itemlist = []
     modlevel_start = 1
     constructs = []
@@ -142,6 +150,8 @@ def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
             if not start_of_code:
                 modlevel_start = lineno + 1
             continue
+        elif test.startswith('#') and line.index(test) < indentpos:
+            pass
         else:
             indentpos = line.index(test)
         if negeer_docs:
@@ -172,8 +182,7 @@ def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
         pop_construct(prev_lineno)
         if test.startswith('def ') or test.startswith('class '):
             words = test.split()
-            construct = (indentpos, words[0],
-                         words[1].split(':')[0].split('(')[0], lineno)
+            construct = (indentpos, words[0], words[1].split(':')[0].split('(')[0], lineno)
             in_construct.append(construct)
         if '#' in test and negeer_docs:
             pos = test.index('#')
