@@ -8,7 +8,7 @@ from afrift.base import MainFrame
 def main(args):
     """Find and Replace in Files Tool (nieuwe naam: Farft ?)
 
-    relay the arguments to the application class
+    some screening, then relay the arguments to the application class
     """
     args['apptype'] = args.pop('appmode')
     err = ''

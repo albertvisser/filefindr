@@ -287,7 +287,7 @@ class ResultsGui(qtw.QDialog):
         self.master.parent.outopts['full_path'] = self.get_pth()
         self.master.parent.outopts['as_csv'] = self.get_csv()
         self.master.parent.outopts['summarize'] = self.get_sum()
-        self.master.parent.schrijfini()
+        self.master.parent.write_to_ini()
 
     def klaar(self):
         """finish dialog
@@ -326,7 +326,7 @@ class MainFrameGui(qtw.QWidget):
         self.vraag_leeg = self.add_checkbox_row(captions['empty'], self.master.always_replace)
 
         if self.master.apptype == "":
-            initial = str(self.master.fnames[0]) if self.master.fnames else ''
+            initial = str(self.master.p['filelist'][0]) if self.master.p['filelist'] else ''
             self.zoek = qtw.QPushButton(captions['zoek'])
             self.zoek.clicked.connect(self.zoekdir)
             self.vraag_dir = self.add_combobox_row(captions['in'], self.master.mru_items["dirs"],
@@ -337,7 +337,7 @@ class MainFrameGui(qtw.QWidget):
             self.row += 1
             self.grid.addWidget(qtw.QLabel(captions['in_s']), self.row, 0)
             box = qtw.QHBoxLayout()
-            box.addWidget(qtw.QLabel(str(self.master.fnames[0])))
+            box.addWidget(qtw.QLabel(str(self.master.p['filelist'][0])))
             box.addStretch()
             self.grid.addLayout(box, self.row, 1)
         elif self.master.apptype == "multi":
@@ -345,7 +345,7 @@ class MainFrameGui(qtw.QWidget):
             self.grid.addWidget(qtw.QLabel(captions['in_m']), self.row, 0, 1, 2)
             self.row += 1
             self.lb = qtw.QListWidget(self)
-            self.lb.insertItems(0, [str(x) for x in self.master.fnames])
+            self.lb.insertItems(0, [str(x) for x in self.master.p['filelist']])
             self.grid.addWidget(self.lb, self.row, 0, 1, 2)
 
         if self.master.apptype != "single" or self.master.fnames[0].is_dir():
@@ -535,7 +535,7 @@ class MainFrameGui(qtw.QWidget):
         """update location to get settings from
         """
         if os.path.exists(txt) and not txt.endswith(os.path.sep):
-            self.master.readini(txt)
+            self.master.read_from_ini(txt)
             self.vraag_zoek.clear()
             self.vraag_zoek.addItems(self.master.mru_items["zoek"])
             self.vraag_verv.clear()
