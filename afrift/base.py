@@ -255,7 +255,7 @@ class Results():
         """
         if self.check_option_combinations_ok():
             self.gui.remember_settings()
-            self.gui.copy_to_clipboard('\n'.join(self.get_results()))
+            self.gui.copy_to_clipboard('\n'.join(self.get_results()) + '\n')
 
     def goto_result(self, row, col):
         """open the file containing the selected item
