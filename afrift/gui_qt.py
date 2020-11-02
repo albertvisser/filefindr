@@ -348,7 +348,7 @@ class MainFrameGui(qtw.QWidget):
             self.lb.insertItems(0, [str(x) for x in self.master.p['filelist']])
             self.grid.addWidget(self.lb, self.row, 0, 1, 2)
 
-        if self.master.apptype != "single" or self.master.fnames[0].is_dir():
+        if self.master.apptype != "single" or self.master.p['filelist'][0].is_dir():
             txt = captions['subs_m'] if self.master.apptype == "multi" else ""
             self.vraag_subs = self.add_checkbox_row(txt + captions['subs'], self.master.p["subdirs"])
             self.vraag_diepte = qtw.QSpinBox(self)
