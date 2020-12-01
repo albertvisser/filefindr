@@ -107,7 +107,9 @@ class Results():
                 label_txt += '\n' + common_path_txt.format(self.common.rstrip(os.sep))
         captions = {'heading': label_txt, 'ctxt': 'Context', 'txt': 'Tekst', 'hlp': 'Help',
                     'rslt': 'Goto Result', 'exit': "&Klaar", 'rpt': "&Repeat Search",
-                    'cpy': "Copy to &File", 'clp': "Copy to &Clipboard", 'fmt': 'Formatteer output:',
+                    'cpy': "Copy to &File", 'clp': "Copy to &Clipboard",
+                    'sel': 'Vervang in selectie', 'all': 'Vervang alles',
+                    'fmt': 'Formatteer output:',
                     'pth': "toon directorypad", 'dlm': "comma-delimited", 'sum': "summarized"}
         self.build_list()
         self.gui.setup_screen(captions)
@@ -269,6 +271,24 @@ class Results():
         prog, fileopt, lineopt = self.parent.editor_option
         subprocess.run([prog, fileopt.format(target), lineopt.format(line)])
 
+    def vervang_in_sel(self, *args):
+        "achteraf vervangen in geselecteerde regels"
+        # bepaal geselecteerde regels
+        # breek af als niks geselecteerd
+        prompt = 'vervang `{}` in geselecteerde regels door:'.format(self.parent.p['zoek'])
+        ok, text = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
+        # zoek de regels op in de bestanden en wijzig ze
+        # herhaal de oorspronkelije zoekactie
+        # toon de output met melding van de vervang-actie
+
+    def vervang_alles(self, *args):
+        "achteraf vervangen in alle regels"
+        prompt = 'vervang `{}` in alle regels door:'.format(self.parent.p['zoek'])
+        ok, text = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
+        return
+        if ok:
+            self.parent.p['vervang'] = text
+            self.parent.zoekvervang.go()  # of gewoon de refresh methode aanroepen?
 
 class MainFrame():
     """Hoofdscherm van de applicatie

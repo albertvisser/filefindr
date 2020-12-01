@@ -118,7 +118,8 @@ class ResultsGui(qtw.QDialog):
         self.master = master
         super().__init__(parent.gui)
         # qtw.QDialog.__init__(self)
-        self.setWindowTitle(parent.resulttitel)
+        # self.setWindowTitle(parent.resulttitel)
+        self.setWindowTitle(self.master.parent.resulttitel)
         self.setWindowIcon(gui.QIcon(master.iconame))
 
     def setup_screen(self, captions):
@@ -171,17 +172,36 @@ class ResultsGui(qtw.QDialog):
         btn.clicked.connect(self.klaar)
         hbox.addWidget(btn)
         if not self.master.label_only:
+            vbox2 = qtw.QVBoxLayout()
+            hbox2 = qtw.QHBoxLayout()
             btn = qtw.QPushButton(captions['rpt'], self)
             btn.clicked.connect(self.master.refresh)
             if self.master.parent.p['vervang']:
                 btn.setEnabled(False)
-            hbox.addWidget(btn)
+            hbox2.addWidget(btn)
             btn = qtw.QPushButton(captions['cpy'], self)
             btn.clicked.connect(self.master.kopie)
-            hbox.addWidget(btn)
+            hbox2.addWidget(btn)
             btn = qtw.QPushButton(captions['clp'], self)
             btn.clicked.connect(self.master.to_clipboard)
-            hbox.addWidget(btn)
+            hbox2.addWidget(btn)
+            hbox2.addStretch(1)
+            vbox2.addLayout(hbox2)
+
+            hbox2 = qtw.QHBoxLayout()
+            btn = qtw.QPushButton(captions['sel'], self)
+            btn.clicked.connect(self.master.vervang_in_sel)
+            if self.master.parent.p['vervang']:
+                btn.setEnabled(False)
+            hbox2.addWidget(btn)
+            btn = qtw.QPushButton(captions['all'], self)
+            btn.clicked.connect(self.master.vervang_alles)
+            if self.master.parent.p['vervang']:
+                btn.setEnabled(False)
+            hbox2.addWidget(btn)
+            vbox2.addLayout(hbox2)
+
+            hbox.addLayout(vbox2)
             gbox = qtw.QGridLayout()
             gbox.addWidget(qtw.QLabel(captions['fmt'], self), 0, 0)
             self.cb_path = qtw.QCheckBox('&' + captions['pth'], self)
@@ -201,7 +221,7 @@ class ResultsGui(qtw.QDialog):
 
         self.setLayout(vbox)
         if not self.master.label_only:
-            self.resize(574 + breedte, 480)
+            self.resize(574 + breedte, 488)
 
     def populate_list(self):
         """copy results to listbox
@@ -270,6 +290,10 @@ class ResultsGui(qtw.QDialog):
     def meld(self, title, message):
         "show message"
         qtw.QMessageBox.information(self, title, message)
+
+    def get_text_from_user(self, title, prompt):
+        "pop up a dialog to get user input"
+        return qtw.QInputDialog.getText(self, title, prompt)
 
     def copy_to_clipboard(self, text):
         """callback for button 'Copy to clipboard'
