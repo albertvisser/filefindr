@@ -252,6 +252,9 @@ class Finder():
             if not x.startswith("."):
                 x = "." + x
             self.extlist_upper.append(x.upper())
+        # self.setup_search()
+
+    def setup_search(self):
         # moet hier nog iets mee doen m.h.o.o. woorddelen of niet
         if self.p['wijzig'] or self.p['regexp']:
             self.use_complex = False

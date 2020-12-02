@@ -295,6 +295,12 @@ class ResultsGui(qtw.QDialog):
         "pop up a dialog to get user input"
         return qtw.QInputDialog.getText(self, title, prompt)
 
+    def get_selection(self):
+        "get the selected items"
+        selected_rows = set([x.row() for x in self.lijst.selectedItems()])
+        selected_lines = [self.lijst.item(x, 0).text() for x in selected_rows]
+        return selected_lines
+
     def copy_to_clipboard(self, text):
         """callback for button 'Copy to clipboard'
         """

@@ -203,10 +203,15 @@ class Results():
         self.parent.gui.set_waitcursor(True)
         self.parent.zoekvervang.go()
         self.parent.gui.set_waitcursor(False)
+        print('in Results.refresh, rpt is', self.parent.zoekvervang.rpt)
         if len(self.parent.zoekvervang.rpt) == 1:
             self.gui.breekaf("Niks gevonden")
-        label_txt = "{} ({} items)".format(self.parent.zoekvervang.rpt[0],
-                                           len(self.parent.zoekvervang.rpt) - 1)
+        elif len(self.parent.zoekvervang.rpt) == 2 and self.parent.zoekvervang.p['wijzig']:
+            count_txt = self.parent.zoekvervang.rpt.pop().split(': ')[-1]
+        else:
+            count_txt = '{} items'.format(len(self.parent.zoekvervang.rpt) - 1)
+
+        label_txt = "{} ({})".format(self.parent.zoekvervang.rpt[0], count_txt)
         if self.parent.apptype == "multi":
             label_txt += '\n' + common_path_txt.format(self.common)
 
@@ -274,6 +279,7 @@ class Results():
     def vervang_in_sel(self, *args):
         "achteraf vervangen in geselecteerde regels"
         # bepaal geselecteerde regels
+        print(self.gui.get_selection())
         # breek af als niks geselecteerd
         prompt = 'vervang `{}` in geselecteerde regels door:'.format(self.parent.p['zoek'])
         ok, text = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
@@ -284,11 +290,13 @@ class Results():
     def vervang_alles(self, *args):
         "achteraf vervangen in alle regels"
         prompt = 'vervang `{}` in alle regels door:'.format(self.parent.p['zoek'])
-        ok, text = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
-        return
+        text, ok = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
         if ok:
-            self.parent.p['vervang'] = text
-            self.parent.zoekvervang.go()  # of gewoon de refresh methode aanroepen?
+            self.parent.zoekvervang.p['vervang'] = text
+            self.parent.zoekvervang.p['wijzig'] = True
+            self.parent.zoekvervang.setup_search()
+            self.refresh()
+
 
 class MainFrame():
     """Hoofdscherm van de applicatie
@@ -653,6 +661,7 @@ class MainFrame():
             loc = self.p.get('pad', '') or str(self.p['filelist'][0].parent)
             self.write_to_ini(os.path.abspath(loc))
         self.zoekvervang = Finder(**self.p)
+        self.zoekvervang.setup_search()
 
         if not self.zoekvervang.ok:
             self.gui.meld(self.resulttitel, '\n'.join(self.zoekvervang.rpt),
