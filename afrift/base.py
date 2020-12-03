@@ -106,9 +106,9 @@ class Results():
             if self.parent.apptype == "multi":
                 label_txt += '\n' + common_path_txt.format(self.common.rstrip(os.sep))
         captions = {'heading': label_txt, 'ctxt': 'Context', 'txt': 'Tekst', 'hlp': 'Help',
-                    'rslt': 'Goto Result', 'exit': "&Klaar", 'rpt': "&Repeat Search",
+                    'rslt': '&Goto Result', 'exit': "&Klaar", 'rpt': "&Repeat Search",
                     'cpy': "Copy to &File", 'clp': "Copy to &Clipboard",
-                    'sel': 'Vervang in selectie', 'all': 'Vervang alles',
+                    'sel': 'Vervang in &Selectie', 'all': 'Vervang &Alles',
                     'fmt': 'Formatteer output:',
                     'pth': "toon directorypad", 'dlm': "comma-delimited", 'sum': "summarized"}
         self.build_list()
@@ -279,13 +279,17 @@ class Results():
     def vervang_in_sel(self, *args):
         "achteraf vervangen in geselecteerde regels"
         # bepaal geselecteerde regels
-        print(self.gui.get_selection())
-        # breek af als niks geselecteerd
+        items = self.gui.get_selection()
+        if not items:
+            self.gui.meld(self.parent.resulttitel,'Geen regels geselecteerd om in te vervangen')
+            return
+        lines_to_replace = [x.split(' r. ') for x in items]
         prompt = 'vervang `{}` in geselecteerde regels door:'.format(self.parent.p['zoek'])
-        ok, text = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
-        # zoek de regels op in de bestanden en wijzig ze
-        # herhaal de oorspronkelije zoekactie
-        # toon de output met melding van de vervang-actie
+        text, ok = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
+        if ok:
+            self.parent.zoekvervang.replace_selected(text, lines_to_replace)
+            # self.parent.zoekvervang.setup_search() -- is dit nodig als het niet wijzigt?
+            self.refresh()
 
     def vervang_alles(self, *args):
         "achteraf vervangen in alle regels"

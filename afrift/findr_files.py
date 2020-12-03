@@ -544,9 +544,7 @@ class Finder():
             ndata, aant = self.rgx.subn(self.p["vervang"], data)
             best_s = str(best)
             self.rpt.append("%s: %s keer" % (best_s, aant))
-            if self.p['backup']:
-                bestnw = best_s + ".bak"
-                shutil.copyfile(best_s, bestnw)
+            self.backup_if_needed(best_s)
             with best.open("w") as f_out:
                 f_out.write(ndata)
 
@@ -589,3 +587,39 @@ class Finder():
                 lines_left_over.append(line)
         lines_left_over.sort()
         return lines_left_over
+
+    def replace_selected(self, text, lines_to_replace):
+        "achteraf vervangen in geselecteerde regels"
+        print('-- entering replace_selected --')
+        single_mode = len(lines_to_replace[0]) == 1
+        file_to_replace = ''
+        print(lines_to_replace[0], single_mode, file_to_replace)
+        for line in sorted(lines_to_replace):
+            print(line)
+            if single_mode:
+                filename, lineno = str(self.p['filelist'][0]), line[0]
+            else:
+                filename, lineno = line
+            print(filename, lineno)
+            if filename != file_to_replace:
+                if file_to_replace:
+                    print('now we write back', file_to_replace)
+                    self.backup_if_needed(file_to_replace)
+                    with open(file_to_replace, 'w') as out:
+                        out.writelines(lines)
+                file_to_replace = filename
+                print('now we read from', file_to_replace)
+                with open(file_to_replace) as in_:
+                    lines = in_.readlines()
+            lines[int(lineno)] = lines[int(lineno)].replace(self.p['zoek'], text)
+        print('now we write back', file_to_replace)
+        self.backup_if_needed(file_to_replace)
+        with open(file_to_replace, 'w') as out:
+            out.writelines(lines)
+        print('-- exiting  replace_selected --')
+
+    def backup_if_needed(self, fname):
+        "make backup if required"
+        if self.p['backup']:
+            bestnw = fname + ".bak"
+            shutil.copyfile(fname, bestnw)
