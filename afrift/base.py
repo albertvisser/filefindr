@@ -106,8 +106,10 @@ class Results():
             if self.parent.apptype == "multi":
                 label_txt += '\n' + common_path_txt.format(self.common.rstrip(os.sep))
         captions = {'heading': label_txt, 'ctxt': 'Context', 'txt': 'Tekst', 'hlp': 'Help',
-                    'rslt': 'Goto Result', 'exit': "&Klaar", 'rpt': "&Repeat Search",
-                    'cpy': "Copy to &File", 'clp': "Copy to &Clipboard", 'fmt': 'Formatteer output:',
+                    'rslt': '&Goto Result', 'exit': "&Klaar", 'rpt': "&Repeat Search",
+                    'cpy': "Copy to &File", 'clp': "Copy to &Clipboard",
+                    'sel': 'Vervang in &Selectie', 'all': 'Vervang &Alles',
+                    'fmt': 'Formatteer output:',
                     'pth': "toon directorypad", 'dlm': "comma-delimited", 'sum': "summarized"}
         self.build_list()
         self.gui.setup_screen(captions)
@@ -192,7 +194,7 @@ class Results():
 
         return text
 
-    def refresh(self, *args):
+    def refresh(self, **kwargs):
         """repeat search and show new results
         """
         self.results = []
@@ -203,8 +205,18 @@ class Results():
         self.parent.gui.set_waitcursor(False)
         if len(self.parent.zoekvervang.rpt) == 1:
             self.gui.breekaf("Niks gevonden")
-        label_txt = "{} ({} items)".format(self.parent.zoekvervang.rpt[0],
-                                           len(self.parent.zoekvervang.rpt) - 1)
+        elif len(self.parent.zoekvervang.rpt) == 2 and self.parent.zoekvervang.p['wijzig']:
+            count_txt = self.parent.zoekvervang.rpt.pop().split(': ')[-1]
+        else:
+            count_txt = '{} items'.format(len(self.parent.zoekvervang.rpt) - 1)
+
+        label_txt = ''
+        replcount = kwargs.get('replace_count', '')
+        if replcount:
+            srch = self.parent.zoekvervang.p['zoek']
+            repl = kwargs.get('replace_text', '')
+            label_txt = '`{}` with `{}` replaced {} in lines\n'.format(srch, repl, replcount)
+        label_txt += "{} ({})".format(self.parent.zoekvervang.rpt[0], count_txt)
         if self.parent.apptype == "multi":
             label_txt += '\n' + common_path_txt.format(self.common)
 
@@ -246,9 +258,8 @@ class Results():
     def help(self):
         """show instructions
         """
-        self.gui.meld('info',
-                      "Select a line and doubleclick or press Ctrl-G to open the indicated file\n"
-                      "at the indicated line (not in single file mode)")
+        self.gui.meld('info', "Select a line and doubleclick or press Ctrl-G to open the"
+                              " indicated file\nat the indicated line (not in single file mode)")
 
     def to_clipboard(self, *args):
         """callback for button 'Copy to clipboard'
@@ -268,6 +279,31 @@ class Results():
         target = self.common + target
         prog, fileopt, lineopt = self.parent.editor_option
         subprocess.run([prog, fileopt.format(target), lineopt.format(line)])
+
+    def vervang_in_sel(self, *args):
+        "achteraf vervangen in geselecteerde regels"
+        # bepaal geselecteerde regels
+        items = self.gui.get_selection()
+        if not items:
+            self.gui.meld(self.parent.resulttitel, 'Geen regels geselecteerd om in te vervangen')
+            return
+        lines_to_replace = [x.split(' r. ') for x in items]
+        prompt = 'vervang `{}` in geselecteerde regels door:'.format(self.parent.p['zoek'])
+        text, ok = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
+        if ok:
+            replaced = self.parent.zoekvervang.replace_selected(text, lines_to_replace)
+            # self.parent.zoekvervang.setup_search() -- is dit nodig als het niet wijzigt?
+            self.refresh(replace_text=text, replace_count=replaced)
+
+    def vervang_alles(self, *args):
+        "achteraf vervangen in alle regels"
+        prompt = 'vervang `{}` in alle regels door:'.format(self.parent.p['zoek'])
+        text, ok = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
+        if ok:
+            self.parent.zoekvervang.p['vervang'] = text
+            self.parent.zoekvervang.p['wijzig'] = True
+            self.parent.zoekvervang.setup_search()
+            self.refresh()
 
 
 class MainFrame():
@@ -292,11 +328,11 @@ class MainFrame():
         self.hier = pathlib.Path.cwd()  # os.getcwd()
         self.mru_items = {"zoek": [], "verv": [], "types": [], "dirs": []}
         self.save_options_keys = (("case", 'case_sensitive'), ("woord", 'whole_words'),
-                                 ("subdirs", 'recursive'), ("context", 'python_context'),
-                                 ("negeer", 'ignore_comments'))
+                                  ("subdirs", 'recursive'), ("context", 'python_context'),
+                                  ("negeer", 'ignore_comments'))
         self.outopts = {'full_path': False, 'as_csv': False, 'summarize': False}
         self.screen_choices = {'regex': False, 'case': False, 'woord': False,
-                               'subdirs': False,'follow_symlinks': False, 'select_subdirs': False,
+                               'subdirs': False, 'follow_symlinks': False, 'select_subdirs': False,
                                'select_files': False, 'context': False, 'negeer': False,
                                'dont_save': False, 'no_gui': False,
                                'output_file': False, 'full_path': False, 'as_csv': False,
@@ -633,6 +669,7 @@ class MainFrame():
             loc = self.p.get('pad', '') or str(self.p['filelist'][0].parent)
             self.write_to_ini(os.path.abspath(loc))
         self.zoekvervang = Finder(**self.p)
+        self.zoekvervang.setup_search()
 
         if not self.zoekvervang.ok:
             self.gui.meld(self.resulttitel, '\n'.join(self.zoekvervang.rpt),

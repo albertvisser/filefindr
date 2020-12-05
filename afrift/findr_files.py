@@ -252,6 +252,11 @@ class Finder():
             if not x.startswith("."):
                 x = "." + x
             self.extlist_upper.append(x.upper())
+        # self.setup_search()
+
+    def setup_search(self):
+        """instellen variabelen t.b.v. zoekactie en output
+        """
         # moet hier nog iets mee doen m.h.o.o. woorddelen of niet
         if self.p['wijzig'] or self.p['regexp']:
             self.use_complex = False
@@ -541,9 +546,7 @@ class Finder():
             ndata, aant = self.rgx.subn(self.p["vervang"], data)
             best_s = str(best)
             self.rpt.append("%s: %s keer" % (best_s, aant))
-            if self.p['backup']:
-                bestnw = best_s + ".bak"
-                shutil.copyfile(best_s, bestnw)
+            self.backup_if_needed(best_s)
             with best.open("w") as f_out:
                 f_out.write(ndata)
 
@@ -586,3 +589,37 @@ class Finder():
                 lines_left_over.append(line)
         lines_left_over.sort()
         return lines_left_over
+
+    def replace_selected(self, text, lines_to_replace):
+        "achteraf vervangen in geselecteerde regels"
+        replaced = 0
+        single_mode = len(lines_to_replace[0]) == 1
+        file_to_replace = ''
+        for line in sorted(lines_to_replace):
+            if single_mode:
+                filename, lineno = str(self.p['filelist'][0]), line[0]
+            else:
+                filename, lineno = line
+            lineno = int(lineno) - 1
+            if filename != file_to_replace:
+                if file_to_replace:
+                    self.backup_if_needed(file_to_replace)
+                    with open(file_to_replace, 'w') as out:
+                        out.writelines(lines)
+                file_to_replace = filename
+                with open(file_to_replace) as in_:
+                    lines = in_.readlines()
+            oldline = lines[lineno]
+            lines[lineno] = lines[lineno].replace(self.p['zoek'], text)
+            if lines[lineno] != oldline:
+                replaced += 1
+        self.backup_if_needed(file_to_replace)
+        with open(file_to_replace, 'w') as out:
+            out.writelines(lines)
+        return replaced
+
+    def backup_if_needed(self, fname):
+        "make backup if required"
+        if self.p['backup']:
+            bestnw = fname + ".bak"
+            shutil.copyfile(fname, bestnw)

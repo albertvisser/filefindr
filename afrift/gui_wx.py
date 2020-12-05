@@ -166,19 +166,36 @@ class ResultsGui(wx.Dialog):
         bsizer.Add(btn, 0, wx.ALL, 5)
 
         if not self.master.label_only:
+            vsizer2 = wx.BoxSizer(wx.VERTICAL)
+            bsizer2 = wx.BoxSizer(wx.HORIZONTAL)
             btn = wx.Button(self, size=(-1, TXTH), label=captions['rpt'])
             btn.Bind(wx.EVT_BUTTON, self.master.refresh)
             if self.master.parent.p['vervang']:
                 btn.Enable(False)
-            bsizer.Add(btn, 0, wx.ALL, 5)
+            bsizer2.Add(btn, 0, wx.ALL, 5)
 
             btn = wx.Button(self, size=(-1, TXTH), label=captions['cpy'])
             btn.Bind(wx.EVT_BUTTON, self.master.kopie)
-            bsizer.Add(btn, 0, wx.ALL, 5)
+            bsizer2.Add(btn, 0, wx.ALL, 5)
 
             btn = wx.Button(self, size=(-1, TXTH), label=captions['clp'])
             btn.Bind(wx.EVT_BUTTON, self.master.to_clipboard)
-            bsizer.Add(btn, 0, wx.ALL, 5)
+            bsizer2.Add(btn, 0, wx.ALL, 5)
+            vsizer2.Add(bsizer2, 0, wx.ALL)
+
+            bsizer2 = wx.BoxSizer(wx.HORIZONTAL)
+            btn = wx.Button(self, size=(-1, TXTH), label=captions['sel'])
+            btn.Bind(wx.EVT_BUTTON, self.master.vervang_in_sel)
+            if self.master.parent.p['vervang']:
+                btn.Enable(False)
+            bsizer2.Add(btn, 0, wx.ALL, 5)
+            btn = wx.Button(self, size=(-1, TXTH), label=captions['all'])
+            btn.Bind(wx.EVT_BUTTON, self.master.vervang_alles)
+            if self.master.parent.p['vervang']:
+                btn.Enable(False)
+            bsizer2.Add(btn, 0, wx.ALL, 5)
+            vsizer2.Add(bsizer2, 0, wx.ALL)
+            bsizer.Add(vsizer2, 0, wx.ALL)
 
             gsizer = wx.FlexGridSizer(cols=2, vgap=5, hgap=5)
             gsizer.Add(wx.StaticText(self, label=captions['fmt']), 0,
@@ -293,6 +310,19 @@ class ResultsGui(wx.Dialog):
     def meld(self, titel, message):
         "show an informational message"
         wx.MessageBox(message, titel, wx.OK | wx.ICON_INFORMATION, self)
+
+    def get_text_from_user(self, titel, message):
+        "pop up a dkialog to get user input"
+        text = wx.GetTextFromUser(message, titel, parent=self)
+        return bool(text), text
+        # or:
+        dlg = wx.TextEntryDialog(self, titel, message)
+        ok = dlg.SetModal()
+        if ok == wx.ID_OK:
+            ok, text = True, dlg.GetValue()
+        else:
+            ok, text = False, None
+        dlg.Destroy()
 
     def copy_to_clipboard(self, text):
         """callback for button 'Copy to clipboard'
