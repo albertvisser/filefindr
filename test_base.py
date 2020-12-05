@@ -48,6 +48,7 @@ class TestMainFrame:
         assert testsubj.p['filelist'] == []
         assert capsys.readouterr().out == ('called setup_options\ncalled apply_cmdline_options\n'
                 'called gui instantiation\ncalled gui.setup_screen\ncalled doe\n')
+        # gemist: r. 310 geen apptype opgegeven en fnaam argument bestaat en is directory
 
     def test_get_filename_list(self, monkeypatch):
         def mock_setup_class(*args):
@@ -81,6 +82,7 @@ class TestMainFrame:
         assert testsubj.title == 'x - multi-file version'
         # de rest moet nog (fn_orig/fnaam = directory, fn_orig/fnaam = file met namen)
         # maar ik weet al dat het werkt dus ik ga even verder met setup_options
+        # gemist vogens coverage: 355-364 apptype = multi en 1e argument heeft waarde
 
     def test_setup_options(self, monkeypatch, capsys):
         def mock_read_from_ini(*args):
@@ -122,6 +124,7 @@ class TestMainFrame:
         testsubj.setup_options()
         assert capsys.readouterr().out == ('called read_from_ini with `{}`\n' .format(
             pathlib.Path.home()))
+        # volgens coverage niks gemist
 
     def test_read_from_ini(self, monkeypatch, capsys):
         def mock_get_iniloc(*args):
@@ -161,6 +164,7 @@ class TestMainFrame:
         assert testsubj.p == {'tast': 'y'}
         # teardown
         clear_path(path)
+        # volgens coverage niks gemist
 
     def test_apply_cmdline_options(self, monkeypatch, capsys):
         def mock_setup_class(self, *args):
@@ -185,6 +189,7 @@ class TestMainFrame:
         assert testsubj.p == {'zoek': 'zoek', 'vervang': '', 'extlist': [], 'case': False,
                 'woord': False, 'subdirs': False, 'context': False, 'negeer': False}
         assert testsubj.outopts['summarize'] == True
+        # volgens coverage niks gemist
 
     def write_to_ini(self, monkeypatch, capsysy):
         pass
