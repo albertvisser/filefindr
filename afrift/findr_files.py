@@ -255,6 +255,8 @@ class Finder():
         # self.setup_search()
 
     def setup_search(self):
+        """instellen variabelen t.b.v. zoekactie en output
+        """
         # moet hier nog iets mee doen m.h.o.o. woorddelen of niet
         if self.p['wijzig'] or self.p['regexp']:
             self.use_complex = False
@@ -590,33 +592,31 @@ class Finder():
 
     def replace_selected(self, text, lines_to_replace):
         "achteraf vervangen in geselecteerde regels"
-        print('-- entering replace_selected --')
+        replaced = 0
         single_mode = len(lines_to_replace[0]) == 1
         file_to_replace = ''
-        print(lines_to_replace[0], single_mode, file_to_replace)
         for line in sorted(lines_to_replace):
-            print(line)
             if single_mode:
                 filename, lineno = str(self.p['filelist'][0]), line[0]
             else:
                 filename, lineno = line
-            print(filename, lineno)
+            lineno = int(lineno) - 1
             if filename != file_to_replace:
                 if file_to_replace:
-                    print('now we write back', file_to_replace)
                     self.backup_if_needed(file_to_replace)
                     with open(file_to_replace, 'w') as out:
                         out.writelines(lines)
                 file_to_replace = filename
-                print('now we read from', file_to_replace)
                 with open(file_to_replace) as in_:
                     lines = in_.readlines()
-            lines[int(lineno)] = lines[int(lineno)].replace(self.p['zoek'], text)
-        print('now we write back', file_to_replace)
+            oldline = lines[lineno]
+            lines[lineno] = lines[lineno].replace(self.p['zoek'], text)
+            if lines[lineno] != oldline:
+                replaced += 1
         self.backup_if_needed(file_to_replace)
         with open(file_to_replace, 'w') as out:
             out.writelines(lines)
-        print('-- exiting  replace_selected --')
+        return replaced
 
     def backup_if_needed(self, fname):
         "make backup if required"

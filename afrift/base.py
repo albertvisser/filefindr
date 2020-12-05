@@ -194,7 +194,7 @@ class Results():
 
         return text
 
-    def refresh(self, *args):
+    def refresh(self, **kwargs):
         """repeat search and show new results
         """
         self.results = []
@@ -203,7 +203,6 @@ class Results():
         self.parent.gui.set_waitcursor(True)
         self.parent.zoekvervang.go()
         self.parent.gui.set_waitcursor(False)
-        print('in Results.refresh, rpt is', self.parent.zoekvervang.rpt)
         if len(self.parent.zoekvervang.rpt) == 1:
             self.gui.breekaf("Niks gevonden")
         elif len(self.parent.zoekvervang.rpt) == 2 and self.parent.zoekvervang.p['wijzig']:
@@ -211,7 +210,13 @@ class Results():
         else:
             count_txt = '{} items'.format(len(self.parent.zoekvervang.rpt) - 1)
 
-        label_txt = "{} ({})".format(self.parent.zoekvervang.rpt[0], count_txt)
+        label_txt = ''
+        replcount = kwargs.get('replace_count', '')
+        if replcount:
+            srch = self.parent.zoekvervang.p['zoek']
+            repl = kwargs.get('replace_text', '')
+            label_txt = '`{}` with `{}` replaced {} in lines\n'.format(srch, repl, replcount)
+        label_txt += "{} ({})".format(self.parent.zoekvervang.rpt[0], count_txt)
         if self.parent.apptype == "multi":
             label_txt += '\n' + common_path_txt.format(self.common)
 
@@ -253,9 +258,8 @@ class Results():
     def help(self):
         """show instructions
         """
-        self.gui.meld('info',
-                      "Select a line and doubleclick or press Ctrl-G to open the indicated file\n"
-                      "at the indicated line (not in single file mode)")
+        self.gui.meld('info', "Select a line and doubleclick or press Ctrl-G to open the"
+                              " indicated file\nat the indicated line (not in single file mode)")
 
     def to_clipboard(self, *args):
         """callback for button 'Copy to clipboard'
@@ -281,15 +285,15 @@ class Results():
         # bepaal geselecteerde regels
         items = self.gui.get_selection()
         if not items:
-            self.gui.meld(self.parent.resulttitel,'Geen regels geselecteerd om in te vervangen')
+            self.gui.meld(self.parent.resulttitel, 'Geen regels geselecteerd om in te vervangen')
             return
         lines_to_replace = [x.split(' r. ') for x in items]
         prompt = 'vervang `{}` in geselecteerde regels door:'.format(self.parent.p['zoek'])
         text, ok = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
         if ok:
-            self.parent.zoekvervang.replace_selected(text, lines_to_replace)
+            replaced = self.parent.zoekvervang.replace_selected(text, lines_to_replace)
             # self.parent.zoekvervang.setup_search() -- is dit nodig als het niet wijzigt?
-            self.refresh()
+            self.refresh(replace_text=text, replace_count=replaced)
 
     def vervang_alles(self, *args):
         "achteraf vervangen in alle regels"
@@ -324,11 +328,11 @@ class MainFrame():
         self.hier = pathlib.Path.cwd()  # os.getcwd()
         self.mru_items = {"zoek": [], "verv": [], "types": [], "dirs": []}
         self.save_options_keys = (("case", 'case_sensitive'), ("woord", 'whole_words'),
-                                 ("subdirs", 'recursive'), ("context", 'python_context'),
-                                 ("negeer", 'ignore_comments'))
+                                  ("subdirs", 'recursive'), ("context", 'python_context'),
+                                  ("negeer", 'ignore_comments'))
         self.outopts = {'full_path': False, 'as_csv': False, 'summarize': False}
         self.screen_choices = {'regex': False, 'case': False, 'woord': False,
-                               'subdirs': False,'follow_symlinks': False, 'select_subdirs': False,
+                               'subdirs': False, 'follow_symlinks': False, 'select_subdirs': False,
                                'select_files': False, 'context': False, 'negeer': False,
                                'dont_save': False, 'no_gui': False,
                                'output_file': False, 'full_path': False, 'as_csv': False,
