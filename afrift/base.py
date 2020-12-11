@@ -194,7 +194,7 @@ class Results():
 
         return text
 
-    def refresh(self, **kwargs):
+    def refresh(self, *args, **kwargs):
         """repeat search and show new results
         """
         self.results = []

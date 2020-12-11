@@ -184,6 +184,9 @@ class ResultsGui(wx.Dialog):
             vsizer2.Add(bsizer2, 0, wx.ALL)
 
             bsizer2 = wx.BoxSizer(wx.HORIZONTAL)
+            btn = wx.Button(self, size=(-1, TXTH), label=captions['alt'])
+            btn.Bind(wx.EVT_BUTTON, self.master.zoek_anders)
+            bsizer2.Add(btn, 0, wx.ALL, 5)
             btn = wx.Button(self, size=(-1, TXTH), label=captions['sel'])
             btn.Bind(wx.EVT_BUTTON, self.master.vervang_in_sel)
             if self.master.parent.p['vervang']:
@@ -269,10 +272,11 @@ class ResultsGui(wx.Dialog):
         """
         self.ShowModal()
 
-    def breekaf(self, message):
+    def breekaf(self, message, done=True):
         "show reason and end dialog"
         self.meld(self.parent.resulttitel, message)
-        self.EndModal(0)
+        if done:
+            self.EndModal(0)
 
     def set_header(self, text):
         "set header for list"
@@ -314,15 +318,25 @@ class ResultsGui(wx.Dialog):
     def get_text_from_user(self, titel, message):
         "pop up a dkialog to get user input"
         text = wx.GetTextFromUser(message, titel, parent=self)
-        return bool(text), text
+        return text, bool(text)
         # or:
         dlg = wx.TextEntryDialog(self, titel, message)
         ok = dlg.SetModal()
-        if ok == wx.ID_OK:
-            ok, text = True, dlg.GetValue()
-        else:
-            ok, text = False, None
+        ok = ok == wx.ID_OK
+        text = dlg.GetValue() if ok else None
         dlg.Destroy()
+        return text, ok
+
+    def get_selection(self):
+        "get the selected lines"
+        items = []
+        texts = []
+        item = self.lijst.GetFirstSelected()
+        while item != -1:
+            items.append(self.lijst.GetItem(item))
+            item = self.lijst.GetNextSelected(item)
+        texts = [x.GetText() for x in items]
+        return texts
 
     def copy_to_clipboard(self, text):
         """callback for button 'Copy to clipboard'
