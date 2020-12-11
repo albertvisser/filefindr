@@ -108,7 +108,7 @@ class Results():
         captions = {'heading': label_txt, 'ctxt': 'Context', 'txt': 'Tekst', 'hlp': 'Help',
                     'rslt': '&Goto Result', 'exit': "&Klaar", 'rpt': "&Repeat Search",
                     'cpy': "Copy to &File", 'clp': "Copy to &Clipboard",
-                    'sel': 'Vervang in &Selectie', 'all': 'Vervang &Alles',
+                    'alt': '&Zoek anders', 'sel': 'Vervang in &Selectie', 'all': 'Vervang &Alles',
                     'fmt': 'Formatteer output:',
                     'pth': "toon directorypad", 'dlm': "comma-delimited", 'sum': "summarized"}
         self.build_list()
@@ -204,7 +204,8 @@ class Results():
         self.parent.zoekvervang.go()
         self.parent.gui.set_waitcursor(False)
         if len(self.parent.zoekvervang.rpt) == 1:
-            self.gui.breekaf("Niks gevonden")
+            self.gui.breekaf("Niks gevonden", done=False)
+            return
         elif len(self.parent.zoekvervang.rpt) == 2 and self.parent.zoekvervang.p['wijzig']:
             count_txt = self.parent.zoekvervang.rpt.pop().split(': ')[-1]
         else:
@@ -304,6 +305,19 @@ class Results():
             self.parent.zoekvervang.p['wijzig'] = True
             self.parent.zoekvervang.setup_search()
             self.refresh()
+
+    def zoek_anders(self, *args):
+        "zoek naar iets anders in dezelfde selectie"
+        origzoek = self.parent.zoekvervang.p['zoek']
+        prompt = 'zoek in dezelfde selectie naar:'
+        text, ok = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
+        if ok:
+            self.parent.zoekvervang.p['zoek'] = text
+            self.parent.zoekvervang.setup_search()
+            self.refresh()
+            print('In zoek_anders: origzoek terugzetten naar', origzoek)
+            self.parent.zoekvervang.p['zoek'] = origzoek
+            self.parent.zoekvervang.setup_search()
 
 
 class MainFrame():

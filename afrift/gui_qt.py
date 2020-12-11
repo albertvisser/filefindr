@@ -189,6 +189,9 @@ class ResultsGui(qtw.QDialog):
             vbox2.addLayout(hbox2)
 
             hbox2 = qtw.QHBoxLayout()
+            btn = qtw.QPushButton(captions['alt'], self)
+            btn.clicked.connect(self.master.zoek_anders)
+            hbox2.addWidget(btn)
             btn = qtw.QPushButton(captions['sel'], self)
             btn.clicked.connect(self.master.vervang_in_sel)
             if self.master.parent.p['vervang']:
@@ -254,10 +257,11 @@ class ResultsGui(qtw.QDialog):
         """
         self.exec_()
 
-    def breekaf(self, message):
+    def breekaf(self, message, done=True):
         "show reason and end dialog"
-        self.meld(self.master.resulttitel, message)
-        super().done(0)
+        self.meld(self.master.parent.resulttitel, message)
+        if done:
+            super().done(0)
 
     def set_header(self, text):
         "set header for list"
