@@ -77,10 +77,7 @@ class SelectNamesGui(qtw.QDialog):
         """show the dialog screen
         """
         result = self.exec_()
-        if result == qtw.QDialog.Accepted:
-            return True
-        # elif result == qtw.QDialog.rejected:
-        return False
+        return result == qtw.QDialog.Accepted
 
     def select_all(self):
         """check or uncheck all boxes
