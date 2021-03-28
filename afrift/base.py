@@ -77,7 +77,7 @@ class SelectNames():
     def show(self):
         """show the dialog screen
         """
-        return self.gui.go()
+        return self.gui.go(), self.names
 
 
 class Results():
@@ -726,12 +726,12 @@ class MainFrame():
                 if skip_files:
                     # tweede ronde: toon de files die overblijven
                     self.names = sorted(self.zoekvervang.filenames)  # , key=lambda x: str(x))
-                    result = SelectNames(self).show()
+                    result, names = SelectNames(self).show()
                     if not result and not skip_dirs:
                         canceled = True
                         break
                     elif result:
-                        self.zoekvervang.filenames = self.names
+                        self.zoekvervang.filenames = names
                         go_on = False
 
             if canceled:
