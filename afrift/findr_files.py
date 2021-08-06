@@ -1,9 +1,7 @@
-# -*- coding: UTF-8 -*-
 """Uitvoeren van de find/replace actie
 
 de uitvoering wordt gestuurd door in een dictionary verzamelde parameters"""
 
-from __future__ import print_function
 import os
 import pathlib
 import re
