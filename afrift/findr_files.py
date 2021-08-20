@@ -592,7 +592,7 @@ class Finder():
         "achteraf vervangen in geselecteerde regels"
         replaced = 0
         single_mode = len(lines_to_replace[0]) == 1
-        file_to_replace = ''
+        file_to_replace, lines = '', []
         for line in sorted(lines_to_replace):
             if single_mode:
                 filename, lineno = str(self.p['filelist'][0]), line[0]

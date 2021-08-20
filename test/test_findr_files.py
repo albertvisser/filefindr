@@ -88,6 +88,7 @@ def test_findr_complex():
         do_stuff(use_this)
         ## do_stuff(use_this, regexp=True)
 
+
 if __name__ == '__main__':
     test_findr()
     ## test_findr_complex()

@@ -1,7 +1,7 @@
 """unittests for findr routines
 """
 
-# import os
+import types
 import pathlib
 import pytest
 import afrift.findr_files as findr
@@ -19,13 +19,13 @@ def test_determine_split_py():
 
 
 def test_check_single_string():
-    assert findr.check_single_string('hello') == False
-    assert findr.check_single_string('"hello"') == True
-    assert findr.check_single_string('""hello""') == False
-    assert findr.check_single_string('"""hello"""') == True
-    assert findr.check_single_string("'hello'") == True
-    assert findr.check_single_string("''hello''") == False
-    assert findr.check_single_string("'''hello'''") == True
+    assert not findr.check_single_string('hello')
+    assert findr.check_single_string('"hello"')
+    assert not findr.check_single_string('""hello""')
+    assert findr.check_single_string('"""hello"""')
+    assert findr.check_single_string("'hello'")
+    assert not findr.check_single_string("''hello''")
+    assert findr.check_single_string("'''hello'''")
 
 
 def test_determine_filetype(monkeypatch):

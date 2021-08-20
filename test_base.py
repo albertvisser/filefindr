@@ -149,14 +149,14 @@ class TestMainFrame:
         testsubj.save_options_keys = (('tast',),)
         monkeypatch.setattr(base, 'get_iniloc', mock_get_iniloc)
         testsubj.read_from_ini()
-        assert testsubj.mru_items == None
+        assert testsubj.mru_items is None
         assert testsubj.outopts == {}
         assert testsubj.p == {}
         # setup
         path.mkdir(exist_ok=True)
         (path / 'mfile').write_text("""{"test": []}""")
         (path / 'ofile').write_text("""{"test": true, "tast": "y"}""")
-        #test
+        # test
         testsubj.outopts['test'] = False
         testsubj.read_from_ini()
         assert testsubj.mru_items == {'test': []}
@@ -171,8 +171,8 @@ class TestMainFrame:
             self.p = {}
             self.mru_items = {"zoek": [], "verv": [], "types": [], "dirs": []}
             self.save_options_keys = (("case", 'case_sensitive'), ("woord", 'whole_words'),
-                                     ("subdirs", 'recursive'), ("context", 'python_context'),
-                                     ("negeer", 'ignore_comments'))
+                                      ("subdirs", 'recursive'), ("context", 'python_context'),
+                                      ("negeer", 'ignore_comments'))
             self.outopts = {'full_path': False, 'as_csv': False, 'summarize': False}
             self.extraopts = {}
             self.always_replace = self.maak_backups = self.exit_when_ready = False
@@ -187,8 +187,8 @@ class TestMainFrame:
         testsubj = base.MainFrame()
         testsubj.apply_cmdline_options({'search': 'zoek', 'replace': '', 'summarize': True})
         assert testsubj.p == {'zoek': 'zoek', 'vervang': '', 'extlist': [], 'case': False,
-                'woord': False, 'subdirs': False, 'context': False, 'negeer': False}
-        assert testsubj.outopts['summarize'] == True
+                              'woord': False, 'subdirs': False, 'context': False, 'negeer': False}
+        assert testsubj.outopts['summarize'] is True
         # volgens coverage niks gemist
 
     def write_to_ini(self, monkeypatch, capsysy):

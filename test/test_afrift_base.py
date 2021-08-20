@@ -46,6 +46,7 @@ def test_abase(parent=None, apptype="", fnaam=""):
     abase.schrijfini()
     lees_ini()
 
+
 if __name__ == '__main__':
     test_abase()
     for item in ("glug", "single", "multi"):

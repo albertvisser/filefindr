@@ -21,7 +21,7 @@ Usage
 
 Originally this tool was intended to work on a directory, but I added some extra modes to make this work with other tools I use: a ``single`` mode makes it work on a single file instead of a directoryand a ``multi`` mode makes it possible to specify multiple files and directories to start from.
 
-The single file version iwas intended to be called from within my favourite text editor SciTE to use on the current file, and the multiple file version was meant to be called from a graphical file manager after marking the entries to work with, but you can also specify these on the command line.
+The single file version was intended to be called from within my favourite text editor SciTE to use on the current file, and the multiple file version was meant to be called from a graphical file manager after marking the entries to work with, but you can also specify these on the command line.
 
 
 Dependencies
