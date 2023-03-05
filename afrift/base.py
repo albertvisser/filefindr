@@ -101,8 +101,8 @@ class Results():
             label_txt = self.parent.zoekvervang.rpt[0]
             label_txt = label_txt.replace('vervangen', aantal + ' vervangen')
         else:
-            label_txt = "{} ({} items)".format(self.parent.zoekvervang.rpt[0],
-                                               len(self.parent.zoekvervang.rpt) - 1)
+            itemcount = len(self.parent.zoekvervang.rpt) - 1
+            label_txt = f"{self.parent.zoekvervang.rpt[0]} ({itemcount} items)"
             if self.parent.apptype == "multi":
                 label_txt += '\n' + common_path_txt.format(self.common.rstrip(os.sep))
         captions = {'heading': label_txt, 'ctxt': 'Context', 'txt': 'Tekst', 'hlp': 'Help',
@@ -148,7 +148,7 @@ class Results():
         comma = self.gui.get_csv()
         context = self.gui.get_sum()
 
-        text = ["{}".format(self.results[0])]
+        text = [f"{self.results[0]}"]
         if self.parent.apptype == "multi" and not toonpad:
             text.append(common_path_txt.format(self.common))
         text.append("")
@@ -206,18 +206,18 @@ class Results():
         if len(self.parent.zoekvervang.rpt) == 1:
             self.gui.breekaf("Niks gevonden", done=False)
             return
-        elif len(self.parent.zoekvervang.rpt) == 2 and self.parent.zoekvervang.p['wijzig']:
+        if len(self.parent.zoekvervang.rpt) == 2 and self.parent.zoekvervang.p['wijzig']:
             count_txt = self.parent.zoekvervang.rpt.pop().split(': ')[-1]
         else:
-            count_txt = '{} items'.format(len(self.parent.zoekvervang.rpt) - 1)
+            count_txt = f'{len(self.parent.zoekvervang.rpt) - 1} items'
 
         label_txt = ''
         replcount = kwargs.get('replace_count', '')
         if replcount:
             srch = self.parent.zoekvervang.p['zoek']
             repl = kwargs.get('replace_text', '')
-            label_txt = '`{}` with `{}` replaced {} in lines\n'.format(srch, repl, replcount)
-        label_txt += "{} ({})".format(self.parent.zoekvervang.rpt[0], count_txt)
+            label_txt = f'`{srch}` with `{repl}` replaced {replcount} in lines\n'
+        label_txt += f"{self.parent.zoekvervang.rpt[0]} ({count_txt})"
         if self.parent.apptype == "multi":
             label_txt += '\n' + common_path_txt.format(self.common)
 
@@ -279,7 +279,8 @@ class Results():
         target, line = selected[0].split(' r. ')
         target = self.common + target
         prog, fileopt, lineopt = self.parent.editor_option
-        subprocess.run([prog, fileopt.format(target), lineopt.format(line)])
+        # subprocess.run([prog, fileopt.format(target), lineopt.format(line)])
+        subprocess.run(prog + [fileopt.format(target)] + [lineopt.format(line)])
 
     def vervang_in_sel(self, *args):
         "achteraf vervangen in geselecteerde regels"
@@ -289,7 +290,7 @@ class Results():
             self.gui.meld(self.parent.resulttitel, 'Geen regels geselecteerd om in te vervangen')
             return
         lines_to_replace = [x.split(' r. ') for x in items]
-        prompt = 'vervang `{}` in geselecteerde regels door:'.format(self.parent.p['zoek'])
+        prompt = f"vervang `{self.parent.p['zoek']}` in geselecteerde regels door:"
         text, ok = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
         if ok:
             replaced = self.parent.zoekvervang.replace_selected(text, lines_to_replace)
@@ -298,7 +299,7 @@ class Results():
 
     def vervang_alles(self, *args):
         "achteraf vervangen in alle regels"
-        prompt = 'vervang `{}` in alle regels door:'.format(self.parent.p['zoek'])
+        prompt = f"vervang `{self.parent.p['zoek']}` in alle regels door:"
         text, ok = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
         if ok:
             self.parent.zoekvervang.p['vervang'] = text
@@ -329,8 +330,8 @@ class MainFrame():
     def __init__(self, **kwargs):
         """attributen die altijd nodig zijn
         """
-        log('in MainFrame.init: cwd is {}'.format(pathlib.Path.cwd()))
-        log('  kwargs is {}'.format(kwargs))
+        log(f'in MainFrame.init: cwd is {pathlib.Path.cwd()}')
+        log(f'  kwargs is {kwargs}')
         self.apptype = kwargs.pop('apptype', '')
         fnaam = kwargs.pop('fnaam', '')
         flist = kwargs.pop('flist', None)
@@ -457,6 +458,11 @@ class MainFrame():
             edfile.write_text(test)
         self.editor_option = [x.split(' = ')[1].strip("'")
                               for x in test.strip().split('\n')]
+        if self.editor_option[0].startswith('['):
+            command_list = [x[1:-1] for x in self.editor_option[0][1:-1].split(', ')]
+            self.editor_option[0] = command_list
+        else:
+            self.editor_option[0] = [self.editor_option[0]]
 
         self.always_replace = False
         self.maak_backups = True
@@ -555,7 +561,7 @@ class MainFrame():
             except ValueError:
                 pass
             self.mru_items["zoek"].insert(0, item)
-            self.s += "zoeken naar {0}".format(item)
+            self.s += "zoeken naar {item}"
             self.p["zoek"] = item
         return mld
 
@@ -570,7 +576,7 @@ class MainFrame():
             except ValueError:
                 pass
             self.mru_items["verv"].insert(0, vervang)
-            self.s = "\nen vervangen door {0}".format(vervang)
+            self.s = "\nen vervangen door {vervang}"
             self.p["vervang"] = vervang
         elif leeg:
             self.s += "\nen weggehaald"
@@ -592,7 +598,7 @@ class MainFrame():
             opts.append("hele woorden")
         self.p["woord"] = words
         if opts:
-            self.s += " ({})".format(', '.join(opts))
+            self.s += " ({', '.join(opts)})"
         return mld
 
     def checktype(self, item):
@@ -604,7 +610,7 @@ class MainFrame():
             except ValueError:
                 pass
             self.mru_items["types"].insert(0, item)
-            self.s += "\nin bestanden van type {0}".format(item)
+            self.s += "\nin bestanden van type {item}"
             exts = item.split(",")
             self.p["extlist"] = [x.lstrip().strip() for x in exts]
         else:
@@ -626,7 +632,7 @@ class MainFrame():
             except ValueError:
                 pass
             self.mru_items["dirs"].insert(0, item)
-            self.s += "\nin {0}".format(item)
+            self.s += "\nin {item}"
             self.p["pad"] = test  # item
             self.p['filelist'] = ''
         return mld
@@ -730,7 +736,7 @@ class MainFrame():
                     if not result and not skip_dirs:
                         canceled = True
                         break
-                    elif result:
+                    if result:
                         self.zoekvervang.filenames = names
                         go_on = False
 
