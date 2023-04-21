@@ -396,15 +396,14 @@ class MainFrame():
             if fn_orig:
                 fnames = [fnaam]
         elif self.apptype == "single":
-            self.title += " - single file version"
             if not fn_orig:
                 raise ValueError('Need filename for application type "single"')
             fnames = [fnaam]
         elif self.apptype == "multi":
-            self.title += " - multi-file version"
             if fn_orig:
                 if fnaam.is_dir():
                     fnames = [fnaam]
+                    self.apptype = ''
                 else:
                     with fnaam.open() as f_in:
                         for line in f_in:
@@ -413,6 +412,8 @@ class MainFrame():
                                 line = line[:-1]
                             line = pathlib.Path(line).expanduser().resolve()
                             fnames.append(line)
+                    if len(fnames) == 1:
+                        self.apptype = 'single'
             elif flist:
                 fnames = [pathlib.Path(x) for x in flist]
             else:
@@ -420,6 +421,10 @@ class MainFrame():
                                  'type "multi"')
         else:
             raise ValueError('application type should be empty, "single" or "multi"')
+        if self.apptype == "single":
+            self.title += " - single file version"
+        elif self.apptype == "multi":
+            self.title += " - multi-file version"
         return fnames
 
     def setup_options(self):
