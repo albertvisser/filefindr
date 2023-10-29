@@ -29,18 +29,18 @@ def test_check_single_string():
 
 
 def test_determine_filetype(monkeypatch):
-    def mock_subprocess_pyfile():
-        return types.SimpleNameSpace(stdout='python')
-    def mock_subprocess_nopyfile():
-        return types.SimpleNameSpace(stdout='pytho')
+    def mock_subprocess_pyfile(*args, **kwargs):
+        return types.SimpleNamespace(stdout='python')
+    def mock_subprocess_nopyfile(*args, **kwargs):
+        return types.SimpleNamespace(stdout='pytho')
     assert findr.determine_filetype(pathlib.Path('')) == ''
     assert findr.determine_filetype(pathlib.Path('test')) == ''
     assert findr.determine_filetype(pathlib.Path('test.pu')) == ''
     assert findr.determine_filetype(pathlib.Path('test.py')) == 'py'
     assert findr.determine_filetype(pathlib.Path('test.pyw')) == 'py'
-    monkeypatch.setattr(findr, 'subprocess.run', mock_subprocess_pyfile)
+    monkeypatch.setattr(findr.subprocess, 'run', mock_subprocess_pyfile)
     assert findr.determine_filetype(pathlib.Path('')) == 'py'
-    monkeypatch.setattr(findr, 'subprocess.run', mock_subprocess_nopyfile)
+    monkeypatch.setattr(findr.subprocess, 'run', mock_subprocess_nopyfile)
     assert findr.determine_filetype(pathlib.Path('')) == ''
 
 
