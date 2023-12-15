@@ -305,7 +305,7 @@ class ResultsGui(wx.Dialog):
         with wx.FileDialog(self, message="Resultaat naar bestand kopieren",
                            defaultDir=str(self.master.parent.hier),
                            defaultFile=fname.join(('searchfor_', ".txt")),
-                           wildcard="{}|All files (*.*)|*.*".format(f_filter),
+                           wildcard="f{f_filter}|All files (*.*)|*.*",
                            style=wx.FD_SAVE) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 fn = dlg.GetPath()

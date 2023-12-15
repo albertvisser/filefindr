@@ -12,13 +12,12 @@ class DataError(Exception):
 
 def splitjoin(orig, zoek, vervang):
     """
-    dit is een routine waarin de binnenkomende string eerst gesplitst wordt
-    in woorden (gescheiden door 1 of meer spaties en/of tabs e.d.);
+    dit is een routine waarin de binnenkomende string eerst gesplitst wordt in woorden
+    (gescheiden door 1 of meer spaties en/of tabs e.d.);
     tegelijkertijd worden de scheidende strings ook bepaald.
     Daarna worden de woorden die vervangen moeten worden vervangen
     en tenslotte wordt de string weer aan elkaar geplakt.
     De truc is dat we de scheidende strings intact laten.
-    Deze routine zit ook in site-packages\mystuff.py
     """
     heeftreturn = False
     if orig[-1:] == "\n":

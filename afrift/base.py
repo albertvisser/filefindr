@@ -7,6 +7,7 @@ ze worden geïmporteerd via een aparte module die bepaalt welke toolkit er gebru
 import os
 import collections
 import subprocess
+import contextlib
 import json
 import logging
 import pathlib
@@ -53,7 +54,7 @@ def get_iniloc(path=None):
     return iniloc, mrufile, optsfile
 
 
-class SelectNames():
+class SelectNames:
     """Tussenscherm om te verwerken files te kiezen
 
     deze class bevat methoden die onafhankelijk zijn van de gekozen
@@ -80,7 +81,7 @@ class SelectNames():
         return self.gui.go(), self.names
 
 
-class Results():
+class Results:
     """Show results on screen
 
     deze class bevat methoden die onafhankelijk zijn van de gekozen
@@ -122,10 +123,7 @@ class Results():
             elif line != "":
                 where, what = line.split(": ", 1)
                 if self.parent.apptype == "single":
-                    if "r. " in where:
-                        where = where.split("r. ", 1)[1]
-                    else:
-                        where = ""
+                    where = where.split("r. ", 1)[1] if "r. " in where else ""
                 if self.common and self.common != '/':
                     where = where.replace(str(self.common), "")
                 if self.show_context:
@@ -203,10 +201,11 @@ class Results():
         self.parent.gui.set_waitcursor(True)
         self.parent.zoekvervang.go()
         self.parent.gui.set_waitcursor(False)
-        if len(self.parent.zoekvervang.rpt) == 1:
+        if len(self.parent.zoekvervang.rpt) == len(['melding']):
             self.gui.breekaf("Niks gevonden", done=False)
             return
-        if len(self.parent.zoekvervang.rpt) == 2 and self.parent.zoekvervang.p['wijzig']:
+        if (len(self.parent.zoekvervang.rpt) == len(['melding', 'header']) and
+                self.parent.zoekvervang.p['wijzig']):
             count_txt = self.parent.zoekvervang.rpt.pop().split(': ')[-1]
         else:
             count_txt = f'{len(self.parent.zoekvervang.rpt) - 1} items'
@@ -244,10 +243,7 @@ class Results():
         for char in '/\\?%*:|"><.':
             if char in f_nam:
                 f_nam = f_nam.replace(char, "~")
-        if self.gui.get_csv():
-            ext = '.csv'
-        else:
-            ext = '.txt'
+        ext = '.csv' if self.gui.get_csv() else '.txt'
         f_nam = f_nam.join(("files-containing-", ext))
         savename = self.gui.get_savefile(f_nam, ext)
         if savename:
@@ -279,8 +275,8 @@ class Results():
         target, line = selected[0].split(' r. ')
         target = self.common + target
         prog, fileopt, lineopt = self.parent.editor_option
-        # subprocess.run([prog, fileopt.format(target), lineopt.format(line)])
-        subprocess.run(prog + [fileopt.format(target)] + [lineopt.format(line)])
+        # subprocess.run([prog, fileopt.format(target), lineopt.format(line)], check=False)
+        subprocess.run(prog + [fileopt.format(target)] + [lineopt.format(line)], check=False)
 
     def vervang_in_sel(self, *args):
         "achteraf vervangen in geselecteerde regels"
@@ -321,7 +317,7 @@ class Results():
             self.parent.zoekvervang.setup_search()
 
 
-class MainFrame():
+class MainFrame:
     """Hoofdscherm van de applicatie
 
     deze class bevat methoden die onafhankelijk zijn van de gekozen
@@ -408,7 +404,7 @@ class MainFrame():
                     with fnaam.open() as f_in:
                         for line in f_in:
                             line = line.strip()
-                            if line.endswith("\\") or line.endswith("/"):
+                            if line.endswith(("\\", "/")):
                                 line = line[:-1]
                             line = pathlib.Path(line).expanduser().resolve()
                             fnames.append(line)
@@ -456,11 +452,8 @@ class MainFrame():
         try:
             test = edfile.read_text()
         except FileNotFoundError:
-            test = '\n'.join(("program = 'SciTE'",
-                              "file-option = '-open:{}'",
-                              "line-option = '-goto:{}'",
-                              ""))
-            edfile.write_text(test)
+            edfile.write_text("program = 'SciTE'\\nfile-option = '-open:{}'\\n"
+                              "line-option = '-goto:{}'\\n\\n")
         self.editor_option = [x.split(' = ')[1].strip("'")
                               for x in test.strip().split('\n')]
         if self.editor_option[0].startswith('['):
@@ -561,10 +554,8 @@ class MainFrame():
             mld = "Kan niet zoeken zonder zoekargument"
         else:
             mld = ""
-            try:
+            with contextlib.suppress(ValueError):
                 self.mru_items["zoek"].remove(item)
-            except ValueError:
-                pass
             self.mru_items["zoek"].insert(0, item)
             self.s += "zoeken naar {item}"
             self.p["zoek"] = item
@@ -576,10 +567,8 @@ class MainFrame():
         self.p["vervang"] = None
         vervang, leeg = items
         if vervang:
-            try:
+            with contextlib.suppress(ValueError):
                 self.mru_items["verv"].remove(vervang)
-            except ValueError:
-                pass
             self.mru_items["verv"].insert(0, vervang)
             self.s = "\nen vervangen door {vervang}"
             self.p["vervang"] = vervang
@@ -610,10 +599,8 @@ class MainFrame():
         "controleer speciale bestandstypen (extensies)"
         mld = ""
         if item:
-            try:
+            with contextlib.suppress(ValueError):
                 self.mru_items["types"].remove(item)
-            except ValueError:
-                pass
             self.mru_items["types"].insert(0, item)
             self.s += "\nin bestanden van type {item}"
             exts = item.split(",")
@@ -632,10 +619,8 @@ class MainFrame():
             mld = "De opgegeven directory bestaat niet"
         else:
             mld = ""
-            try:
+            with contextlib.suppress(ValueError):
                 self.mru_items["dirs"].remove(item)
-            except ValueError:
-                pass
             self.mru_items["dirs"].insert(0, item)
             self.s += "\nin {item}"
             self.p["pad"] = test  # item
@@ -715,9 +700,8 @@ class MainFrame():
             go_on = skip_dirs or skip_files
             canceled = False
             while go_on:
-                if skip_dirs:
-                    # eerste ronde: toon directories
-                    if self.zoekvervang.dirnames:
+                # eerste ronde: toon directories
+                if skip_dirs and self.zoekvervang.dirnames:
                         self.names = sorted(self.zoekvervang.dirnames)
 
                         result = SelectNames(self, files=False).show()
@@ -734,8 +718,8 @@ class MainFrame():
                                     break
                         if not skip_files:
                             go_on = False
+                # tweede ronde: toon de files die overblijven
                 if skip_files:
-                    # tweede ronde: toon de files die overblijven
                     self.names = sorted(self.zoekvervang.filenames)  # , key=lambda x: str(x))
                     result, names = SelectNames(self).show()
                     if not result and not skip_dirs:

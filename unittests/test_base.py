@@ -1,9 +1,9 @@
 """unittests for gui independent code
 """
-import os
+# import os
 import pathlib
 import pytest
-import afrift.base as base
+from afrift import base
 
 class TestMainFrame:
     def test_setup_class(self, monkeypatch, capsys):
@@ -87,14 +87,13 @@ class TestMainFrame:
     def test_setup_options(self, monkeypatch, capsys):
         def mock_read_from_ini(*args):
             if len(args) > 1:
-                print('called read_from_ini with `{}`'.format(args[1]))
+                print(f'called read_from_ini with `{args[1]}`')
             else:
                 print('called read_from_ini with no args')
         def mock_setup_class(self, *args):
             self.save_options_keys = (("case", 'case_sensitive'), ("woord", 'whole_words'),
                                      ("subdirs", 'recursive'), ("context", 'python_context'),
                                      ("negeer", 'ignore_comments'))
-            return
         monkeypatch.setattr(base.MainFrame, '__init__', mock_setup_class)
         testsubj = base.MainFrame()
 
@@ -113,17 +112,14 @@ class TestMainFrame:
         testsubj.p = {'filelist': [pathlib.Path.home() / 'x']}
         testsubj.apptype = ''
         testsubj.setup_options()
-        assert capsys.readouterr().out == ('called read_from_ini with `{}/x`\n' .format(
-            pathlib.Path.home()))
+        assert capsys.readouterr().out == ('called read_from_ini with `{pathlib.Path.home()}/x`\n')
         testsubj.apptype = 'single'
         testsubj.setup_options()
-        assert capsys.readouterr().out == ('called read_from_ini with `{}`\n' .format(
-            pathlib.Path.home()))
+        assert capsys.readouterr().out == ('called read_from_ini with `{pathlib.Path.home()}`\n')
         testsubj.apptype = 'multi'
         testsubj.p = {'filelist': [pathlib.Path.home() / 'x', pathlib.Path.home() / 'y' / 'x']}
         testsubj.setup_options()
-        assert capsys.readouterr().out == ('called read_from_ini with `{}`\n' .format(
-            pathlib.Path.home()))
+        assert capsys.readouterr().out == ('called read_from_ini with `{pathlib.Path.home()}`\n')
         # volgens coverage niks gemist
 
     def test_read_from_ini(self, monkeypatch, capsys):
@@ -176,7 +172,6 @@ class TestMainFrame:
             self.outopts = {'full_path': False, 'as_csv': False, 'summarize': False}
             self.extraopts = {}
             self.always_replace = self.maak_backups = self.exit_when_ready = False
-            return
         monkeypatch.setattr(base.MainFrame, '__init__', mock_setup_class)
         testsubj = base.MainFrame()
         testsubj.apply_cmdline_options({})

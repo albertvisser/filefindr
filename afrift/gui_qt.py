@@ -43,10 +43,7 @@ class SelectNamesGui(qtw.QDialog):
         fvbox = qtw.QVBoxLayout()
         self.checklist = []
         for item in self.master.parent.names:
-            if self.master.do_files:
-                cb = qtw.QCheckBox(str(item), frm)
-            else:
-                cb = qtw.QCheckBox(item, frm)
+            cb = qtw.QCheckBox(str(item), frm) if self.master.do_files else qtw.QCheckBox(item, frm)
             fhbox = qtw.QHBoxLayout()
             fhbox.addWidget(cb)
             self.checklist.append(cb)
@@ -283,7 +280,7 @@ class ResultsGui(qtw.QDialog):
             f_filter = 'Comma delimited files (*.csv)'
         elif ext == '.txt':
             f_filter = 'Text files (*.txt)'
-        f_filter = "{};;All files (*.*)".format(f_filter)
+        f_filter = f"{f_filter};;All files (*.*)"
         dlg = qtw.QFileDialog.getSaveFileName(self, "Resultaat naar bestand kopieren",
                                               str(self.master.parent.hier / fname), f_filter)
         return dlg[0]
@@ -556,10 +553,7 @@ class MainFrameGui(qtw.QWidget):
     def check_case(self, val):
         """autocompletion voor zoektekst in overeenstemming brengen met case
         indicator"""
-        if val == core.Qt.Checked:
-            new_value = core.Qt.CaseSensitive
-        else:
-            new_value = core.Qt.CaseInsensitive
+        new_value = core.Qt.CaseSensitive if val == core.Qt.Checked else core.Qt.CaseInsensitive
         self.vraag_zoek.setAutoCompletionCaseSensitivity(new_value)
 
     def check_loc(self, txt):

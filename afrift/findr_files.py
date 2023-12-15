@@ -70,7 +70,7 @@ def format_result(lines, context_type=None):
         if context and context != old_context or source_changed:
             old_context = context
             lines_out.append(context)
-        lines_out.append(': '.join((location, statement)))
+        lines_out.append('{location}: {statement}')
     return lines_out
 
 
@@ -95,7 +95,7 @@ def determine_filetype(entry):
     """
     if entry.suffix in ('.py', '.pyw'):
         return 'py'
-    result = subprocess.run(['file', entry], stdout=subprocess.PIPE)
+    result = subprocess.run(['file', entry], stdout=subprocess.PIPE, check=False)
     if 'python' in str(result.stdout.lower()):
         return 'py'
     return ''
@@ -159,7 +159,7 @@ def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
                 if not start_of_code:
                     modlevel_start = lineno + 1
                 continue
-            if test.startswith('"""') or test.startswith("'''"):
+            if test.startswith(('"""', "'''")):
                 docstring = test[:3]
                 docstring_start = lineno
                 if line.rstrip().endswith(docstring):
@@ -168,8 +168,7 @@ def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
                 if not start_of_code:
                     modlevel_start = lineno + 1
                 continue
-            if test.startswith('"') or test.startswith("'"):
-                if check_single_string(test.rstrip()):
+            if test.startswith(('"', "'")) and check_single_string(test.rstrip()):
                     itemlist.append(((lineno, indentpos), (lineno, -1), 'docstring'))
                     if not start_of_code:
                         modlevel_start = lineno + 1
@@ -178,7 +177,7 @@ def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
             start_of_code = True
             itemlist.append(((modlevel_start, 0), (len(lines), -1), contains_default))
         pop_construct(prev_lineno)
-        if test.startswith('def ') or test.startswith('class '):
+        if test.startswith(('def ', 'class ')):
             words = test.split()
             construct = (indentpos, words[0], words[1].split(':')[0].split('(')[0], lineno)
             in_construct.append(construct)
@@ -194,16 +193,13 @@ def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
         for part in item:
             type_, name = part[1:3]
             if type_ == "def":
-                if construct and construct[-2] == "class":
-                    type_ = "method"
-                else:
-                    type_ = "function"
+                type_ = "method" if construct and construct[-2] == "class" else "function"
             construct.extend([type_, name])
         itemlist.append(((start, 0), (end, -1), " ".join(construct)))
     return sorted(itemlist)
 
 
-class Finder():
+class Finder:
     """interpreteren van de parameters en aansturen van de zoek/vervang routine
     """
     def __init__(self, **parms):
@@ -244,7 +240,7 @@ class Finder():
         if self.rpt:
             self.ok = False
             return
-        self.p['wijzig'] = True if self.p['vervang'] is not None else False
+        self.p['wijzig'] = self.p['vervang'] is not None
         self.extlist_upper = []
         for x in self.p['extlist']:
             if not x.startswith("."):
@@ -261,16 +257,16 @@ class Finder():
             self.rgx = self.build_regexp_simple()
         else:
             self.rgx, self.ignore = self.build_regexes()
-        specs = ["Gezocht naar '{}'".format(self.p['zoek'])]
+        specs = [f"Gezocht naar '{self.p['zoek']}'"]
         if self.p['wijzig']:
-            specs.append(" en dit vervangen door '{}'".format(self.p['vervang']))
+            specs.append(f" en dit vervangen door '{self.p['vervang']}'")
         if self.p['extlist']:
             if len(self.p['extlist']) > 1:
                 typs = " en ".join((", ".join(self.p['extlist'][:-1]),
                                     self.p['extlist'][-1]))
             else:
                 typs = self.p['extlist'][0]
-            specs.append(" in bestanden van type {}".format(typs))
+            specs.append(f" in bestanden van type {typs}")
         self.filenames = []
         self.dirnames = set()
         if self.p['pad']:
@@ -307,9 +303,10 @@ class Finder():
         except NotADirectoryError toegevoegd
         """
         path = pad
-        try:
-            test = path.name
-        except AttributeError:
+        # try:
+        #     test = path.name
+        # except AttributeError:
+        if hasattr(path, 'name'):
             path = pathlib.Path(pad)
         else:
             pad = str(path)
@@ -328,7 +325,7 @@ class Finder():
         except PermissionError:
             _list = []
         except FileNotFoundError:
-            return 'File not found: {}'.format(path.resolve())
+            return 'File not found: {path.resolve()}'
         ## else:
             ## _list = (pad,)
         for entry in _list:
@@ -353,9 +350,8 @@ class Finder():
         """
         zoek = ''
         for char in self.p['zoek']:
-            if not self.p['regexp']:
-                if char in special_chars:
-                    zoek += "\\"
+            if not self.p['regexp'] and char in special_chars:
+                zoek += "\\"
             zoek += char
         flags = re.MULTILINE
         if not self.p['case']:
@@ -481,7 +477,7 @@ class Finder():
             if self.p['negeer'] and contains in ('comment', 'docstring'):
                 continue
             if contains != 'ignore':
-                self.rpt.append('{} r. {} ({}): {}'.format(best, lineno, contains, text))
+                self.rpt.append(f'{best} r. {lineno} ({contains}): {text}')
 
     def zoek(self, best):
         "het daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
@@ -520,8 +516,7 @@ class Finder():
             result_list = self.complex_search(data, lines)
             for lineno in result_list:
                 found = True
-                self.rpt.append("{} r. {}: {}".format(
-                    best, lineno, regels[lineno - 1].rstrip()))
+                self.rpt.append(f"{best} r. {lineno}: {regels[lineno - 1].rstrip()}")
             return
 
         # gebruik de oude manier van zoeken bij vervangen of bij regexp zoekstring
@@ -535,15 +530,14 @@ class Finder():
                     if not self.p['wijzig']:
                         in_line = lineno + from_line
                         if in_line != last_in_line:
-                            self.rpt.append("{0} r. {1}: {2}".format(
-                                best, in_line, regels[in_line - 1].rstrip()))
+                            self.rpt.append(f"{best} r. {in_line}: {regels[in_line - 1].rstrip()}")
                         last_in_line = in_line
                     from_line = lineno
                     break
         if found and self.p['wijzig']:
             ndata, aant = self.rgx.subn(self.p["vervang"], data)
             best_s = str(best)
-            self.rpt.append("%s: %s keer" % (best_s, aant))
+            self.rpt.append(f"{best_s}: {aant} keer")
             self.backup_if_needed(best_s)
             with best.open("w") as f_out:
                 f_out.write(ndata)
