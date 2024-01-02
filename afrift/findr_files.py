@@ -70,7 +70,7 @@ def format_result(lines, context_type=None):
         if context and context != old_context or source_changed:
             old_context = context
             lines_out.append(context)
-        lines_out.append('{location}: {statement}')
+        lines_out.append(f'{location}: {statement}')
     return lines_out
 
 
