@@ -1,4 +1,4 @@
-"""unittests for findr routines
+"""unittests for ./afrift/findr_files.py
 """
 
 import types
@@ -8,10 +8,14 @@ import afrift.findr_files as findr
 
 
 def test_determine_split_none():
+    """unittest for findr_files.determine_split_none
+    """
     assert findr.determine_split_none('whatever') == 3
 
 
 def test_determine_split_py():
+    """unittest for findr_files.determine_split_py
+    """
     assert findr.determine_split_py(['', '', '', 'class', '', '']) == 5
     assert findr.determine_split_py(['', '', '', 'class', '', 'method']) == 7
     assert findr.determine_split_py(['', '', '', 'function']) == 5
@@ -19,6 +23,8 @@ def test_determine_split_py():
 
 
 def test_check_single_string():
+    """unittest for findr_files.check_single_string
+    """
     assert not findr.check_single_string('hello')
     assert findr.check_single_string('"hello"')
     assert not findr.check_single_string('""hello""')
@@ -29,9 +35,15 @@ def test_check_single_string():
 
 
 def test_determine_filetype(monkeypatch):
+    """unittest for findr_files.determine_filetype
+    """
     def mock_subprocess_pyfile(*args, **kwargs):
+        """stub
+        """
         return types.SimpleNamespace(stdout='python')
     def mock_subprocess_nopyfile(*args, **kwargs):
+        """stub
+        """
         return types.SimpleNamespace(stdout='pytho')
     assert findr.determine_filetype(pathlib.Path('')) == ''
     assert findr.determine_filetype(pathlib.Path('test')) == ''
@@ -45,7 +57,11 @@ def test_determine_filetype(monkeypatch):
 
 
 class TestFinder:
+    """unittests for findr_files.Finder
+    """
     def test_setup_class(self):
+        """unittest for Finder.setup_class
+        """
         with pytest.raises(TypeError):
             testobj = findr.Finder(gargl=False)
         testobj = findr.Finder()
@@ -79,7 +95,11 @@ class TestFinder:
         # 291-292 self errors is truthy
 
     def test_parse_zoek(self, monkeypatch):
+        """unittest for Finder.parse_zoek
+        """
         def mock_init(self, *args):
+            """stub
+            """
             self.p = {}
         monkeypatch.setattr(findr.Finder, '__init__', mock_init)
         testobj = findr.Finder()

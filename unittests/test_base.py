@@ -1,4 +1,4 @@
-"""unittests for gui independent code
+"""unittests for ./afrift/base.py
 """
 # import os
 import pathlib
@@ -6,26 +6,48 @@ import pytest
 from afrift import base
 
 class TestMainFrame:
+    """unittests for base.MainFrame
+    """
     def test_setup_class(self, monkeypatch, capsys):
+        """unittest for MainFrame.setup_class
+        """
         def mock_get_filename_list(*args):
+            """stub
+            """
             return ['x', 'y', 'z']
         def mock_get_filename_list_empty(*args):
+            """stub
+            """
             return []
         def mock_setup_options(*args):
+            """stub
+            """
             print('called setup_options')
         def mock_apply_cmdline_options_nogui(self, *args):
+            """stub
+            """
             print('called apply_cmdline_options')
             self.extraopts = {'no_gui': True}
         def mock_apply_cmdline_options(self, *args):
+            """stub
+            """
             print('called apply_cmdline_options')
             self.extraopts = {'no_gui': False}
         def mock_gui(*args):
+            """stub
+            """
             print('called gui instantiation')
         def mock_gui_setup_screen(*args):
+            """stub
+            """
             print('called gui.setup_screen')
         def mock_doe(*args):
+            """stub
+            """
             print('called doe')
         def mock_gui_go(*args):
+            """stub
+            """
             print('called gui.go')
         monkeypatch.setattr(base.MainFrame, 'get_filename_list', mock_get_filename_list)
         monkeypatch.setattr(base.MainFrame, 'setup_options', mock_setup_options)
@@ -51,7 +73,11 @@ class TestMainFrame:
         # gemist: r. 310 geen apptype opgegeven en fnaam argument bestaat en is directory
 
     def test_get_filename_list(self, monkeypatch):
+        """unittest for MainFrame.get_filename_list
+        """
         def mock_setup_class(*args):
+            """stub
+            """
             return
         monkeypatch.setattr(base.MainFrame, '__init__', mock_setup_class)
         testsubj = base.MainFrame()
@@ -85,12 +111,18 @@ class TestMainFrame:
         # gemist vogens coverage: 355-364 apptype = multi en 1e argument heeft waarde
 
     def test_setup_options(self, monkeypatch, capsys):
+        """unittest for MainFrame.setup_options
+        """
         def mock_read_from_ini(*args):
+            """stub
+            """
             if len(args) > 1:
                 print(f'called read_from_ini with `{args[1]}`')
             else:
                 print('called read_from_ini with no args')
         def mock_setup_class(self, *args):
+            """stub
+            """
             self.save_options_keys = (("case", 'case_sensitive'), ("woord", 'whole_words'),
                                      ("subdirs", 'recursive'), ("context", 'python_context'),
                                      ("negeer", 'ignore_comments'))
@@ -103,6 +135,7 @@ class TestMainFrame:
         testsubj.setup_options()
         assert testsubj.p['fallback_encoding'] == 'latin-1'
         assert testsubj.editor_option == ['SciTE', '-open:{}', '-goto:{}']
+        # laatste test: [["Scite'\\nfile-option"]]
         assert not testsubj.always_replace
         assert testsubj.maak_backups
         assert not testsubj.exit_when_ready
@@ -122,13 +155,21 @@ class TestMainFrame:
         assert capsys.readouterr().out == ('called read_from_ini with `{pathlib.Path.home()}`\n')
         # volgens coverage niks gemist
 
-    def test_read_from_ini(self, monkeypatch, capsys):
+    def test_read_from_ini(self, monkeypatch):
+        """unittest for MainFrame.read_from_ini
+        """
         def mock_get_iniloc(*args):
+            """stub
+            """
             loc = pathlib.Path.home() / 'testloc'
             return loc, loc / 'mfile', loc / 'ofile'
         def mock_setup_class(*args):
+            """stub
+            """
             return
         def clear_path(path):
+            """stub
+            """
             if not path.exists():
                 return
             if (path / 'mfile').exists():
@@ -162,8 +203,12 @@ class TestMainFrame:
         clear_path(path)
         # volgens coverage niks gemist
 
-    def test_apply_cmdline_options(self, monkeypatch, capsys):
+    def test_apply_cmdline_options(self, monkeypatch):
+        """unittest for MainFrame.apply_cmdline_options
+        """
         def mock_setup_class(self, *args):
+            """stub
+            """
             self.p = {}
             self.mru_items = {"zoek": [], "verv": [], "types": [], "dirs": []}
             self.save_options_keys = (("case", 'case_sensitive'), ("woord", 'whole_words'),
@@ -187,4 +232,5 @@ class TestMainFrame:
         # volgens coverage niks gemist
 
     def write_to_ini(self, monkeypatch, capsysy):
-        pass
+        """stub
+        """
