@@ -1,4 +1,4 @@
-"""AFRIFT PyQt5 specific classes
+"""AFRIFT PyQt specific classes
 """
 import os
 import sys
