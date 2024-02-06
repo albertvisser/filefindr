@@ -1,0 +1,12 @@
+[testdir]
+unittests
+
+[testscripts]
+base = test_base.py
+findr = test_findr.py
+
+[testees]
+base = afrift/base.py 
+qtgui = afrift/gui_qt.py
+wxgui = afrift/gui_wx.py
+findr = afrift/findr_files.py
