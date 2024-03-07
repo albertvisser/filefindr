@@ -1,38 +1,9 @@
 #! /usr/bin/env python3
-"""Find And Replace in Files
+"""Find And Replace in Files (nieuwe naam: Farft ?)
 """
+import sys
 import argparse
-from afrift.base import MainFrame
-
-
-def main(args):
-    """Find and Replace in Files Tool (nieuwe naam: Farft ?)
-
-    some screening, then relay the arguments to the application class
-    """
-    args['apptype'] = args.pop('appmode')
-    err = ''
-    if args['output_file']:
-        if args['as_csv'] and args['summarize']:
-            err = 'Summarize output to csv is not a sensible combination'
-    else:
-        for option in ('full_path', 'as_csv', 'summarize'):
-            if args[option]:
-                err = 'Output options without output destination not allowed'
-                break
-    if err:
-        print(err)
-        return
-    test = args.pop('fname')
-    if len(test) > 1:
-        args['flist'] = test
-        args['apptype'] = 'multi'
-    elif test:
-        args['fnaam'] = test[0]
-    try:
-        MainFrame(**args)
-    except ValueError as err:
-        print(err)
+from afrift.base import main
 
 
 if __name__ == "__main__":
@@ -79,4 +50,4 @@ if __name__ == "__main__":
     parser.add_argument("-u", "--summarize", action='store_true',
                         help="output_summarized")
     args = parser.parse_args()
-    main(vars(args))
+    sys.exit(main(vars(args)))

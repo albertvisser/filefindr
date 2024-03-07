@@ -14,20 +14,43 @@ import pathlib
 from .gui import SelectNamesGui, ResultsGui, MainFrameGui
 from .findr_files import Finder, format_result
 BASE = pathlib.Path.home() / '.afrift'
-if not BASE.exists():
-    BASE.mkdir()
+BASE.mkdir(exist_ok=True)
 HERE = pathlib.Path(__file__).parent  # os.path.dirname(__file__)
 LOGFILE = HERE.parent / 'logs' / 'afrift.log'
+logging.basicConfig(filename=str(LOGFILE), level=logging.DEBUG, format='%(asctime)s %(message)s')
 WANT_LOGGING = 'DEBUG' in os.environ and os.environ["DEBUG"] != "0"
-if WANT_LOGGING:
-    if not LOGFILE.parent.exists():
-        LOGFILE.parent.mkdir()
-    if not LOGFILE.exists():
-        LOGFILE.touch()
-    logging.basicConfig(filename=str(LOGFILE), level=logging.DEBUG,
-                        format='%(asctime)s %(message)s')
 common_path_txt = 'De bestanden staan allemaal in of onder de directory "{}"'
 iconame = str(HERE / "find.ico")  # os.path.join(HERE, "find.ico")
+
+
+def main(args):
+    """Entry point for application
+    """
+    # preliminary actions, earlier in module level code
+    if WANT_LOGGING:
+        LOGFILE.parent.mkdir(exist_ok=True)
+        LOGFILE.touch(exist_ok=True)
+    # some screening, then relay the arguments to the application class
+    args['apptype'] = args.pop('appmode')
+    err = ''
+    if args['output_file']:
+        if args['as_csv'] and args['summarize']:
+            return "'Output to csv' and 'summarize' is not a sensible combination"
+    else:
+        for option in ('full_path', 'as_csv', 'summarize'):
+            if args.get(option, ''):
+                return 'Output options without output destination not allowed'
+    test = args.pop('fname')
+    if len(test) > 1:
+        args['flist'] = test
+        args['apptype'] = 'multi'
+    elif test:
+        args['fnaam'] = test[0]
+    try:
+        MainFrame(**args)
+        return ''
+    except ValueError as err:
+        return str(err)
 
 
 def log(message):
@@ -57,8 +80,7 @@ def get_iniloc(path=None):
 class SelectNames:
     """Tussenscherm om te verwerken files te kiezen
 
-    deze class bevat methoden die onafhankelijk zijn van de gekozen
-    GUI-toolkit
+    deze class bevat methoden die onafhankelijk zijn van de gekozen GUI-toolkit
     """
     def __init__(self, parent, files=True):
         self.do_files = files
@@ -204,8 +226,8 @@ class Results:
         if len(self.parent.zoekvervang.rpt) == len(['melding']):
             self.gui.breekaf("Niks gevonden", done=False)
             return
-        if (len(self.parent.zoekvervang.rpt) == len(['melding', 'header']) and
-                self.parent.zoekvervang.p['wijzig']):
+        if (len(self.parent.zoekvervang.rpt) == len(['melding', 'header'])
+                and self.parent.zoekvervang.p['wijzig']):
             count_txt = self.parent.zoekvervang.rpt.pop().split(': ')[-1]
         else:
             count_txt = f'{len(self.parent.zoekvervang.rpt) - 1} items'
@@ -444,6 +466,7 @@ class MainFrame:
         try:
             test = encfile.read_text()
         except FileNotFoundError:
+            encfile.touch()
             test = 'latin-1\n'
             encfile.write_text(test)
         self.p['fallback_encoding'] = test.strip()
@@ -452,10 +475,11 @@ class MainFrame:
         try:
             test = edfile.read_text()
         except FileNotFoundError:
-            edfile.write_text("program = 'SciTE'\\nfile-option = '-open:{}'\\n"
-                              "line-option = '-goto:{}'\\n\\n")
+            edfile.touch()
+            test = "program = 'SciTE'\nfile-option = '-open:{}'\nline-option = '-goto:{}'\n"
+            edfile.write_text(test)
         self.editor_option = [x.split(' = ')[1].strip("'")
-                              for x in test.strip().split('\n')]
+                              for x in test.strip().split('\n') if x]
         if self.editor_option[0].startswith('['):
             command_list = [x[1:-1] for x in self.editor_option[0][1:-1].split(', ')]
             self.editor_option[0] = command_list
@@ -702,22 +726,22 @@ class MainFrame:
             while go_on:
                 # eerste ronde: toon directories
                 if skip_dirs and self.zoekvervang.dirnames:
-                        self.names = sorted(self.zoekvervang.dirnames)
+                    self.names = sorted(self.zoekvervang.dirnames)
 
-                        result = SelectNames(self, files=False).show()
-                        if not result:
-                            canceled = True
-                            break
+                    result = SelectNames(self, files=False).show()
+                    if not result:
+                        canceled = True
+                        break
 
-                        fnames = self.zoekvervang.filenames[:]
-                        for entry in fnames:
-                            for name in self.names:
-                                # if str(entry).startswith(name + '/'):
-                                if entry.parent == name:
-                                    self.zoekvervang.filenames.remove(entry)
-                                    break
-                        if not skip_files:
-                            go_on = False
+                    fnames = self.zoekvervang.filenames[:]
+                    for entry in fnames:
+                        for name in self.names:
+                            # if str(entry).startswith(name + '/'):
+                            if entry.parent == name:
+                                self.zoekvervang.filenames.remove(entry)
+                                break
+                    if not skip_files:
+                        go_on = False
                 # tweede ronde: toon de files die overblijven
                 if skip_files:
                     self.names = sorted(self.zoekvervang.filenames)  # , key=lambda x: str(x))
