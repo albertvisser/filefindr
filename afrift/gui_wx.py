@@ -165,7 +165,7 @@ class ResultsGui(wx.Dialog):
         btn = wx.Button(self, wx.ID_CANCEL, size=(-1, TXTH), label=captions['exit'])
         bsizer.Add(btn, 0, wx.ALL, 5)
 
-        if not self.master.label_only:
+        if self.master.show_result_details:
             vsizer2 = wx.BoxSizer(wx.VERTICAL)
             bsizer2 = wx.BoxSizer(wx.HORIZONTAL)
             btn = wx.Button(self, size=(-1, TXTH), label=captions['rpt'])
@@ -305,7 +305,7 @@ class ResultsGui(wx.Dialog):
         with wx.FileDialog(self, message="Resultaat naar bestand kopieren",
                            defaultDir=str(self.master.parent.hier),
                            defaultFile=fname.join(('searchfor_', ".txt")),
-                           wildcard="f{f_filter}|All files (*.*)|*.*",
+                           wildcard=f"{f_filter}|All files (*.*)|*.*",
                            style=wx.FD_SAVE) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 fn = dlg.GetPath()
@@ -364,7 +364,7 @@ class ResultsGui(wx.Dialog):
         self.master.goto_result(row, -1)
 
     def remember_settings(self):
-        ""
+        "save options to configuration"
         self.master.parent.outopts['full_path'] = self.get_pth()
         self.master.parent.outopts['as_csv'] = self.get_csv()
         self.master.parent.outopts['summarize'] = self.get_sum()

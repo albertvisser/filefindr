@@ -128,7 +128,7 @@ class ResultsGui(qtw.QDialog):
         hbox.addWidget(self.txt)
         vbox.addLayout(hbox)
 
-        if not self.master.label_only:
+        if self.master.show_result_details:
             hbox = qtw.QHBoxLayout()
             self.lijst = qtw.QTableWidget(self)
             self.lijst.verticalHeader().setVisible(False)
@@ -165,7 +165,7 @@ class ResultsGui(qtw.QDialog):
         btn = qtw.QPushButton(captions['exit'], self)
         btn.clicked.connect(self.klaar)
         hbox.addWidget(btn)
-        if not self.master.label_only:
+        if self.master.show_result_details:
             vbox2 = qtw.QVBoxLayout()
             hbox2 = qtw.QHBoxLayout()
             btn = qtw.QPushButton(captions['rpt'], self)
@@ -217,7 +217,7 @@ class ResultsGui(qtw.QDialog):
         vbox.addLayout(hbox)
 
         self.setLayout(vbox)
-        if not self.master.label_only:
+        if self.master.show_result_details:
             self.resize(574 + breedte, 488)
 
     def populate_list(self):
@@ -295,7 +295,8 @@ class ResultsGui(qtw.QDialog):
 
     def get_selection(self):
         "get the selected items"
-        selected_rows = set([x.row() for x in self.lijst.selectedItems()])
+        # selected_rows = set([x.row() for x in self.lijst.selectedItems()])
+        selected_rows = {x.row() for x in self.lijst.selectedItems()}
         selected_lines = [self.lijst.item(x, 0).text() for x in selected_rows]
         return selected_lines
 
@@ -311,7 +312,7 @@ class ResultsGui(qtw.QDialog):
         self.master.goto_result(self.lijst.currentRow(), self.lijst.currentColumn())
 
     def remember_settings(self):
-        ""
+        "save options to configuration"
         self.master.parent.outopts['full_path'] = self.get_pth()
         self.master.parent.outopts['as_csv'] = self.get_csv()
         self.master.parent.outopts['summarize'] = self.get_sum()

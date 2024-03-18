@@ -109,6 +109,22 @@ class Results:
     deze class bevat methoden die onafhankelijk zijn van de gekozen
     GUI-toolkit
     """
+    captions = {'heading': '', 'ctxt': 'Context', 'txt': 'Tekst', 'hlp': 'Help',
+                'rslt': '&Goto Result', 'exit': "&Klaar", 'rpt': "&Repeat Search",
+                'cpy': "Copy to &File", 'clp': "Copy to &Clipboard",
+                'alt': '&Zoek anders', 'sel': 'Vervang in &Selectie', 'all': 'Vervang &Alles',
+                'fmt': 'Formatteer output:',
+                'pth': "toon directorypad", 'dlm': "comma-delimited", 'sum': "summarized"}
+    messages = {'nope': "Niks gevonden",
+                'sum2csv': "Summarize to comma delimited is not a sensible option, request denied",
+                'help': "Select a line and doubleclick or press Ctrl-G to open the indicated file\n"
+                        "at the indicated line (not in single file mode)",
+                'goto': 'Not in single file mode',
+                'noitems': 'Geen regels geselecteerd om in te vervangen',
+                'vervsel': "vervang `{}` in geselecteerde regels door:",
+                'vervall': "vervang `{}` in alle regels door:",
+                'other': 'zoek in dezelfde selectie naar:'
+                }
     def __init__(self, parent, common_path=''):
         self.parent = parent
         self.common = common_path
@@ -118,24 +134,19 @@ class Results:
         self.iconame = iconame
         self.gui = ResultsGui(parent, self)
 
-        self.label_only = self.parent.p['vervang'] and self.parent.apptype == 'single'
-        if self.label_only:
-            aantal = self.parent.zoekvervang.rpt[1].split(None, 1)[1]
-            label_txt = self.parent.zoekvervang.rpt[0]
-            label_txt = label_txt.replace('vervangen', aantal + ' vervangen')
-        else:
+        self.show_result_details = not self.parent.p['vervang'] or self.parent.apptype != 'single'
+        if self.show_result_details:
             itemcount = len(self.parent.zoekvervang.rpt) - 1
             label_txt = f"{self.parent.zoekvervang.rpt[0]} ({itemcount} items)"
             if self.parent.apptype == "multi":
                 label_txt += '\n' + common_path_txt.format(self.common.rstrip(os.sep))
-        captions = {'heading': label_txt, 'ctxt': 'Context', 'txt': 'Tekst', 'hlp': 'Help',
-                    'rslt': '&Goto Result', 'exit': "&Klaar", 'rpt': "&Repeat Search",
-                    'cpy': "Copy to &File", 'clp': "Copy to &Clipboard",
-                    'alt': '&Zoek anders', 'sel': 'Vervang in &Selectie', 'all': 'Vervang &Alles',
-                    'fmt': 'Formatteer output:',
-                    'pth': "toon directorypad", 'dlm': "comma-delimited", 'sum': "summarized"}
+        else:
+            aantal = self.parent.zoekvervang.rpt[1].split(None, 1)[1]
+            label_txt = self.parent.zoekvervang.rpt[0]
+            label_txt = label_txt.replace('vervangen', aantal + ' vervangen')
+        self.captions['heading'] = label_txt
         self.build_list()
-        self.gui.setup_screen(captions)
+        self.gui.setup_screen(self.captions)
 
     def build_list(self):
         "construct list of results"
@@ -224,7 +235,7 @@ class Results:
         self.parent.zoekvervang.go()
         self.parent.gui.set_waitcursor(False)
         if len(self.parent.zoekvervang.rpt) == len(['melding']):
-            self.gui.breekaf("Niks gevonden", done=False)
+            self.gui.breekaf(self.messages['nope'], done=False)
             return
         if (len(self.parent.zoekvervang.rpt) == len(['melding', 'header'])
                 and self.parent.zoekvervang.p['wijzig']):
@@ -249,10 +260,8 @@ class Results:
     def check_option_combinations_ok(self):
         """onzinnige combinatie(s) uitsluiten
         """
-        title, msg = (self.parent.title,
-                      "Summarize to comma delimited is not a sensible option, request denied")
         if self.gui.get_sum() and self.gui.get_csv():
-            self.gui.meld(title, msg)
+            self.gui.meld('ahem', self.messages['sum2csv'])
             return False
         return True
 
@@ -277,8 +286,7 @@ class Results:
     def help(self):
         """show instructions
         """
-        self.gui.meld('info', "Select a line and doubleclick or press Ctrl-G to open the"
-                              " indicated file\nat the indicated line (not in single file mode)")
+        self.gui.meld('info', self.messages['help'])
 
     def to_clipboard(self, *args):
         """callback for button 'Copy to clipboard'
@@ -291,7 +299,7 @@ class Results:
         """open the file containing the selected item
         """
         if self.parent.apptype == 'single':
-            self.gui.meld('ahem', 'Not in single file mode')
+            self.gui.meld('ahem', self.messages['goto'])
             return
         selected = self.results[row + 1]
         target, line = selected[0].split(' r. ')
@@ -305,10 +313,10 @@ class Results:
         # bepaal geselecteerde regels
         items = self.gui.get_selection()
         if not items:
-            self.gui.meld(self.parent.resulttitel, 'Geen regels geselecteerd om in te vervangen')
+            self.gui.meld(self.parent.resulttitel, self.messages['noitems'])
             return
         lines_to_replace = [x.split(' r. ') for x in items]
-        prompt = f"vervang `{self.parent.p['zoek']}` in geselecteerde regels door:"
+        prompt = self.messages['replsel'].format(self.parent.p['zoek'])
         text, ok = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
         if ok:
             replaced = self.parent.zoekvervang.replace_selected(text, lines_to_replace)
@@ -317,7 +325,7 @@ class Results:
 
     def vervang_alles(self, *args):
         "achteraf vervangen in alle regels"
-        prompt = f"vervang `{self.parent.p['zoek']}` in alle regels door:"
+        prompt = self.messages['replall'].format(self.parent.p['zoek'])
         text, ok = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
         if ok:
             self.parent.zoekvervang.p['vervang'] = text
@@ -328,13 +336,11 @@ class Results:
     def zoek_anders(self, *args):
         "zoek naar iets anders in dezelfde selectie"
         origzoek = self.parent.zoekvervang.p['zoek']
-        prompt = 'zoek in dezelfde selectie naar:'
-        text, ok = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
+        text, ok = self.gui.get_text_from_user(self.parent.resulttitel, self.messages['other'])
         if ok:
             self.parent.zoekvervang.p['zoek'] = text
             self.parent.zoekvervang.setup_search()
             self.refresh()
-            print('In zoek_anders: origzoek terugzetten naar', origzoek)
             self.parent.zoekvervang.p['zoek'] = origzoek
             self.parent.zoekvervang.setup_search()
 
@@ -504,7 +510,7 @@ class MainFrame:
                 for key, value in self.outopts.items():
                     self.outopts[key] = opts.pop(key, '') or value
                 for key in [x[0] for x in self.save_options_keys]:
-                    self.p[key] = opts.pop(key, '') or value
+                    self.p[key] = opts.pop(key, '') or value   # waar komt deze value vandaan?
 
     def apply_cmdline_options(self, cmdline_options):
         """lees settings opties vanuit invoer; override waar opgegeven
@@ -563,7 +569,7 @@ class MainFrame:
             ## else:
                 ## while test and not os.path.exists(test):
                     ## test = test[:-1]
-            # make sure common part is a directory
+            # make sure common part is recognized as a directory
             if os.path.isfile(test):
                 test = os.path.dirname(test) + os.sep
             else:
@@ -581,7 +587,7 @@ class MainFrame:
             with contextlib.suppress(ValueError):
                 self.mru_items["zoek"].remove(item)
             self.mru_items["zoek"].insert(0, item)
-            self.s += "zoeken naar {item}"
+            self.s += f"zoeken naar {item}"
             self.p["zoek"] = item
         return mld
 
@@ -594,7 +600,7 @@ class MainFrame:
             with contextlib.suppress(ValueError):
                 self.mru_items["verv"].remove(vervang)
             self.mru_items["verv"].insert(0, vervang)
-            self.s = "\nen vervangen door {vervang}"
+            self.s += f"\nen vervangen door {vervang}"
             self.p["vervang"] = vervang
         elif leeg:
             self.s += "\nen weggehaald"
@@ -616,7 +622,7 @@ class MainFrame:
             opts.append("hele woorden")
         self.p["woord"] = words
         if opts:
-            self.s += " ({', '.join(opts)})"
+            self.s += f" ({', '.join(opts)})"
         return mld
 
     def checktype(self, item):
@@ -626,7 +632,7 @@ class MainFrame:
             with contextlib.suppress(ValueError):
                 self.mru_items["types"].remove(item)
             self.mru_items["types"].insert(0, item)
-            self.s += "\nin bestanden van type {item}"
+            self.s += f"\nin bestanden van type {item}"
             exts = item.split(",")
             self.p["extlist"] = [x.lstrip().strip() for x in exts]
         else:
@@ -637,8 +643,7 @@ class MainFrame:
         "controleer zoekpad"
         test = pathlib.Path(item)
         if not item:
-            mld = ("Ik wil wel graag weten in welke directory ik moet "
-                   "(beginnen met) zoeken")
+            mld = "Ik wil wel graag weten in welke directory ik moet (beginnen met) zoeken"
         elif not test.exists():  # pathlib.Path(item).exists():
             mld = "De opgegeven directory bestaat niet"
         else:
@@ -646,7 +651,7 @@ class MainFrame:
             with contextlib.suppress(ValueError):
                 self.mru_items["dirs"].remove(item)
             self.mru_items["dirs"].insert(0, item)
-            self.s += "\nin {item}"
+            self.s += f"\nin {item}"
             self.p["pad"] = test  # item
             self.p['filelist'] = ''
         return mld
