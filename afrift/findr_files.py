@@ -306,7 +306,7 @@ class Finder:
         # try:
         #     test = path.name
         # except AttributeError:
-        if hasattr(path, 'name'):
+        if not hasattr(path, 'name'):
             path = pathlib.Path(pad)
         else:
             pad = str(path)
