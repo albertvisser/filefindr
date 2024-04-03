@@ -26,16 +26,20 @@ def _test_format_result(monkeypatch, capsys):
     assert testee.format_result(lines, context_type=None) == "expected_result"
 
 
-def test_check_single_string(monkeypatch, capsys):
-    """unittest for findr_files.check_single_string
+def test_is_single_line_docstring(monkeypatch, capsys):
+    """unittest for findr_files.is_single_line_docstring
     """
-    assert not testee.check_single_string('hello')
-    assert testee.check_single_string('"hello"')
-    assert not testee.check_single_string('""hello""')
-    assert testee.check_single_string('"""hello"""')
-    assert testee.check_single_string("'hello'")
-    assert not testee.check_single_string("''hello''")
-    assert testee.check_single_string("'''hello'''")
+    assert not testee.is_single_line_docstring('hello')
+    assert testee.is_single_line_docstring('"hello"')
+    assert not testee.is_single_line_docstring('"hello')
+    assert not testee.is_single_line_docstring('""hello""')
+    assert testee.is_single_line_docstring('"""hello"""')
+    assert not testee.is_single_line_docstring('"""hello')
+    assert testee.is_single_line_docstring("'hello'")
+    assert not testee.is_single_line_docstring("'hello")
+    assert not testee.is_single_line_docstring("''hello''")
+    assert testee.is_single_line_docstring("'''hello'''")
+    assert not testee.is_single_line_docstring("'''hello")
 
 
 def test_determine_filetype(monkeypatch, capsys):
@@ -44,10 +48,12 @@ def test_determine_filetype(monkeypatch, capsys):
     def mock_subprocess_pyfile(*args, **kwargs):
         """stub
         """
+        print('called subprocess.run with args', args, kwargs)
         return types.SimpleNamespace(stdout='python')
     def mock_subprocess_nopyfile(*args, **kwargs):
         """stub
         """
+        print('called subprocess.run with args', args, kwargs)
         return types.SimpleNamespace(stdout='pytho')
     assert testee.determine_filetype(testee.pathlib.Path('')) == ''
     assert testee.determine_filetype(testee.pathlib.Path('test')) == ''
@@ -56,15 +62,29 @@ def test_determine_filetype(monkeypatch, capsys):
     assert testee.determine_filetype(testee.pathlib.Path('test.pyw')) == 'py'
     monkeypatch.setattr(testee.subprocess, 'run', mock_subprocess_pyfile)
     assert testee.determine_filetype(testee.pathlib.Path('')) == 'py'
+    assert capsys.readouterr().out == (
+            "called subprocess.run with args"
+            " (['file', PosixPath('.')],) {'stdout': -1, 'check': False}\n")
     monkeypatch.setattr(testee.subprocess, 'run', mock_subprocess_nopyfile)
     assert testee.determine_filetype(testee.pathlib.Path('')) == ''
+    assert capsys.readouterr().out == (
+            "called subprocess.run with args"
+            " (['file', PosixPath('.')],) {'stdout': -1, 'check': False}\n")
 
 
-def _test_read_input_file(monkeypatch, capsys):
+def test_read_input_file(monkeypatch, capsys, tmp_path):
     """unittest for findr_files.read_input_file
     """
-    assert testee.read_input_file(file, fallback_encoding) == "expected_result"
-
+    fname = 'findr_results'
+    as_utf = tmp_path / f'{fname}_unicode'
+    as_utf.write_text('thïs\nis\nsøme\ntëxt\n', encoding='utf-8')
+    as_latin = tmp_path / f'{fname}_latin'
+    as_latin.write_text('thïs\nis\nsøme\ntëxt\n', encoding='latin-1')
+    # assert testee.get_file(as_utf) == ['is\n', 'some\n', 'this\n', 'tëxt\n']
+    # assert testee.get_file(as_latin) == ['is\n', 'some\n', 'this\n', 'tëxt\n']
+    assert testee.read_input_file(as_utf, '') == ['thïs\n', 'is\n', 'søme\n', 'tëxt\n']
+    assert testee.read_input_file(as_latin, 'latin-1') == ['thïs\n', 'is\n', 'søme\n', 'tëxt\n']
+    assert testee.read_input_file(as_latin, 'utf-32') is None
 
 def _test_pyread(monkeypatch, capsys):
     """unittest for findr_files.pyread
@@ -148,12 +168,29 @@ class TestFinder:
         assert testobj.subdirs(pad, level=0) == "expected_result"
         assert capsys.readouterr().out == ("")
 
-    def _test_build_regexp_simple(self, monkeypatch, capsys):
+    def test_build_regexp_simple(self, monkeypatch, capsys):
         """unittest for Finder.build_regexp_simple
         """
+        def mock_compile(*args):
+            return f'called re.compile with args {args}'
+        monkeypatch.setattr(testee, 'special_chars', '!')
+        monkeypatch.setattr(testee.re, 'compile', mock_compile)
         testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.build_regexp_simple() == "expected_result"
-        assert capsys.readouterr().out == ("")
+        testobj.p['zoek'] = 'xy!z'
+        testobj.p['case'] = False
+        testobj.p['regexp'] = False
+        flags_multi = testee.re.MULTILINE
+        flags_both = testee.re.MULTILINE | testee.re.IGNORECASE
+        assert testobj.build_regexp_simple() == (
+                f"called re.compile with args ('xy\\\\!z', {flags_both})")
+        testobj.p['case'] = False
+        testobj.p['regexp'] = True
+        assert testobj.build_regexp_simple() == (
+                f"called re.compile with args ('xy!z', {flags_both})")
+        testobj.p['case'] = True
+        testobj.p['regexp'] = False
+        assert testobj.build_regexp_simple() == (
+                f"called re.compile with args ('xy\\\\!z', {flags_multi})")
 
     def _test_build_regexes(self, monkeypatch, capsys):
         """unittest for Finder.build_regexes
@@ -205,9 +242,17 @@ class TestFinder:
         assert testobj.replace_selected(text, lines_to_replace) == "expected_result"
         assert capsys.readouterr().out == ("")
 
-    def _test_backup_if_needed(self, monkeypatch, capsys):
+    def test_backup_if_needed(self, monkeypatch, capsys):
         """unittest for Finder.backup_if_needed
         """
+        def mock_copy(*args):
+            print('called shutil.copyfile with args', args)
+        monkeypatch.setattr(testee.shutil, 'copyfile', mock_copy)
         testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.backup_if_needed(fname) == "expected_result"
-        assert capsys.readouterr().out == ("")
+        testobj.p['backup'] = False
+        testobj.backup_if_needed('filename')
+        assert capsys.readouterr().out == ""
+        testobj.p['backup'] = True
+        testobj.backup_if_needed('filename')
+        assert capsys.readouterr().out == (
+                "called shutil.copyfile with args ('filename', 'filename.bak')\n")

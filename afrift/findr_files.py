@@ -74,14 +74,17 @@ def format_result(lines, context_type=None):
     return lines_out
 
 
-def check_single_string(inp):
-    """inspect single (doc)string
+def is_single_line_docstring(inp):
+    """return True if input is a valid single-line docstring (with correct delimiters)
     """
     test = inp[0]
     while test in ('"', "'"):
         try:
             ix = inp.index(test, 1)
-        except IndexError:
+        # het is een syntax error als een single-quote niet wordt afgesloten op dezelfde regel
+        # dus hoef ik hier wel naar te kijken?
+        # except IndexError:
+        except ValueError:
             return False
         inp = inp[ix + 1:].strip()
         if not inp:
@@ -142,25 +145,27 @@ def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
         if line.strip() == "":
             continue
         lineno = ix + 1
-        test = line.lstrip()
-        if test.startswith('#') and negeer_docs:
+        code = line.lstrip()
+        if code.startswith('#') and negeer_docs:
             itemlist.append(((lineno, 0), (lineno, -1), 'comment'))
             if not start_of_code:
                 modlevel_start = lineno + 1
             continue
-        elif test.startswith('#') and line.index(test) < indentpos:
+        elif code.startswith('#') and line.index(code) < indentpos:
             pass
         else:
-            indentpos = line.index(test)
+            indentpos = line.index(code)
         if negeer_docs:
-            if docstring and line.rstrip().endswith(docstring):
-                docstring = ''
+            if docstring_delim and line.rstrip().endswith(docstring_delim):
+                # dit mist de situatie dat er een commentaar volgt na de docstring
+                docstring_delim = ''
+                # doctring_start is eerder ingesteld
                 itemlist.append(((docstring_start, indentpos), (lineno, -1), "docstring"))
                 if not start_of_code:
                     modlevel_start = lineno + 1
                 continue
-            if test.startswith(('"""', "'''")):
-                docstring = test[:3]
+            if code.startswith(('"""', "'''")):
+                docstring_delim = code[:3]
                 docstring_start = lineno
                 if line.rstrip().endswith(docstring):
                     docstring = ''
@@ -168,21 +173,23 @@ def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
                 if not start_of_code:
                     modlevel_start = lineno + 1
                 continue
-            if test.startswith(('"', "'")) and check_single_string(test.rstrip()):
-                    itemlist.append(((lineno, indentpos), (lineno, -1), 'docstring'))
-                    if not start_of_code:
-                        modlevel_start = lineno + 1
-                    continue
+            # het is een syntax error als een single-quote niet wordt afgesloten op dezelfde regel
+            # dus is de extra controle wel nodig?
+            if code.startswith(('"', "'")) and is_single_line_docstring(code.rstrip()):
+                itemlist.append(((lineno, indentpos), (lineno, -1), 'docstring'))
+                if not start_of_code:
+                    modlevel_start = lineno + 1
+                continue
         if not start_of_code:
             start_of_code = True
             itemlist.append(((modlevel_start, 0), (len(lines), -1), contains_default))
         pop_construct(prev_lineno)
-        if test.startswith(('def ', 'class ')):
-            words = test.split()
+        if code.startswith(('def ', 'class ')):
+            words = code.split()
             construct = (indentpos, words[0], words[1].split(':')[0].split('(')[0], lineno)
             in_construct.append(construct)
-        if '#' in test and negeer_docs:
-            pos = test.index('#')
+        if '#' in code and negeer_docs:
+            pos = code.index('#')
             itemlist.append(((lineno, pos), (lineno, -1), 'comment'))
         prev_lineno = lineno
     indentpos = 0
@@ -543,7 +550,7 @@ class Finder:
                 f_out.write(ndata)
 
     def complex_search(self, data, lines):
-        """extended serch using phrases we want to find and phrases we don't want to find
+        """extended search using phrases we want to find and phrases we don't want to find
         """
         # maak een lijst van alle locaties waar een string gevonden is
         # (plus de index van de  regexp die er bij hoort)
