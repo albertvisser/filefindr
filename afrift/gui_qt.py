@@ -228,17 +228,20 @@ class ResultsGui(qtw.QDialog):
             self.lijst.setRowHeight(ix, 18)
             col = 0
             item = qtw.QTableWidgetItem(result[0])
+            item.setToolTip(result[0])
             item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
             self.lijst.setItem(ix, col, item)
 
             if self.master.show_context:
                 col += 1
                 item = qtw.QTableWidgetItem(result[1])
+                item.setToolTip(result[1])
                 item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
                 self.lijst.setItem(ix, col, item)
 
             col += 1
             item = qtw.QTableWidgetItem(result[-1])
+            item.setToolTip(result[-1])
             item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
             self.lijst.setItem(ix, col, item)
 
