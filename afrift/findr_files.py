@@ -33,12 +33,8 @@ def determine_split_py(words):
     return end
 
 
-determine_split = {None: determine_split_none,  # dispatch table
-                   "py": determine_split_py}
-
-
-def format_result(lines, context_type=None):
-    """reformat search results
+def reformat_result(lines, context_type=None):
+    """format search results for showing as "summarized"
     """
     start_splitting = False
     old_program_file = old_context = ''
@@ -55,7 +51,8 @@ def format_result(lines, context_type=None):
         program_file = words[0]
         location = ' '.join(words[1:3])
 
-        end = determine_split[context_type](words)
+        end = {None: determine_split_none,
+               "py": determine_split_py}[context_type](words)
         context = ' '.join(words[3:end]) if end > 3 else ''
 
         split_on = words[end - 1]
@@ -139,6 +136,7 @@ def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
     in_construct = []
     docstring = ''
     docstring_start = 0
+    docstring_delim = ''
     indentpos = prev_lineno = 0
     start_of_code = False
     for ix, line in enumerate(lines):
@@ -151,7 +149,7 @@ def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
             if not start_of_code:
                 modlevel_start = lineno + 1
             continue
-        elif code.startswith('#') and line.index(code) < indentpos:
+        if code.startswith('#') and line.index(code) < indentpos:
             pass
         else:
             indentpos = line.index(code)
@@ -227,11 +225,11 @@ class Finder:
             "fallback_encoding": 'ascii',
             "context": False,
             "negeer": False, }
-        for x in parms:
-            if x in self.p:
-                self.p[x] = parms[x]
+        for name, value in parms.items():
+            if name in self.p:
+                self.p[name] = value
             else:
-                raise TypeError('Onbekende optie ' + x)
+                raise TypeError('Onbekende optie ' + name)
         ## print('On creating Finder instance:', self.p)
         self.ok = True
         self.errors = []
@@ -277,11 +275,11 @@ class Finder:
         self.filenames = []
         self.dirnames = set()
         if self.p['pad']:
-            specs.append(" in {}".format(self.p['pad']))
+            specs.append(f" in {self.p['pad']}")
             self.subdirs(self.p['pad'])
         else:
             if len(self.p['filelist']) == 1:
-                specs.append(" in {}".format(self.p['filelist'][0]))
+                specs.append(f" in {self.p['filelist'][0]}")
             else:
                 specs.append(" in opgegeven bestanden/directories")
             for entry in self.p['filelist']:
@@ -441,53 +439,16 @@ class Finder:
         add_to_matches()
         return possible_matches, required_matches, forbidden_matches
 
-    def go(self):  # do_action(self)  # , search_python=False):
+    def go(self):
         """start the search
         """
         for entry in self.filenames:
             self.zoek(entry)
-        if not self.p['context']:  # search_python:
-            return
-        results, self.rpt = self.rpt, []
-        locations = {}
-        for entry in self.filenames:
-            ftype = determine_filetype(entry)
-            if ftype == 'py':
-                locations[str(entry)] = pyread(entry, self.p['fallback_encoding'], self.p['negeer'])
-            else:
-                locations[str(entry)] = []
-        for item in results:
-            test = item.split(' r. ', 1)
-            if len(test) == 1:
-                self.rpt.append(item)
-                continue
-            best = test[0]
-            if not locations[best]:
-                continue
-            test = test[1].split(': ', 1)
-            if len(test) == 1:
-                self.rpt.append(item)
-                continue
-            lineno, text = test
-            contains = contains_default
-            for loc in locations[best]:
-                lineno = int(lineno)
-                if loc[0][0] < lineno <= loc[1][0]:
-                    old_contains = contains
-                    contains = loc[2]
-                    if contains == 'comment':
-                        where = text.upper().find(self.p['zoek'].upper())
-                        if where < loc[0][1]:
-                            contains = old_contains
-                if loc[0][0] > lineno:
-                    break
-            if self.p['negeer'] and contains in ('comment', 'docstring'):
-                continue
-            if contains != 'ignore':
-                self.rpt.append(f'{best} r. {lineno} ({contains}): {text}')
+        if self.p['context']:
+            self.add_context()
 
     def zoek(self, best):
-        "het daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
+        "daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
         pos, lines, regels = 0, [], []
         msg = ""
         try_again = False
@@ -548,6 +509,47 @@ class Finder:
             self.backup_if_needed(best_s)
             with best.open("w") as f_out:
                 f_out.write(ndata)
+
+    def add_context(self):
+        """determine locations and add into search results
+        """
+        results, self.rpt = self.rpt, []
+        locations = {}
+        for entry in self.filenames:
+            ftype = determine_filetype(entry)
+            if ftype == 'py':
+                locations[str(entry)] = pyread(entry, self.p['fallback_encoding'], self.p['negeer'])
+            else:
+                locations[str(entry)] = []
+        for item in results:
+            test = item.split(' r. ', 1)
+            if len(test) == 1:
+                self.rpt.append(item)
+                continue
+            best = test[0]
+            if not locations[best]:
+                continue
+            test = test[1].split(': ', 1)
+            if len(test) == 1:
+                self.rpt.append(item)
+                continue
+            lineno, text = test
+            contains = contains_default
+            for loc in locations[best]:
+                lineno = int(lineno)
+                if loc[0][0] < lineno <= loc[1][0]:
+                    old_contains = contains
+                    contains = loc[2]
+                    if contains == 'comment':
+                        where = text.upper().find(self.p['zoek'].upper())
+                        if where < loc[0][1]:
+                            contains = old_contains
+                if loc[0][0] > lineno:
+                    break
+            if self.p['negeer'] and contains in ('comment', 'docstring'):
+                continue
+            if contains != 'ignore':
+                self.rpt.append(f'{best} r. {lineno} ({contains}): {text}')
 
     def complex_search(self, data, lines):
         """extended search using phrases we want to find and phrases we don't want to find
