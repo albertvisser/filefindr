@@ -11,8 +11,10 @@ import contextlib
 import json
 import logging
 import pathlib
+import io
+import csv
 from .gui import SelectNamesGui, ResultsGui, MainFrameGui
-from .findr_files import Finder, format_result
+from .findr_files import Finder, reformat_result
 BASE = pathlib.Path.home() / '.afrift'
 BASE.mkdir(exist_ok=True)
 HERE = pathlib.Path(__file__).parent  # os.path.dirname(__file__)
@@ -48,9 +50,9 @@ def main(args):
         args['fnaam'] = test[0]
     try:
         MainFrame(**args)
-        return ''
     except ValueError as err:
         return str(err)
+    return ''
 
 
 def log(message):
@@ -103,6 +105,38 @@ class SelectNames:
         return self.gui.go(), self.names
 
 
+class CSVTextBuf:
+    """Format the search results into columns before outputting
+    """
+    def __init__(self, apptype, toonpad):
+        self.apptype = apptype
+        self.toonpad = toonpad
+        self.textbuf = io.StringIO()
+        self.writer = csv.writer(self.textbuf, dialect='unix')
+        self.header = [('Path/file' if toonpad else 'File'), 'Line', 'Context', 'Result']
+
+    def write_line(self, result):
+        "write the header if it hasn't been written yet, then write a line of results"
+        loc, line = result[0].rsplit(' r. ', 1)
+        result[:1] = [loc, line]
+        if self.header and len(self.header) > len(result):
+            self.header[2:] = self.header[3:]
+        if self.apptype == 'single' and not self.toonpad:
+            result = result[1:]
+            if self.header:
+                self.header = self.header[1:]
+        if self.header:
+            self.writer.writerow(self.header)
+            self.header = None
+        self.writer.writerow(result)
+
+    def get_contents_and_close(self):
+        "make the buffer contents available and close the buffer"
+        result = self.textbuf.getvalue().split("\n")
+        self.textbuf.close()
+        return result
+
+
 class Results:
     """Show results on screen
 
@@ -125,6 +159,7 @@ class Results:
                 'vervall': "vervang `{}` in alle regels door:",
                 'other': 'zoek in dezelfde selectie naar:'
                 }
+
     def __init__(self, parent, common_path=''):
         self.parent = parent
         self.common = common_path
@@ -168,7 +203,7 @@ class Results:
         self.results.insert(0, kop)
 
     def show(self):
-        """show the dialog screen
+        """show the screen
         """
         self.gui.go()
 
@@ -177,18 +212,14 @@ class Results:
         """
         toonpad = self.gui.get_pth()
         comma = self.gui.get_csv()
-        context = self.gui.get_sum()
+        summarize = self.gui.get_sum()
 
         text = [f"{self.results[0]}"]
         if self.parent.apptype == "multi" and not toonpad:
             text.append(common_path_txt.format(self.common))
         text.append("")
         if comma:
-            import io
-            import csv
-            textbuf = io.StringIO()
-            writer = csv.writer(textbuf, dialect='unix')
-            header = [('Path/file' if toonpad else 'File'), 'Line', 'Context', 'Result']
+            textbuf = CSVTextBuf(self.parent.apptype, toonpad)
         for item in self.results[1:]:
             result = list(item)
             if self.parent.apptype == 'single':
@@ -196,32 +227,21 @@ class Results:
             if toonpad and (self.parent.apptype == 'multi' or comma):
                 result[0] = self.common + result[0]
             if comma:
-                loc, line = result[0].rsplit(' r. ', 1)
-                result[:1] = [loc, line]
-                if header and len(header) > len(result):
-                    header[2:] = header[3:]
-                if self.parent.apptype == 'single' and not toonpad:
-                    result = result[1:]
-                    if header:
-                        header = header[1:]
-                if header:
-                    writer.writerow(header)
-                    header = None
-                writer.writerow(result)
+                textbuf.write_line(result)
             else:
                 text.append(" ".join(result).strip())
 
         if comma:
-            text += textbuf.getvalue().split("\n")
-            textbuf.close()
+            text += textbuf.get_contents_and_close()
 
-        if context:
+        if summarize:
             context = 'py' if self.show_context else None
+            fname = self.parent.p['filelist'][0]
             if self.parent.apptype == 'single':
-                text = ['{} {}'.format(self.parent.p['filelist'][0], x) if x else '' for x in text]
-            text = format_result(text, context)
+                text = [f'{fname} {x}' if x else '' for x in text]
+            text = reformat_result(text, context)
             if self.parent.apptype == 'single' and not toonpad:
-                text = [x.replace(str(self.parent.p['filelist'][0]), '', 1).strip() for x in text]
+                text = [x.replace(str(fname), '', 1).strip() for x in text]
 
         return text
 
@@ -235,7 +255,9 @@ class Results:
         self.parent.zoekvervang.go()
         self.parent.gui.set_waitcursor(False)
         if len(self.parent.zoekvervang.rpt) == len(['melding']):
-            self.gui.breekaf(self.messages['nope'], done=False)
+            # self.gui.breekaf(self.messages['nope'], done=False)
+            message = f"{self.parent.zoekvervang.rpt[0]}\n{self.messages['nope']}"
+            self.gui.breekaf(message, done=False)
             return
         if (len(self.parent.zoekvervang.rpt) == len(['melding', 'header'])
                 and self.parent.zoekvervang.p['wijzig']):
@@ -437,12 +459,11 @@ class MainFrame:
                             line = pathlib.Path(line).expanduser().resolve()
                             fnames.append(line)
                     if len(fnames) == 1:
-                        self.apptype = 'single'
+                        self.apptype = '' if fnames[0].is_dir() else 'single'
             elif flist:
                 fnames = [pathlib.Path(x) for x in flist]
             else:
-                raise ValueError('Need filename or list of files for application '
-                                 'type "multi"')
+                raise ValueError('Need filename or list of files for application type "multi"')
         else:
             raise ValueError('application type should be empty, "single" or "multi"')
         if self.apptype == "single":
@@ -510,7 +531,7 @@ class MainFrame:
                 for key, value in self.outopts.items():
                     self.outopts[key] = opts.pop(key, '') or value
                 for key in [x[0] for x in self.save_options_keys]:
-                    self.p[key] = opts.pop(key, '') or value   # waar komt deze value vandaan?
+                    self.p[key] = opts.pop(key, '') or self.p[key]
 
     def apply_cmdline_options(self, cmdline_options):
         """lees settings opties vanuit invoer; override waar opgegeven
@@ -557,26 +578,70 @@ class MainFrame:
         with ofile.open("w") as _out:
             json.dump(opts, _out, indent=4)
 
-    def determine_common(self):
-        """determine common part of filenames
+    def doe(self):
+        """Zoekactie uitvoeren en resultaatscherm tonen"""
+        if message := self.setup_parameters():
+            self.gui.error(self.fouttitel, message)
+            return
+
+        self.gui.add_item_to_searchlist(self.p['zoek'])
+        if not self.extraopts['dont_save']:
+            loc = self.p.get('pad', '') or str(self.p['filelist'][0].parent)
+            self.write_to_ini(os.path.abspath(loc))
+        self.zoekvervang = Finder(**self.p)
+        self.zoekvervang.setup_search()
+        if not self.zoekvervang.ok:
+            self.gui.meld(self.resulttitel, f'{self.zoekvervang.rpt}\n{self.zoekvervang.errors}')
+            return
+        if not self.zoekvervang.filenames:
+            self.gui.meld(self.resulttitel, "Geen bestanden om te doorzoeken")
+            return
+
+        if (self.apptype != 'single'
+                and (len(self.p['filelist']) > 1 or self.p['filelist'][0].is_dir())):
+            canceled = self.select_search_exclusions_if_requested()
+            if canceled:
+                return
+
+        self.gui.set_waitcursor(True)
+        self.zoekvervang.go()  # do_action()  # search_python=self.p["context"])
+        self.gui.set_waitcursor(False)
+
+        self.show_results()
+
+        if ((self.extraopts['no_gui'] and self.extraopts['output_file'])
+                or (self.gui.get_exit() and self.p["vervang"] is not None)):
+            self.gui.einde()
+
+    def setup_parameters(self):
+        """screen argument checks
         """
-        if self.apptype == 'single':
-            test = self.p['filelist'][0]
-        elif self.apptype == 'multi':
-            test = os.path.commonpath([str(x) for x in self.p['filelist']])
-            ## if test in self.p['filelist']:
-                ## pass
-            ## else:
-                ## while test and not os.path.exists(test):
-                    ## test = test[:-1]
-            # make sure common part is recognized as a directory
-            if os.path.isfile(test):
-                test = os.path.dirname(test) + os.sep
-            else:
-                test += os.sep
-        else:
-            test = str(self.p["pad"]) + os.sep
-        return test
+        if mld := self.checkzoek(self.gui.get_searchtext()):    # om uit te proberen!
+            return mld
+        if mld := self.checkverv(self.gui.get_replace_args()):
+            return mld
+        if mld := self.checkattr(self.gui.get_search_attr()):
+            return mld
+        search_multiple_files = self.apptype != "single" or self.p['filelist'][0].is_dir()
+        if search_multiple_files:
+            if mld := self.checktype(self.gui.get_types_to_search()):
+                return mld
+        if not self.apptype:
+            if mld := self.checkpath(self.gui.get_dir_to_search()):
+                return mld
+        if search_multiple_files:
+            subdirs, links, depth = self.gui.get_subdirs_to_search()
+            if subdirs:
+                self.s += " en onderliggende directories"
+            self.p["subdirs"] = subdirs
+            self.p["follow_symlinks"] = links
+            self.p["maxdepth"] = depth
+        elif self.apptype == "single" and self.p['filelist'][0].is_symlink():
+            self.p["follow_symlinks"] = True
+        self.p["backup"] = self.gui.get_backup()
+        self.p["negeer"] = self.gui.get_ignore()
+        self.p["context"] = self.gui.get_context()
+        return ''
 
     def checkzoek(self, item):
         "controleer zoekargument"
@@ -656,132 +721,87 @@ class MainFrame:
             self.p['filelist'] = ''
         return mld
 
-    def checksubs(self, items):
-        "subdirs aangeven"
-        subdirs, links, depth = items
-        if subdirs:
-            self.s += " en onderliggende directories"
-        self.p["subdirs"] = subdirs
-        self.p["follow_symlinks"] = links
-        self.p["maxdepth"] = depth
-
-    def doe(self):
-        """Zoekactie uitvoeren en resultaatscherm tonen"""
-        item = self.gui.get_searchtext()
-        mld = self.checkzoek(item)
-        if not mld:
-            self.checkverv(self.gui.get_replace_args())
-            self.checkattr(self.gui.get_search_attr())
-            # volgens qt versie
-            if self.apptype != "single" or self.p['filelist'][0].is_dir():
-                self.checktype(self.gui.get_types_to_search())
-            # volgens wx versie
-            # try:
-            #     typelist = self.gui.get_types_to_search()
-            # except AttributeError:
-            #     typelist = None
-            # if typelist:
-            #     self.checktype(typelist)
-            if not self.apptype:
-                mld = self.checkpath(self.gui.get_dir_to_search())
-        if not mld:
-            # volgens qt versie
-            if self.apptype != "single" or self.p['filelist'][0].is_dir():
-                self.checksubs(self.gui.get_subdirs_to_search())
-            elif self.apptype == "single" and self.p['filelist'][0].is_symlink():
-                self.p["follow_symlinks"] = True
-            # volgens wx versie
-            # try:
-            #     self.checksubs(self.gui.get_subdirs_to_search())
-            # except aAttributeError:
-            #     pass
-        self.p["backup"] = self.gui.get_backup()
-        self.p["negeer"] = self.gui.get_ignore()
-        self.p["context"] = self.gui.get_context()
-
-        if mld:
-            self.gui.error(self.fouttitel, mld)
-            return
-
-        self.gui.add_item_to_searchlist(item)
-        if not self.extraopts['dont_save']:
-            loc = self.p.get('pad', '') or str(self.p['filelist'][0].parent)
-            self.write_to_ini(os.path.abspath(loc))
-        self.zoekvervang = Finder(**self.p)
-        self.zoekvervang.setup_search()
-
-        if not self.zoekvervang.ok:
-            self.gui.meld(self.resulttitel, '\n'.join(self.zoekvervang.rpt),
-                          self.zoekvervang.errors)
-            return
-
-        if not self.zoekvervang.filenames:
-            self.gui.meld(self.resulttitel, "Geen bestanden gevonden")
-            return
-
-        common_part = self.determine_common()
-        if self.apptype == "single" or (
-                len(self.p['filelist']) == 1 and self.p['filelist'][0].is_file()):
-            pass
+    def determine_common(self):
+        """determine common part of filenames
+        """
+        if self.apptype == 'single':
+            test = self.p['filelist'][0]
+        elif self.apptype == 'multi':
+            test = os.path.commonpath([str(x) for x in self.p['filelist']])
+            ## if test in self.p['filelist']:
+                ## pass
+            ## else:
+                ## while test and not os.path.exists(test):
+                    ## test = test[:-1]
+            # make sure common part is recognized as a directory
+            if os.path.isfile(test):
+                test = os.path.dirname(test) + os.sep
+            else:
+                test += os.sep
         else:
-            skip_dirs = self.gui.get_skipdirs()
-            skip_files = self.gui.get_skipfiles()
-            go_on = skip_dirs or skip_files
-            canceled = False
-            while go_on:
-                # eerste ronde: toon directories
-                if skip_dirs and self.zoekvervang.dirnames:
-                    self.names = sorted(self.zoekvervang.dirnames)
+            test = str(self.p["pad"]) + os.sep
+        return test
 
-                    result = SelectNames(self, files=False).show()
-                    if not result:
-                        canceled = True
-                        break
+    def select_search_exclusions_if_requested(self):
+        """present dialogs to skip directories and/or files to search
+        """
+        skip_dirs = self.gui.get_skipdirs()
+        skip_files = self.gui.get_skipfiles()
+        go_on = skip_dirs or skip_files  # -> if not(skip_dirs or skip_files):
+        canceled = False                 # ->     return False
+        while go_on:  # -> while True
+            # eerste ronde: toon directories
+            if skip_dirs and self.zoekvervang.dirnames:
+                self.names = sorted(self.zoekvervang.dirnames)
 
-                    fnames = self.zoekvervang.filenames[:]
-                    for entry in fnames:
-                        for name in self.names:
-                            # if str(entry).startswith(name + '/'):
-                            if entry.parent == name:
-                                self.zoekvervang.filenames.remove(entry)
-                                break
-                    if not skip_files:
-                        go_on = False
-                # tweede ronde: toon de files die overblijven
-                if skip_files:
-                    self.names = sorted(self.zoekvervang.filenames)  # , key=lambda x: str(x))
-                    result, names = SelectNames(self).show()
-                    if not result and not skip_dirs:
-                        canceled = True
-                        break
-                    if result:
-                        self.zoekvervang.filenames = names
-                        go_on = False
+                result, names = SelectNames(self, files=False).show()
+                if not result:
+                    canceled = True
+                    break
 
-            if canceled:
-                return
+                self.remove_files_in_selected_dirs(names)
+                if not skip_files:            # zijn deze twee überhaupt nodig?
+                    go_on = False  # -> break
+            # tweede ronde: toon de files die overblijven
+            if skip_files:
+                self.names = sorted(self.zoekvervang.filenames)  # , key=lambda x: str(x))
+                result, names = SelectNames(self).show()
+                if not result and not skip_dirs:
+                    canceled = True
+                    break
+                if result:
+                    self.zoekvervang.filenames = names
+                    go_on = False  # -> break - is deze wel nodig?
+        return canceled
 
-        self.gui.set_waitcursor(True)
-        self.zoekvervang.go()  # do_action()  # search_python=self.p["context"])
-        self.gui.set_waitcursor(False)
+    def remove_files_in_selected_dirs(self, dirnames):
+        """remove files ithat do not need to be searched from the selection
+        """
+        fnames = self.zoekvervang.filenames[:]
+        for entry in fnames:
+            for name in dirnames:
+                # if str(entry).startswith(name + '/'):
+                if str(entry.parent) == name:
+                    self.zoekvervang.filenames.remove(entry)
+                    break
 
-        self.noescape = True    # wx versie: switch tbv afsluiten dialoog met Escape
+    def show_results(self):
+        """present the result(s) or write to an output file
+        """
+        common_part = self.determine_common()
         if len(self.zoekvervang.rpt) == 1:
-            if self.extraopts['output_file']:
-                print('No results')
+            if f_out := self.extraopts['output_file']:
+                with f_out:
+                    print('No results', file=f_out)
             else:
                 mld = "Niks gevonden" if self.zoekvervang.ok else self.zoekvervang.rpt[0]
                 self.gui.meld(self.resulttitel, mld)
+
         else:
             dlg = Results(self, common_part)
-
-            if self.extraopts['output_file']:
-                with self.extraopts['output_file'] as f_out:
+            if f_out := self.extraopts['output_file']:
+                with f_out:
                     for line in dlg.get_results():
-                        f_out.write(line + "\n")
+                        print(line, file=f_out)
             else:
                 dlg.show()
-
-        if (self.extraopts['no_gui'] and self.extraopts['output_file']) or (
-                self.gui.get_exit() and self.p["vervang"] is not None):
-            self.gui.einde()
