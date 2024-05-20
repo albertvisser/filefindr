@@ -561,23 +561,6 @@ class MainFrame:
         self.maak_backups = cmdline_options.pop('backup_originals', '')
         self.exit_when_ready = True   # altijd aan?
 
-    def write_to_ini(self, path=None):
-        """huidige settings toevoegen dan wel vervangen in ini file
-
-        indien opgegeven op de cmdline, dan niet onthouden (zie self.cmdline_options)
-        """
-        if self.extraopts['dont_save']:
-            return
-        loc, mfile, ofile = get_iniloc(path)
-        if not loc.exists():
-            loc.mkdir()
-        with mfile.open("w") as _out:
-            json.dump(self.mru_items, _out, indent=4)
-        opts = {key: self.p[key] for key, argname in self.save_options_keys}
-        opts.update(self.outopts)
-        with ofile.open("w") as _out:
-            json.dump(opts, _out, indent=4)
-
     def doe(self):
         """Zoekactie uitvoeren en resultaatscherm tonen"""
         if message := self.setup_parameters():
@@ -589,6 +572,9 @@ class MainFrame:
             loc = self.p.get('pad', '') or str(self.p['filelist'][0].parent)
             self.write_to_ini(os.path.abspath(loc))
         self.zoekvervang = Finder(**self.p)
+        if self.zoekvervang.rpt:
+            self.gui.error(self.fouttitel, self.zoekvervang.rpt[0])
+            return
         self.zoekvervang.setup_search()
         if not self.zoekvervang.ok:
             self.gui.meld(self.resulttitel, f'{self.zoekvervang.rpt}\n{self.zoekvervang.errors}')
@@ -597,7 +583,7 @@ class MainFrame:
             self.gui.meld(self.resulttitel, "Geen bestanden om te doorzoeken")
             return
 
-        if (self.apptype != 'single'
+        if (self.apptype != 'single' and self.p['filelist']
                 and (len(self.p['filelist']) > 1 or self.p['filelist'][0].is_dir())):
             canceled = self.select_search_exclusions_if_requested()
             if canceled:
@@ -627,8 +613,12 @@ class MainFrame:
             if mld := self.checktype(self.gui.get_types_to_search()):
                 return mld
         if not self.apptype:
-            if mld := self.checkpath(self.gui.get_dir_to_search()):
-                return mld
+            if self.checkpath_necessary:
+                if mld := self.checkpath(self.gui.get_dir_to_search()):
+                    return mld
+            else:
+                self.p['pad'] = self.p["filelist"][0]
+                self.p["filelist"] = []
         if search_multiple_files:
             subdirs, links, depth = self.gui.get_subdirs_to_search()
             if subdirs:
@@ -721,26 +711,38 @@ class MainFrame:
             self.p['filelist'] = ''
         return mld
 
+    def write_to_ini(self, path=None):
+        """huidige settings toevoegen dan wel vervangen in ini file
+
+        indien opgegeven op de cmdline, dan niet onthouden (zie self.cmdline_options)
+        """
+        if self.extraopts['dont_save']:
+            return
+        loc, mfile, ofile = get_iniloc(path)
+        if not loc.exists():
+            loc.mkdir()
+        with mfile.open("w") as _out:
+            json.dump(self.mru_items, _out, indent=4)
+        opts = {key: self.p[key] for key, argname in self.save_options_keys}
+        opts.update(self.outopts)
+        with ofile.open("w") as _out:
+            json.dump(opts, _out, indent=4)
+
     def determine_common(self):
         """determine common part of filenames
         """
         if self.apptype == 'single':
-            test = self.p['filelist'][0]
+            result = self.p['filelist'][0]
         elif self.apptype == 'multi':
             test = os.path.commonpath([str(x) for x in self.p['filelist']])
-            ## if test in self.p['filelist']:
-                ## pass
-            ## else:
-                ## while test and not os.path.exists(test):
-                    ## test = test[:-1]
-            # make sure common part is recognized as a directory
             if os.path.isfile(test):
-                test = os.path.dirname(test) + os.sep
+                # multi voor 1 filenaam - wordt dat niet automatisch single?
+                result = os.path.dirname(test) + os.sep
             else:
-                test += os.sep
+                result = test + os.sep
         else:
-            test = str(self.p["pad"]) + os.sep
-        return test
+            result = str(self.p["pad"]) + os.sep
+        return result
 
     def select_search_exclusions_if_requested(self):
         """present dialogs to skip directories and/or files to search
@@ -788,7 +790,6 @@ class MainFrame:
     def show_results(self):
         """present the result(s) or write to an output file
         """
-        common_part = self.determine_common()
         if len(self.zoekvervang.rpt) == 1:
             if f_out := self.extraopts['output_file']:
                 with f_out:
@@ -798,7 +799,7 @@ class MainFrame:
                 self.gui.meld(self.resulttitel, mld)
 
         else:
-            dlg = Results(self, common_part)
+            dlg = Results(self, self.determine_common())
             if f_out := self.extraopts['output_file']:
                 with f_out:
                     for line in dlg.get_results():

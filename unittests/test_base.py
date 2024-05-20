@@ -1371,7 +1371,7 @@ class TestMainFrame:
                 return 'dir'
             def get_subdirs_to_search(self):
                 print('called MainGui.get_subdirs_to_search')
-                return ['subdirs'], True, 5
+                return True, True, 5
             def get_backup(self):
                 print('called MainGui.get_backup')
                 return True
@@ -1413,7 +1413,7 @@ class TestMainFrame:
             return ''
         def mock_get_subdirs():
             print('called MainGui.get_subdirs_to_search')
-            return [], False, 0
+            return False, False, 0
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.checkzoek = mock_checkzoek
         testobj.checkverv = mock_checkverv
@@ -1487,6 +1487,7 @@ class TestMainFrame:
         testobj.checktype = mock_checktype_2
         testobj.s = 'zz'
         testobj.p = {}
+        testobj.checkpath_necessary = True
         assert testobj.setup_parameters() == 'message from checkpath'
         assert testobj.p == {}
         assert testobj.s == 'zz'
@@ -1501,12 +1502,32 @@ class TestMainFrame:
                                            "called MainGui.get_dir_to_search\n"
                                            "called MainWindow.checkpath with arg dir\n")
 
+        testobj.s = 'zz'
+        testobj.p = {}
+        testobj.checkpath_necessary = False
+        assert testobj.setup_parameters() == ''
+        assert testobj.p == {'subdirs': True, 'follow_symlinks': True, 'maxdepth': 5,
+                             'backup': True, 'negeer': True, 'context': True}
+        assert testobj.s == 'zz en onderliggende directories'
+        assert capsys.readouterr().out == ("called MainGui.get_searchtext\n"
+                                           "called MainWindow.checkzoek with arg find\n"
+                                           "called MainGui.get_replace_args\n"
+                                           "called MainWindow.checkverv with arg replace\n"
+                                           "called MainGui.get_search_attr\n"
+                                           "called MainWindow.checkattr with arg attr\n"
+                                           "called MainGui.get_types_to_search\n"
+                                           "called MainWindow.checktype with arg types\n"
+                                           "called MainGui.get_subdirs_to_search\n"
+                                           "called MainGui.get_backup\n"
+                                           "called MainGui.get_ignore\n"
+                                           "called MainGui.get_context\n")
+
         testobj.checkpath = mock_checkpath_2
         testobj.apptype = 'multi'
         testobj.s = 'zz'
         testobj.p = {}
         assert testobj.setup_parameters() == ''
-        assert testobj.p == {'subdirs': ['subdirs'], 'follow_symlinks': True, 'maxdepth': 5,
+        assert testobj.p == {'subdirs': True, 'follow_symlinks': True, 'maxdepth': 5,
                              'backup': True, 'negeer': True, 'context': True}
         assert testobj.s == 'zz en onderliggende directories'
         assert capsys.readouterr().out == ("called MainGui.get_searchtext\n"
@@ -1526,7 +1547,7 @@ class TestMainFrame:
         testobj.s = 'zz'
         testobj.p = {}
         assert testobj.setup_parameters() == ''
-        assert testobj.p == {'subdirs': [], 'follow_symlinks': False, 'maxdepth': 0,
+        assert testobj.p == {'subdirs': False, 'follow_symlinks': False, 'maxdepth': 0,
                              'backup': True, 'negeer': True, 'context': True}
         assert testobj.s == 'zz'
         assert capsys.readouterr().out == ("called MainGui.get_searchtext\n"
@@ -1590,19 +1611,17 @@ class TestMainFrame:
         testobj.extraopts['output_file'] = None
         testobj.show_results()
         assert capsys.readouterr().out == (
-                "called MainWindow.determine_common\n"
                 "called MainGui.meld with args ('showing results', 'Niks gevonden')\n")
 
         testobj.zoekvervang.ok = False
         testobj.show_results()
         assert capsys.readouterr().out == (
-                "called MainWindow.determine_common\n"
                 "called MainGui.meld with args ('showing results', '1 regel')\n")
 
         testobj.extraopts['output_file'] = outfilename.open('w')
         testobj.show_results()
         assert outfilename.read_text() == 'No results\n'
-        assert capsys.readouterr().out == ("called MainWindow.determine_common\n")
+        assert capsys.readouterr().out == ''
 
         testobj.zoekvervang.rpt = ['header', 'result line']
         testobj.extraopts['output_file'] = None

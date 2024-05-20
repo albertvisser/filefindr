@@ -357,14 +357,30 @@ class MainFrameGui(qtw.QWidget):
         self.vraag_verv.completer().setCaseSensitivity(core.Qt.CaseSensitive)
         self.vraag_leeg = self.add_checkbox_row(captions['empty'], self.master.always_replace)
 
+        self.master.checkpath_necessary = True
         if self.master.apptype == "":
-            initial = str(self.master.p['filelist'][0]) if self.master.p['filelist'] else ''
-            self.zoek = qtw.QPushButton(captions['zoek'])
-            self.zoek.clicked.connect(self.zoekdir)
-            self.vraag_dir = self.add_combobox_row(captions['in'], self.master.mru_items["dirs"],
-                                                   initial=initial, button=self.zoek)
-            self.vraag_dir.setCompleter(None)
-            self.vraag_dir.editTextChanged[str].connect(self.check_loc)
+            if len(self.master.p['filelist']) == 1:
+                # self.vraag_dir = self.add_combobox_row(captions['in'],
+                #                                        self.master.mru_items["dirs"],
+                #                                        initial=str(self.master.p['filelist'][0]))
+                # self.vraag_dir.setEditable(False)
+                # # self.vraag_dir.setCurrentText(str(self.master.p['filelist'][0]))
+                # self.vraag_dir.setItemText(0, str(self.master.p['filelist'][0]))
+                self.row += 1
+                self.grid.addWidget(qtw.QLabel(captions['in']), self.row, 0)
+                box = qtw.QHBoxLayout()
+                box.addWidget(qtw.QLabel(str(self.master.p['filelist'][0])))
+                box.addStretch()
+                self.grid.addLayout(box, self.row, 1)
+                self.master.checkpath_necessary = False
+            else:
+                initial = str(self.master.p['filelist'][0]) if self.master.p['filelist'] else ''
+                self.zoek = qtw.QPushButton(captions['zoek'])
+                self.zoek.clicked.connect(self.zoekdir)
+                self.vraag_dir = self.add_combobox_row(captions['in'], self.master.mru_items["dirs"],
+                                                       initial=initial, button=self.zoek)
+                self.vraag_dir.setCompleter(None)
+                self.vraag_dir.editTextChanged[str].connect(self.check_loc)
         elif self.master.apptype == "single":
             self.row += 1
             self.grid.addWidget(qtw.QLabel(captions['in_s']), self.row, 0)
