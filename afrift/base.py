@@ -33,7 +33,7 @@ def main(args):
         LOGFILE.parent.mkdir(exist_ok=True)
         LOGFILE.touch(exist_ok=True)
     # some screening, then relay the arguments to the application class
-    args['apptype'] = args.pop('appmode')
+    # args['apptype'] = args.pop('appmode')
     err = ''
     if args['output_file']:
         if args['as_csv'] and args['summarize']:
@@ -42,12 +42,12 @@ def main(args):
         for option in ('full_path', 'as_csv', 'summarize'):
             if args.get(option, ''):
                 return 'Output options without output destination not allowed'
-    test = args.pop('fname')
-    if len(test) > 1:
-        args['flist'] = test
-        args['apptype'] = 'multi'
-    elif test:
-        args['fnaam'] = test[0]
+    # test = args.pop('fname')
+    # if len(test) > 1:
+    #     args['flist'] = test
+    #     args['apptype'] = 'multi'
+    # elif test:
+    #     args['fnaam'] = test[0]
     try:
         MainFrame(**args)
     except ValueError as err:
@@ -121,7 +121,8 @@ class CSVTextBuf:
         result[:1] = [loc, line]
         if self.header and len(self.header) > len(result):
             self.header[2:] = self.header[3:]
-        if self.apptype == 'single' and not self.toonpad:
+        # if self.apptype == 'single' and not self.toonpad:
+        if self.apptype == 'single-file' and not self.toonpad:
             result = result[1:]
             if self.header:
                 self.header = self.header[1:]
@@ -165,20 +166,29 @@ class Results:
         self.common = common_path
         self.show_context = self.parent.p["context"]
         self.results = []
-        self.titel = 'Regel' if self.parent.apptype == "single" else 'File/Regel'
+        self.titel = 'Regel' if self.parent.apptype == "single-file" else 'File/Regel'
         self.iconame = iconame
         self.gui = ResultsGui(parent, self)
 
-        self.show_result_details = not self.parent.p['vervang'] or self.parent.apptype != 'single'
-        if self.show_result_details:
+        # self.show_result_details = not self.parent.p['vervang'] or self.parent.apptype != 'single'
+        # if self.show_result_details:
+        #     itemcount = len(self.parent.zoekvervang.rpt) - 1
+        #     label_txt = f"{self.parent.zoekvervang.rpt[0]} ({itemcount} items)"
+        #     if self.parent.apptype == "multi":
+        #         label_txt += '\n' + common_path_txt.format(self.common.rstrip(os.sep))
+        # else:
+        #     aantal = self.parent.zoekvervang.rpt[1].split(None, 1)[1]
+        #     label_txt = self.parent.zoekvervang.rpt[0]
+        #     label_txt = label_txt.replace('vervangen', aantal + ' vervangen')
+        if self.parent.p['vervang'] and self.parent.apptype == 'single-file':
+            aantal = self.parent.zoekvervang.rpt[1].split(None, 1)[1]
+            label_txt = self.parent.zoekvervang.rpt[0]
+            label_txt = label_txt.replace('vervangen', aantal + ' vervangen')
+        else:
             itemcount = len(self.parent.zoekvervang.rpt) - 1
             label_txt = f"{self.parent.zoekvervang.rpt[0]} ({itemcount} items)"
             if self.parent.apptype == "multi":
                 label_txt += '\n' + common_path_txt.format(self.common.rstrip(os.sep))
-        else:
-            aantal = self.parent.zoekvervang.rpt[1].split(None, 1)[1]
-            label_txt = self.parent.zoekvervang.rpt[0]
-            label_txt = label_txt.replace('vervangen', aantal + ' vervangen')
         self.captions['heading'] = label_txt
         self.build_list()
         self.gui.setup_screen(self.captions)
@@ -190,7 +200,7 @@ class Results:
                 kop = line
             elif line != "":
                 where, what = line.split(": ", 1)
-                if self.parent.apptype == "single":
+                if self.parent.apptype == "single-file":
                     where = where.split("r. ", 1)[1] if "r. " in where else ""
                 if self.common and self.common != '/':
                     where = where.replace(str(self.common), "")
@@ -222,7 +232,7 @@ class Results:
             textbuf = CSVTextBuf(self.parent.apptype, toonpad)
         for item in self.results[1:]:
             result = list(item)
-            if self.parent.apptype == 'single':
+            if self.parent.apptype == 'single-file':
                 result[0] = ' r. ' + result[0]
             if toonpad and (self.parent.apptype == 'multi' or comma):
                 result[0] = self.common + result[0]
@@ -237,10 +247,10 @@ class Results:
         if summarize:
             context = 'py' if self.show_context else None
             fname = self.parent.p['filelist'][0]
-            if self.parent.apptype == 'single':
+            if self.parent.apptype == 'single-file':
                 text = [f'{fname} {x}' if x else '' for x in text]
             text = reformat_result(text, context)
-            if self.parent.apptype == 'single' and not toonpad:
+            if self.parent.apptype == 'single-file' and not toonpad:
                 text = [x.replace(str(fname), '', 1).strip() for x in text]
 
         return text
@@ -320,7 +330,7 @@ class Results:
     def goto_result(self, row, col):
         """open the file containing the selected item
         """
-        if self.parent.apptype == 'single':
+        if self.parent.apptype == 'single-file':
             self.gui.meld('ahem', self.messages['goto'])
             return
         selected = self.results[row + 1]
@@ -378,9 +388,11 @@ class MainFrame:
         """
         log(f'in MainFrame.init: cwd is {pathlib.Path.cwd()}')
         log(f'  kwargs is {kwargs}')
-        self.apptype = kwargs.pop('apptype', '')
-        fnaam = kwargs.pop('fnaam', '')
-        flist = kwargs.pop('flist', None)
+        # self.apptype = kwargs.pop('apptype', '')
+        # fnaam = kwargs.pop('fnaam', '')
+        # flist = kwargs.pop('flist', None)
+        fnames = kwargs.pop('fnames', [])
+        list_file = kwargs.pop('list_file', '')
         self.title = "Albert's find-replace in files tool"
         self.iconame = iconame
         self.fouttitel = self.title + "- fout"
@@ -402,11 +414,26 @@ class MainFrame:
         # en ze eerst vanuit de opgeslagen waarden en daarna vanuit de
         # opgegeven startup-opties te vullen - zie ook onderstaande captions en read_kwargs()
 
-        fnpath = pathlib.Path(fnaam).expanduser().resolve()
-        if self.apptype == "" and fnpath.exists() and not fnpath.is_dir():
-            self.apptype = 'single'
+        # fnpath = pathlib.Path(fnaam).expanduser().resolve()
+        # if self.apptype == "" and fnpath.exists() and not fnpath.is_dir():
+        #     self.apptype = 'single'
 
-        self.p = {'filelist': self.get_filename_list(fnaam, fnpath, flist)}
+        # self.p = {'filelist': self.get_filename_list(fnaam, fnpath, flist)}
+        if fnames:
+            if list_file:
+                raise ValueError("List-file niet toegestaan bij lijst bestanden")
+            self.apptype, filelist = determine_mode_from_input(fnames)
+        elif list_file:
+            # self.apptype = 'multi'
+            self.apptype, filelist = determine_mode_from_input(expand_list_file(list_file))
+        else:
+            self.apptype, filelist = 'open', []
+        self.p = {'filelist': filelist}
+        if self.apptype.startswith("single"):
+            self.title += " - single file version"
+        elif self.apptype == "multi":
+            self.title += " - multi-file version"
+
         self.s = ""
         self.setup_options()
         self.extraopts = collections.defaultdict(lambda: False)
@@ -434,7 +461,7 @@ class MainFrame:
         else:
             self.gui.go()
 
-    def get_filename_list(self, fn_orig, fnaam, flist):
+    def get_filename_list(self, fn_orig, fnaam, flist):   # niet meer nodig
         """determine the files to search in
         """
         fnames = []
@@ -479,7 +506,8 @@ class MainFrame:
             self.p[key] = False
 
         if self.p['filelist']:
-            if self.apptype == 'single':
+            # if self.apptype == 'single':
+            if self.apptype.startswith('single'):
                 self.read_from_ini(self.p['filelist'][0].parent)
             elif self.apptype == 'multi':
                 test = os.path.commonpath([str(x) for x in self.p['filelist']])
@@ -583,8 +611,9 @@ class MainFrame:
             self.gui.meld(self.resulttitel, "Geen bestanden om te doorzoeken")
             return
 
-        if (self.apptype != 'single' and self.p['filelist']
-                and (len(self.p['filelist']) > 1 or self.p['filelist'][0].is_dir())):
+        # if (self.apptype != 'single' and self.p['filelist']
+        #         and (len(self.p['filelist']) > 1 or self.p['filelist'][0].is_dir())):
+        if self.apptype != 'single-file':
             canceled = self.select_search_exclusions_if_requested()
             if canceled:
                 return
@@ -608,25 +637,21 @@ class MainFrame:
             return mld
         if mld := self.checkattr(self.gui.get_search_attr()):
             return mld
-        search_multiple_files = self.apptype != "single" or self.p['filelist'][0].is_dir()
-        if search_multiple_files:
+        if self.apptype != 'single-file':
             if mld := self.checktype(self.gui.get_types_to_search()):
                 return mld
-        if not self.apptype:
-            if self.checkpath_necessary:
-                if mld := self.checkpath(self.gui.get_dir_to_search()):
-                    return mld
-            else:
-                self.p['pad'] = self.p["filelist"][0]
-                self.p["filelist"] = []
-        if search_multiple_files:
+        if not self.apptype.startswith('single'):
+            if mld := self.checkpath(self.gui.get_dir_to_search()):
+                return mld
+        if self.apptype != 'single-file':
             subdirs, links, depth = self.gui.get_subdirs_to_search()
             if subdirs:
                 self.s += " en onderliggende directories"
             self.p["subdirs"] = subdirs
             self.p["follow_symlinks"] = links
             self.p["maxdepth"] = depth
-        elif self.apptype == "single" and self.p['filelist'][0].is_symlink():
+        # elif self.apptype == "single" and self.p['filelist'][0].is_symlink():
+        elif self.apptype == "single-file" and self.p['filelist'][0].is_symlink():
             self.p["follow_symlinks"] = True
         self.p["backup"] = self.gui.get_backup()
         self.p["negeer"] = self.gui.get_ignore()
@@ -731,7 +756,8 @@ class MainFrame:
     def determine_common(self):
         """determine common part of filenames
         """
-        if self.apptype == 'single':
+        # if self.apptype == 'single':
+        if self.apptype.startswith('single'):
             result = self.p['filelist'][0]
         elif self.apptype == 'multi':
             test = os.path.commonpath([str(x) for x in self.p['filelist']])
@@ -806,3 +832,41 @@ class MainFrame:
                         print(line, file=f_out)
             else:
                 dlg.show()
+
+
+def determine_mode_from_input(fnames):
+    """read the input filename(s) and build a search list, setting the appropriate application type
+    """
+    if len(fnames) == 1:
+        fnpath = pathlib.Path(fnames[0]).expanduser().resolve()
+        if not fnpath.exists():
+            raise ValueError('File does not exist')
+        if fnpath.is_dir():
+            apptype = 'single-dir'
+        else:
+            apptype = 'single-file'
+        fnames = [fnpath]
+    else:
+        fnames = [pathlib.Path(x) for x in fnames]
+        apptype = 'multi'
+    return apptype, fnames
+
+
+def expand_list_file(fnaam):
+    """read the file containing the filenames to search and build a search list
+    """
+    fnpath = pathlib.Path(fnaam).expanduser().resolve()
+    if not fnpath.exists():
+        raise ValueError('File does not exist')
+    if fnpath.is_dir():
+        raise ValueError('List file must not be a directory')
+    else:
+        fnames = []
+        with fnpath.open() as f_in:
+            for line in f_in:
+                line = line.strip()
+                if line.endswith(("\\", "/")):
+                    line = line[:-1]
+                line = pathlib.Path(line).expanduser().resolve()
+                fnames.append(line)
+    return fnames

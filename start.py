@@ -11,9 +11,10 @@ if __name__ == "__main__":
     file type specfic context is NOT some surrounding lines, but a characteristic
     of the location, e.g. the function in which a line is found
     """)
-    parser.add_argument("fname", nargs="*", help='one or more path names')
-    parser.add_argument("-m", "--appmode", default='', choices=['single', 'multi'],
-                        help='specify execution mode')
+    parser.add_argument("fnames", nargs="*", help='one or more path names')
+    # parser.add_argument("-m", "--appmode", default='', choices=['single', 'multi'],
+    #                     help='specify execution mode')
+    parser.add_argument("-l", "--list-file", help="iname of file containing files to search")
     parser.add_argument("-s", "--search", help="search argument")
     parser.add_argument("-r", "--replace", help="replacement")
     parser.add_argument("-X", "--regex", action='store_true',

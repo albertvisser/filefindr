@@ -70,36 +70,34 @@ def test_main(monkeypatch, capsys, tmp_path):
     mock_logfile = tmp_path / 'logs' / 'afrift.log'
     monkeypatch.setattr(testee, 'LOGFILE', mock_logfile)
     monkeypatch.setattr(testee, 'WANT_LOGGING', True)
-    assert testee.main({'appmode': 'xx', 'fname': ['yy'], 'output_file': ''}) == ''
+    assert testee.main({'x': 'xx', 'output_file': ''}) == ''
     assert capsys.readouterr().out == (
             f"called pathlib.Path.mkdir with args ({mock_logfile.parent!r},) {{'exist_ok': True}}\n"
             f"called pathlib.Path.touch with args ({mock_logfile!r},) {{'exist_ok': True}}\n"
-            "called MainFrame with args () {'output_file': '', 'apptype': 'xx', 'fnaam': 'yy'}\n")
+            "called MainFrame with args () {'x': 'xx', 'output_file': ''}\n")
 
     monkeypatch.setattr(testee, 'WANT_LOGGING', False)
-    assert testee.main({'appmode': 'xx', 'fname': ['yy', 'zz'], 'output_file': ''}) == ''
+    assert testee.main({'x': 'xx', 'output_file': ''}) == ''
     assert capsys.readouterr().out == (
-            "called MainFrame with args"
-            " () {'output_file': '', 'apptype': 'multi', 'flist': ['yy', 'zz']}\n")
+            "called MainFrame with args () {'x': 'xx', 'output_file': ''}\n")
 
-    assert testee.main({'appmode': 'xx', 'fname': ['yy'], 'output_file': '', 'full_path': 'zz'}) == (
+    assert testee.main({'output_file': '', 'full_path': 'zz'}) == (
             "Output options without output destination not allowed")
     assert capsys.readouterr().out == ''
-    assert testee.main({'appmode': 'xx', 'fname': ['yy'], 'output_file': '', 'as_csv': True}) == (
+    assert testee.main({'output_file': '', 'as_csv': True}) == (
             "Output options without output destination not allowed")
     assert capsys.readouterr().out == ''
-    assert testee.main({'appmode': 'xx', 'fname': ['yy'], 'output_file': '', 'summarize': True}) == (
+    assert testee.main({'output_file': '', 'summarize': True}) == (
             "Output options without output destination not allowed")
     assert capsys.readouterr().out == ''
-    assert testee.main({'appmode': 'xx', 'fname': ['yy'], 'output_file': 'zz', 'as_csv': True,
-                        'summarize': True}) == (
+    assert testee.main({'output_file': 'zz', 'as_csv': True, 'summarize': True}) == (
             "'Output to csv' and 'summarize' is not a sensible combination")
     assert capsys.readouterr().out == ''
 
     monkeypatch.setattr(testee, 'MainFrame', mock_mainframe_2)
     assert testee.main({'appmode': 'xx', 'fname': ['yy'], 'output_file': ''}) == 'message'
     assert capsys.readouterr().out == (
-            "called MainFrame with args () {'output_file': '', 'apptype': 'xx', 'fnaam': 'yy'}\n")
+            "called MainFrame with args () {'appmode': 'xx', 'fname': ['yy'], 'output_file': ''}\n")
 
 
 def test_log(monkeypatch, capsys):
@@ -144,6 +142,48 @@ def test_get_iniloc(monkeypatch, tmp_path):
     expected = mockbase / 'resolved_somewhere'
     assert testee.get_iniloc('somewhere') == (expected, expected / 'mru_items.json',
                                               expected / 'options.json')
+
+
+def test_determine_mode_from_input(tmp_path):
+    """unittest for determine_mode_from_input
+    """
+    with pytest.raises(ValueError) as err:
+        testee.determine_mode_from_input(['filename'])
+    assert str(err.value) == 'File does not exist'
+    (tmp_path / 'testdir').mkdir()
+    (tmp_path / 'testfile').touch()
+    origdir = testee.os.getcwd()
+    testee.os.chdir(tmp_path)
+    assert testee.determine_mode_from_input(['testdir']) == (
+            'single-dir', [tmp_path / 'testdir'])
+    assert testee.determine_mode_from_input(['testfile']) == (
+            'single-file', [tmp_path / 'testfile'])
+    assert testee.determine_mode_from_input(['testfile1', 'testfile2']) == (
+            'multi', [testee.pathlib.Path('testfile1'), testee.pathlib.Path('testfile2')])
+    testee.os.chdir(origdir)
+
+
+def test_expand_list_file(tmp_path):
+    """unittest for expand_list_file
+    """
+    with pytest.raises(ValueError) as err:
+        testee.expand_list_file('filename')
+    assert str(err.value) == 'File does not exist'
+    (tmp_path / 'testdir').mkdir()
+    # (tmp_path / 'testfile').touch()
+    (tmp_path / 'testfile').write_text('testfile1\ntestdir1/\ntestfile2  \ntestdir2\\\ntestfile3')
+
+    origdir = testee.os.getcwd()
+    testee.os.chdir(tmp_path)
+    with pytest.raises(ValueError) as err:
+        testee.expand_list_file('testdir')
+    assert str(err.value) == 'List file must not be a directory'
+    assert testee.expand_list_file('testfile') == [tmp_path / 'testfile1',
+                                                   tmp_path / 'testdir1',
+                                                   tmp_path / 'testfile2',
+                                                   tmp_path / 'testdir2',
+                                                   tmp_path / 'testfile3']
+    testee.os.chdir(origdir)
 
 
 class TestSelectNames:
@@ -275,7 +315,6 @@ class TestCSVTextBuf:
         testobj.writer = MockWriter()
         testobj.toonpad = False
         testobj.apptype = ''
-        # breakpoint()
         testobj.write_line(['p r. q', 'r', 's', 't'])
         assert capsys.readouterr().out == (
                 "called csv.writer.writerow with arg ['aa', 'bb', 'xx', 'yy', 'zz']\n"
@@ -284,7 +323,7 @@ class TestCSVTextBuf:
         testobj.header = ['aa', 'bb', 'xx', 'yy', 'zz']
         testobj.writer = MockWriter()
         testobj.toonpad = False
-        testobj.apptype = 'single'
+        testobj.apptype = 'single-file'
         testobj.write_line(['p r. q', 'r', 's'])
         assert capsys.readouterr().out == (
                 "called csv.writer.writerow with arg ['bb', 'yy', 'zz']\n"
@@ -293,14 +332,14 @@ class TestCSVTextBuf:
         testobj.header = None
         testobj.writer = MockWriter()
         testobj.toonpad = False
-        testobj.apptype = 'single'
+        testobj.apptype = 'single-file'
         testobj.write_line(['p r. q', 'r', 's'])
         assert capsys.readouterr().out == "called csv.writer.writerow with arg ['q', 'r', 's']\n"
 
         testobj.header = ['aa', 'bb', 'xx', 'yy', 'zz']
         testobj.writer = MockWriter()
         testobj.toonpad = True
-        testobj.apptype = 'single'
+        testobj.apptype = 'single-file'
         testobj.write_line(['p r. q', 'r', 's'])
         assert capsys.readouterr().out == (
                 "called csv.writer.writerow with arg ['aa', 'bb', 'yy', 'zz']\n"
@@ -309,7 +348,7 @@ class TestCSVTextBuf:
         testobj.header = None
         testobj.writer = MockWriter()
         testobj.toonpad = True
-        testobj.apptype = 'single'
+        testobj.apptype = 'single-file'
         testobj.write_line(['p r. q', 'r', 's'])
         assert capsys.readouterr().out == (
                 "called csv.writer.writerow with arg ['p', 'q', 'r', 's']\n")
@@ -367,8 +406,9 @@ class TestResults:
             print('called TestResults.build_list')
         parent = MockMainFrame()
         assert capsys.readouterr().out == "called MainFrame.__init__ \n"
-        parent.p = {'context': True, 'vervang': None}
-        parent.apptype = ''
+
+        parent.p = {'context': True, 'vervang': 'xxx'}
+        parent.apptype = 'single-file'
         parent.zoekvervang = types.SimpleNamespace(rpt=['gezocht en/of vervangen', 'namelijk 2'])
         monkeypatch.setattr(testee.Results, 'captions', {})
         monkeypatch.setattr(testee.Results, 'build_list', mock_build)
@@ -378,28 +418,27 @@ class TestResults:
         assert testobj.common == ''
         assert testobj.show_context
         assert testobj.results == []
-        assert testobj.titel == 'File/Regel'
-        assert isinstance(testobj.gui, testee.ResultsGui)
-        assert testobj.show_result_details
-        assert capsys.readouterr().out == (
-                f"called ResultsGui.__init__ with args ({parent}, {testobj})\n"
-                "called TestResults.build_list\n"
-                "called ResultsGui.setup_screen with arg"
-                " {'heading': 'gezocht en/of vervangen (1 items)'}\n")
-        parent.p['vervang'] = 'xx'
-        parent.apptype = 'single'
-        testobj = testee.Results(parent)
         assert testobj.titel == 'Regel'
-        assert not testobj.show_result_details
+        assert isinstance(testobj.gui, testee.ResultsGui)
         assert capsys.readouterr().out == (
                 f"called ResultsGui.__init__ with args ({parent}, {testobj})\n"
                 "called TestResults.build_list\n"
                 "called ResultsGui.setup_screen with arg"
                 " {'heading': 'gezocht en/of 2 vervangen'}\n")
+
+        parent.p['vervang'] = 'xx'
+        parent.apptype = 'xxx'
+        testobj = testee.Results(parent)
+        assert testobj.titel == 'File/Regel'
+        assert capsys.readouterr().out == (
+                f"called ResultsGui.__init__ with args ({parent}, {testobj})\n"
+                "called TestResults.build_list\n"
+                "called ResultsGui.setup_screen with arg"
+                " {'heading': 'gezocht en/of vervangen (1 items)'}\n")
+
         parent.apptype = 'multi'
         testobj = testee.Results(parent)
         assert testobj.titel == 'File/Regel'
-        assert testobj.show_result_details
         assert capsys.readouterr().out == (
                 f"called ResultsGui.__init__ with args ({parent}, {testobj})\n"
                 "called TestResults.build_list\n"
@@ -423,12 +462,12 @@ class TestResults:
         assert testobj.results == ['xxx', ('path_to/file r. i', 'text')]
 
         testobj.results = []
-        testobj.parent.apptype = 'single'
+        testobj.parent.apptype = 'single-file'
         testobj.build_list()
         assert testobj.results == ['xxx', ('i', 'text')]
 
         testobj.results = []
-        testobj.parent.apptype = ''
+        testobj.parent.apptype = 'qqq'
         testobj.common = pathlib.Path('path_to')
         testobj.build_list()
         assert testobj.results == ['xxx', ('/file r. i', 'text')]
@@ -487,7 +526,7 @@ class TestResults:
         testobj.gui.get_pth = lambda: False
         testobj.gui.get_csv = lambda: False
         testobj.gui.get_sum = lambda: False
-        testobj.parent.apptype = 'single'
+        testobj.parent.apptype = 'single-file'
         assert testobj.get_results() == ["first line", '', 'r. second line']
         assert capsys.readouterr().out == ("")
 
@@ -496,10 +535,10 @@ class TestResults:
         testobj.gui.get_pth = lambda: False
         testobj.gui.get_csv = lambda: True
         testobj.gui.get_sum = lambda: True
-        testobj.parent.apptype = ''
+        testobj.parent.apptype = 'qqq'
         assert testobj.get_results() == ["first line", '', 'textbuf', 'contents']
         assert capsys.readouterr().out == (
-                "called CSVTextBuf.__init__ with args ('', False)\n"
+                "called CSVTextBuf.__init__ with args ('qqq', False)\n"
                 "called CSVTextBuf.write_line with arg '['sec r. ond', 'line']'\n"
                 "called CSVTextBuf.get_contents_and_close\n"
                 "called reformat_result with args (['first line', '', 'textbuf', 'contents'], py)\n")
@@ -507,7 +546,6 @@ class TestResults:
         testobj.gui.get_pth = lambda: True
         testobj.gui.get_csv = lambda: False
         testobj.gui.get_sum = lambda: True
-        testobj.parent.apptype = ''
         assert testobj.get_results() == ["first line", '', 'sec r. ond line']
         assert capsys.readouterr().out == (
                 "called reformat_result with args (['first line', '', 'sec r. ond line'], py)\n")
@@ -515,10 +553,9 @@ class TestResults:
         testobj.gui.get_pth = lambda: True
         testobj.gui.get_csv = lambda: True
         testobj.gui.get_sum = lambda: True
-        testobj.parent.apptype = ''
         assert testobj.get_results() == ["first line", '', 'textbuf', 'contents']
         assert capsys.readouterr().out == (
-                "called CSVTextBuf.__init__ with args ('', True)\n"
+                "called CSVTextBuf.__init__ with args ('qqq', True)\n"
                 "called CSVTextBuf.write_line with arg '['heresec r. ond', 'line']'\n"
                 "called CSVTextBuf.get_contents_and_close\n"
                 "called reformat_result with args (['first line', '', 'textbuf', 'contents'], py)\n")
@@ -534,7 +571,7 @@ class TestResults:
         testobj.gui.get_pth = lambda: True
         testobj.gui.get_csv = lambda: False
         testobj.gui.get_sum = lambda: True
-        testobj.parent.apptype = 'single'
+        testobj.parent.apptype = 'single-file'
         assert testobj.get_results() == ["filename first line", '', 'filename r. sec r. ond line']
         assert capsys.readouterr().out == (
                 "called reformat_result with args"
@@ -543,7 +580,7 @@ class TestResults:
         testobj.gui.get_pth = lambda: False
         testobj.gui.get_csv = lambda: False
         testobj.gui.get_sum = lambda: True
-        testobj.parent.apptype = 'single'
+        testobj.parent.apptype = 'single-file'
         assert testobj.get_results() == ["first line", '', 'r. sec r. ond line']
         assert capsys.readouterr().out == (
                 "called reformat_result with args"
@@ -725,7 +762,7 @@ class TestResults:
         testobj.results = ['heading', ('filename r. n', 'xxx')]
         testobj.common = 'pathname/'
         testobj.parent.editor_option = [['editor'], 'open-file {}', 'at-position {}']
-        testobj.parent.apptype = 'single'
+        testobj.parent.apptype = 'single-file'
         testobj.goto_result(0, 5)
         assert capsys.readouterr().out == "called ResultsGui.meld with args ('ahem', 'no go')\n"
         testobj.parent.apptype = ''
@@ -879,18 +916,20 @@ class TestMainFrame:
     def test_init(self, monkeypatch, capsys):
         """unittest for MainFrame.__init__
         """
-        def mock_get_filename_list(*args):
-            """stub
-            """
-            return ['x', 'y', 'z']
-        def mock_get_filename_list_empty(*args):
-            """stub
-            """
-            return []
         def mock_setup_options(*args):
             """stub
             """
             print('called setup_options')
+        def mock_determine(arg):
+            """stub
+            """
+            print(f'called determine_mode_from_input with arg {arg}')
+            if arg == 'expanded list-file':
+                return 'multi', ['yyy', 'zzz']
+            return 'single-file', ['xxx']
+        def mock_expand(filename):
+            print(f"called expand_list_file with arg '{filename}'")
+            return 'expanded list-file'
         def mock_apply_cmdline_options_nogui(self, *args):
             """stub
             """
@@ -917,8 +956,9 @@ class TestMainFrame:
             """stub
             """
             print('called gui.go')
-        monkeypatch.setattr(testee.MainFrame, 'get_filename_list', mock_get_filename_list)
         monkeypatch.setattr(testee.MainFrame, 'setup_options', mock_setup_options)
+        monkeypatch.setattr(testee, 'determine_mode_from_input', mock_determine)
+        monkeypatch.setattr(testee, 'expand_list_file', mock_expand)
         monkeypatch.setattr(testee.MainFrame, 'apply_cmdline_options', mock_apply_cmdline_options)
         monkeypatch.setattr(testee.MainFrameGui, '__init__', mock_gui)
         monkeypatch.setattr(testee.MainFrameGui, 'setup_screen', mock_gui_setup_screen)
@@ -926,55 +966,51 @@ class TestMainFrame:
         monkeypatch.setattr(testee.MainFrame, 'doe', mock_doe)
 
         testobj = testee.MainFrame()
-        assert testobj.apptype == ''
-        assert testobj.p['filelist'] == ['x', 'y', 'z']
+        assert testobj.apptype == 'open'
+        assert testobj.p['filelist'] == []
         assert capsys.readouterr().out == ('called setup_options\n'
                                            'called apply_cmdline_options\n'
                                            'called gui instantiation\n'
                                            'called gui.setup_screen\n'
                                            'called gui.go\n')
-        monkeypatch.setattr(testee.MainFrame, 'get_filename_list', mock_get_filename_list_empty)
+
         monkeypatch.setattr(testee.MainFrame, 'apply_cmdline_options',
                             mock_apply_cmdline_options_nogui)
         testobj = testee.MainFrame()
-        assert testobj.apptype == ''
+        assert testobj.apptype == 'open'
         assert testobj.p['filelist'] == []
         assert capsys.readouterr().out == ('called setup_options\n'
                                            'called apply_cmdline_options\n'
                                            'called gui instantiation\n'
                                            'called gui.setup_screen\n'
                                            'called doe\n')
-        # gemist: r. 310 geen apptype opgegeven en fnaam argument bestaat en is directory
-        monkeypatch.setattr(pathlib.Path, 'exists', lambda x: False)
-        monkeypatch.setattr(pathlib.Path, 'is_dir', lambda x: False)
-        testobj = testee.MainFrame(fnaam='testfile')
-        assert testobj.apptype == ''
-        assert testobj.p['filelist'] == []
-        assert capsys.readouterr().out == ('called setup_options\n'
-                                           'called apply_cmdline_options\n'
-                                           'called gui instantiation\n'
-                                           'called gui.setup_screen\n'
-                                           'called doe\n')
-        monkeypatch.setattr(pathlib.Path, 'exists', lambda x: True)
-        monkeypatch.setattr(pathlib.Path, 'is_dir', lambda x: True)
-        testobj = testee.MainFrame(fnaam='testfile')
-        assert testobj.apptype == ''
-        assert testobj.p['filelist'] == []
-        assert capsys.readouterr().out == ('called setup_options\n'
-                                           'called apply_cmdline_options\n'
-                                           'called gui instantiation\n'
-                                           'called gui.setup_screen\n'
-                                           'called doe\n')
-        monkeypatch.setattr(pathlib.Path, 'exists', lambda x: True)
-        monkeypatch.setattr(pathlib.Path, 'is_dir', lambda x: False)
-        testobj = testee.MainFrame(fnaam='testfile')
-        assert testobj.apptype == 'single'
-        assert testobj.p['filelist'] == []
-        assert capsys.readouterr().out == ('called setup_options\n'
-                                           'called apply_cmdline_options\n'
-                                           'called gui instantiation\n'
-                                           'called gui.setup_screen\n'
-                                           'called doe\n')
+
+        testobj = testee.MainFrame(fnames=['xxx', 'yyy'])
+        assert testobj.apptype == 'single-file'
+        assert testobj.p['filelist'] == ['xxx']
+        assert capsys.readouterr().out == (
+                "called determine_mode_from_input with arg ['xxx', 'yyy']\n"
+                'called setup_options\n'
+                'called apply_cmdline_options\n'
+                'called gui instantiation\n'
+                'called gui.setup_screen\n'
+                'called doe\n')
+
+        with pytest.raises(ValueError) as exc:
+            testobj = testee.MainFrame(fnames=['xxx', 'yyy'], list_file='zzz')
+        assert str(exc.value) == 'List-file niet toegestaan bij lijst bestanden'
+
+        testobj = testee.MainFrame(list_file='zzz')
+        assert testobj.apptype == 'multi'
+        assert testobj.p['filelist'] == ['yyy', 'zzz']
+        assert capsys.readouterr().out == (
+                "called expand_list_file with arg 'zzz'\n"
+                "called determine_mode_from_input with arg expanded list-file\n"
+                'called setup_options\n'
+                'called apply_cmdline_options\n'
+                'called gui instantiation\n'
+                'called gui.setup_screen\n'
+                'called doe\n')
 
     def test_get_filename_list(self, monkeypatch, capsys, tmp_path):
         """unittest for MainFrame.get_filename_list
@@ -1454,26 +1490,11 @@ class TestMainFrame:
                                            "called MainWindow.checkattr with arg attr\n")
 
         testobj.checkattr = mock_checkattr_2
+        testobj.apptype = 'not single'
         testobj.s = 'zz'
-        testobj.p = {'filelist': [testee.pathlib.Path('/tmp')]}
-        testobj.apptype = 'single'
+        testobj.p = {'filelist': ['xx']}
         assert testobj.setup_parameters() == 'message from checktype'
-        assert testobj.p == {'filelist': [testee.pathlib.Path('/tmp')]}
-        assert testobj.s == 'zz'
-        assert capsys.readouterr().out == ("called MainGui.get_searchtext\n"
-                                           "called MainWindow.checkzoek with arg find\n"
-                                           "called MainGui.get_replace_args\n"
-                                           "called MainWindow.checkverv with arg replace\n"
-                                           "called MainGui.get_search_attr\n"
-                                           "called MainWindow.checkattr with arg attr\n"
-                                           "called MainGui.get_types_to_search\n"
-                                           "called MainWindow.checktype with arg types\n")
-
-        testobj.apptype = ''
-        testobj.s = 'zz'
-        testobj.p = {}
-        assert testobj.setup_parameters() == 'message from checktype'
-        assert testobj.p == {}
+        assert testobj.p == {'filelist': ['xx']}
         assert testobj.s == 'zz'
         assert capsys.readouterr().out == ("called MainGui.get_searchtext\n"
                                            "called MainWindow.checkzoek with arg find\n"
@@ -1486,10 +1507,10 @@ class TestMainFrame:
 
         testobj.checktype = mock_checktype_2
         testobj.s = 'zz'
-        testobj.p = {}
-        testobj.checkpath_necessary = True
+        testobj.p = {'filelist': ['xx']}
+        testobj.apptype = 'not single'
         assert testobj.setup_parameters() == 'message from checkpath'
-        assert testobj.p == {}
+        assert testobj.p == {'filelist': ['xx']}
         assert testobj.s == 'zz'
         assert capsys.readouterr().out == ("called MainGui.get_searchtext\n"
                                            "called MainWindow.checkzoek with arg find\n"
@@ -1502,32 +1523,13 @@ class TestMainFrame:
                                            "called MainGui.get_dir_to_search\n"
                                            "called MainWindow.checkpath with arg dir\n")
 
-        testobj.s = 'zz'
-        testobj.p = {}
-        testobj.checkpath_necessary = False
-        assert testobj.setup_parameters() == ''
-        assert testobj.p == {'subdirs': True, 'follow_symlinks': True, 'maxdepth': 5,
-                             'backup': True, 'negeer': True, 'context': True}
-        assert testobj.s == 'zz en onderliggende directories'
-        assert capsys.readouterr().out == ("called MainGui.get_searchtext\n"
-                                           "called MainWindow.checkzoek with arg find\n"
-                                           "called MainGui.get_replace_args\n"
-                                           "called MainWindow.checkverv with arg replace\n"
-                                           "called MainGui.get_search_attr\n"
-                                           "called MainWindow.checkattr with arg attr\n"
-                                           "called MainGui.get_types_to_search\n"
-                                           "called MainWindow.checktype with arg types\n"
-                                           "called MainGui.get_subdirs_to_search\n"
-                                           "called MainGui.get_backup\n"
-                                           "called MainGui.get_ignore\n"
-                                           "called MainGui.get_context\n")
-
         testobj.checkpath = mock_checkpath_2
-        testobj.apptype = 'multi'
         testobj.s = 'zz'
-        testobj.p = {}
+        testobj.apptype = 'not single'
+        testobj.p = {'filelist': ['xx']}
         assert testobj.setup_parameters() == ''
-        assert testobj.p == {'subdirs': True, 'follow_symlinks': True, 'maxdepth': 5,
+        assert testobj.p == {'filelist': ['xx'],
+                             'subdirs': True, 'follow_symlinks': True, 'maxdepth': 5,
                              'backup': True, 'negeer': True, 'context': True}
         assert testobj.s == 'zz en onderliggende directories'
         assert capsys.readouterr().out == ("called MainGui.get_searchtext\n"
@@ -1538,12 +1540,38 @@ class TestMainFrame:
                                            "called MainWindow.checkattr with arg attr\n"
                                            "called MainGui.get_types_to_search\n"
                                            "called MainWindow.checktype with arg types\n"
+                                           "called MainGui.get_dir_to_search\n"
+                                           "called MainWindow.checkpath with arg dir\n"
                                            "called MainGui.get_subdirs_to_search\n"
                                            "called MainGui.get_backup\n"
                                            "called MainGui.get_ignore\n"
                                            "called MainGui.get_context\n")
 
         testobj.gui.get_subdirs_to_search = mock_get_subdirs
+        testobj.s = 'zz'
+        testobj.apptype = 'not single'
+        testobj.p = {'filelist': ['xx']}
+        assert testobj.setup_parameters() == ''
+        assert testobj.p == {'filelist': ['xx'],
+                             'subdirs': False, 'follow_symlinks': False, 'maxdepth': 0,
+                             'backup': True, 'negeer': True, 'context': True}
+        assert testobj.s == 'zz'
+        assert capsys.readouterr().out == ("called MainGui.get_searchtext\n"
+                                           "called MainWindow.checkzoek with arg find\n"
+                                           "called MainGui.get_replace_args\n"
+                                           "called MainWindow.checkverv with arg replace\n"
+                                           "called MainGui.get_search_attr\n"
+                                           "called MainWindow.checkattr with arg attr\n"
+                                           "called MainGui.get_types_to_search\n"
+                                           "called MainWindow.checktype with arg types\n"
+                                           "called MainGui.get_dir_to_search\n"
+                                           "called MainWindow.checkpath with arg dir\n"
+                                           "called MainGui.get_subdirs_to_search\n"
+                                           "called MainGui.get_backup\n"
+                                           "called MainGui.get_ignore\n"
+                                           "called MainGui.get_context\n")
+
+        testobj.apptype = 'single'
         testobj.s = 'zz'
         testobj.p = {}
         assert testobj.setup_parameters() == ''
@@ -1562,11 +1590,29 @@ class TestMainFrame:
                                            "called MainGui.get_backup\n"
                                            "called MainGui.get_ignore\n"
                                            "called MainGui.get_context\n")
-        testobj.apptype = 'single'
+
+        testobj.apptype = 'single-file'
         testobj.s = 'zz'
-        monkeypatch.setattr(testee.pathlib.Path, 'is_dir', lambda x: False)
+        testobj.p = {'filelist': [testee.pathlib.Path('/tmp')], 'follow_symlinks': False}
+        assert testobj.setup_parameters() == ''
+        assert testobj.p == {'filelist': [testee.pathlib.Path('/tmp')],
+                             'follow_symlinks': False,
+                             'backup': True, 'negeer': True, 'context': True}
+        assert testobj.s == 'zz'
+        assert capsys.readouterr().out == ("called MainGui.get_searchtext\n"
+                                           "called MainWindow.checkzoek with arg find\n"
+                                           "called MainGui.get_replace_args\n"
+                                           "called MainWindow.checkverv with arg replace\n"
+                                           "called MainGui.get_search_attr\n"
+                                           "called MainWindow.checkattr with arg attr\n"
+                                           "called MainGui.get_backup\n"
+                                           "called MainGui.get_ignore\n"
+                                           "called MainGui.get_context\n")
+
         monkeypatch.setattr(testee.pathlib.Path, 'is_symlink', lambda x: True)
-        testobj.p = {'filelist': [testee.pathlib.Path('/tmp')]}
+        testobj.apptype = 'single-file'
+        testobj.s = 'zz'
+        testobj.p = {'filelist': [testee.pathlib.Path('/tmp')], 'follow_symlinks': False}
         assert testobj.setup_parameters() == ''
         assert testobj.p == {'filelist': [testee.pathlib.Path('/tmp')],
                              'follow_symlinks': True,
@@ -1724,17 +1770,32 @@ class TestMainFrame:
         class MockFinder:
             """stub
             """
-            ok = None
-            filenames = None
-            rpt = None
-            errors = None
+            ok = False
+            filenames = []
+            errors = ''
 
             def __init__(self, **kwargs):
                 print('called Finder.__init__ with args', kwargs)
+                self.rpt = ['init fout']
             def setup_search(self):
                 print('called Finder.setup_search')
+                self.rpt = 'header'
+                self.ok = False
+                self.errors = 'message'
             def go(self):
                 print('called Finder.go')
+        def mockfinder_init_2(self, **kwargs):
+            print('called Finder.__init__ with args', kwargs)
+            self.rpt = []
+        def mockfinder_setup_search_2(self):
+            print('called Finder.setup_search')
+            self.rpt = 'header'
+            self.ok = True
+        def mockfinder_setup_search_3(self):
+            print('called Finder.setup_search')
+            self.rpt = 'header'
+            self.ok = True
+            self.filenames = ['xxxxx']
         def mock_setup():
             print('called MainWindow.setup_parameters')
             return 'xxx'
@@ -1755,11 +1816,11 @@ class TestMainFrame:
             """stub
             """
             def error(self, *args):
-                print('called MainGui.with args', args)
+                print('called MainGui.error with args', args)
             def meld(self, *args):
-                print('called MainGui.with args', args)
+                print('called MainGui.meld with args', args)
             def add_item_to_searchlist(self, arg):
-                print(f'called MainGui.set_waitcursor with arg {arg}')
+                print(f'called MainGui.add_item_to_searchlist with arg {arg}')
             def set_waitcursor(self, value):
                 print(f'called MainGui.set_waitcursor with arg {value}')
             def get_exit(self):
@@ -1770,80 +1831,74 @@ class TestMainFrame:
         monkeypatch.setattr(testee, 'Finder', MockFinder)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.gui = MockGui()
-        testobj.setup_parameters = mock_setup
         testobj.write_to_ini = mock_write
         testobj.select_search_exclusions_if_requested = mock_select
         testobj.show_results = mock_show
         testobj.fouttitel = 'error:'
         testobj.resulttitel = 'results:'
         testobj.p = {'zoek': 'find_me', 'vervang': None}
+        testobj.setup_parameters = mock_setup
         testobj.doe()
         assert capsys.readouterr().out == ("called MainWindow.setup_parameters\n"
-                                           "called MainGui.with args ('error:', 'xxx')\n")
+                                           "called MainGui.error with args ('error:', 'xxx')\n")
 
         testobj.setup_parameters = mock_setup_2
         testobj.extraopts['dont_save'] = True
-        monkeypatch.setattr(MockFinder, 'ok', False)
-        monkeypatch.setattr(MockFinder, 'rpt', 'header')
-        monkeypatch.setattr(MockFinder, 'errors', 'message')
         testobj.doe()
         assert capsys.readouterr().out == (
                 "called MainWindow.setup_parameters\n"
-                "called MainGui.set_waitcursor with arg find_me\n"
+                "called MainGui.add_item_to_searchlist with arg find_me\n"
+                "called Finder.__init__ with args {'zoek': 'find_me', 'vervang': None}\n"
+                "called MainGui.error with args ('error:', 'init fout')\n")
+
+        MockFinder.__init__ = mockfinder_init_2
+        testobj.doe()
+        assert capsys.readouterr().out == (
+                "called MainWindow.setup_parameters\n"
+                "called MainGui.add_item_to_searchlist with arg find_me\n"
                 "called Finder.__init__ with args {'zoek': 'find_me', 'vervang': None}\n"
                 "called Finder.setup_search\n"
-                "called MainGui.with args ('results:', 'header\\nmessage')\n")
+                "called MainGui.meld with args ('results:', 'header\\nmessage')\n")
 
+        MockFinder.setup_search = mockfinder_setup_search_2
         testobj.extraopts['dont_save'] = False
-        monkeypatch.setattr(MockFinder, 'ok', True)
-        monkeypatch.setattr(MockFinder, 'filenames', [])
         testobj.p['filelist'] = [tmp_path]
         testobj.doe()
         assert capsys.readouterr().out == (
                 "called MainWindow.setup_parameters\n"
-                "called MainGui.set_waitcursor with arg find_me\n"
+                "called MainGui.add_item_to_searchlist with arg find_me\n"
                 f"called MainWindow.write_to_ini with arg {tmp_path.parent}\n"
                 "called Finder.__init__ with args"
                 f" {{'zoek': 'find_me', 'vervang': None, 'filelist': [{tmp_path!r}]}}\n"
                 "called Finder.setup_search\n"
-                "called MainGui.with args ('results:', 'Geen bestanden om te doorzoeken')\n")
+                "called MainGui.meld with args ('results:', 'Geen bestanden om te doorzoeken')\n")
 
-        monkeypatch.setattr(MockFinder, 'filenames', ['not_empty'])
-        testobj.apptype = ''
+        MockFinder.setup_search = mockfinder_setup_search_3
+        testobj.p['pad'] = 'xxx'
+        testobj.apptype = 'not single-file'
         testobj.doe()
         assert capsys.readouterr().out == (
-                "called MainWindow.setup_parameters\n"
-                "called MainGui.set_waitcursor with arg find_me\n"
-                f"called MainWindow.write_to_ini with arg {tmp_path.parent}\n"
-                "called Finder.__init__ with args"
-                f" {{'zoek': 'find_me', 'vervang': None, 'filelist': [{tmp_path!r}]}}\n"
-                "called Finder.setup_search\n"
-                "called MainWindow.select_search_exclusions_if_requested\n")
+            "called MainWindow.setup_parameters\n"
+            "called MainGui.add_item_to_searchlist with arg find_me\n"
+            f"called MainWindow.write_to_ini with arg {testee.HERE.parent}/xxx\n"
+            "called Finder.__init__ with args"
+            f" {{'zoek': 'find_me', 'vervang': None, 'filelist': [{tmp_path!r}], 'pad': 'xxx'}}\n"
+            "called Finder.setup_search\n"
+            "called MainWindow.select_search_exclusions_if_requested\n")
 
-        testobj.apptype = 'multi'
-        testobj.p['filelist'] = [tmp_path / 'file1', tmp_path / 'file2']
-        testobj.doe()
-        assert capsys.readouterr().out == (
-                "called MainWindow.setup_parameters\n"
-                "called MainGui.set_waitcursor with arg find_me\n"
-                f"called MainWindow.write_to_ini with arg {tmp_path}\n"
-                "called Finder.__init__ with args"
-                f" {{'zoek': 'find_me', 'vervang': None, 'filelist': {testobj.p['filelist']}}}\n"
-                "called Finder.setup_search\n"
-                "called MainWindow.select_search_exclusions_if_requested\n")
-
+        testobj.p.pop('pad')
+        testobj.extraopts['dont_save'] = True
         testobj.select_search_exclusions_if_requested = mock_select_2
-        testobj.apptype = 'single'
         testobj.extraopts['no_gui'] = False
         testobj.extraopts['output_file'] = 'ofile'
         testobj.doe()
         assert capsys.readouterr().out == (
                 "called MainWindow.setup_parameters\n"
-                "called MainGui.set_waitcursor with arg find_me\n"
-                f"called MainWindow.write_to_ini with arg {tmp_path}\n"
+                "called MainGui.add_item_to_searchlist with arg find_me\n"
                 "called Finder.__init__ with args"
                 f" {{'zoek': 'find_me', 'vervang': None, 'filelist': {testobj.p['filelist']}}}\n"
                 "called Finder.setup_search\n"
+                "called MainWindow.select_search_exclusions_if_requested\n"
                 "called MainGui.set_waitcursor with arg True\n"
                 "called Finder.go\n"
                 "called MainGui.set_waitcursor with arg False\n"
@@ -1855,11 +1910,11 @@ class TestMainFrame:
         testobj.doe()
         assert capsys.readouterr().out == (
                 "called MainWindow.setup_parameters\n"
-                "called MainGui.set_waitcursor with arg find_me\n"
-                f"called MainWindow.write_to_ini with arg {tmp_path}\n"
+                "called MainGui.add_item_to_searchlist with arg find_me\n"
                 "called Finder.__init__ with args"
                 f" {{'zoek': 'find_me', 'vervang': None, 'filelist': {testobj.p['filelist']}}}\n"
                 "called Finder.setup_search\n"
+                "called MainWindow.select_search_exclusions_if_requested\n"
                 "called MainGui.set_waitcursor with arg True\n"
                 "called Finder.go\n"
                 "called MainGui.set_waitcursor with arg False\n"
@@ -1870,11 +1925,11 @@ class TestMainFrame:
         testobj.doe()
         assert capsys.readouterr().out == (
                 "called MainWindow.setup_parameters\n"
-                "called MainGui.set_waitcursor with arg find_me\n"
-                f"called MainWindow.write_to_ini with arg {tmp_path}\n"
+                "called MainGui.add_item_to_searchlist with arg find_me\n"
                 "called Finder.__init__ with args"
                 f" {{'zoek': 'find_me', 'vervang': None, 'filelist': {testobj.p['filelist']}}}\n"
                 "called Finder.setup_search\n"
+                "called MainWindow.select_search_exclusions_if_requested\n"
                 "called MainGui.set_waitcursor with arg True\n"
                 "called Finder.go\n"
                 "called MainGui.set_waitcursor with arg False\n"
@@ -1887,11 +1942,11 @@ class TestMainFrame:
         testobj.doe()
         assert capsys.readouterr().out == (
                 "called MainWindow.setup_parameters\n"
-                "called MainGui.set_waitcursor with arg find_me\n"
-                f"called MainWindow.write_to_ini with arg {tmp_path}\n"
+                "called MainGui.add_item_to_searchlist with arg find_me\n"
                 "called Finder.__init__ with args"
                 f" {{'zoek': 'find_me', 'vervang': '', 'filelist': {testobj.p['filelist']}}}\n"
                 "called Finder.setup_search\n"
+                "called MainWindow.select_search_exclusions_if_requested\n"
                 "called MainGui.set_waitcursor with arg True\n"
                 "called Finder.go\n"
                 "called MainGui.set_waitcursor with arg False\n"
@@ -1903,11 +1958,11 @@ class TestMainFrame:
         testobj.doe()
         assert capsys.readouterr().out == (
                 "called MainWindow.setup_parameters\n"
-                "called MainGui.set_waitcursor with arg find_me\n"
-                f"called MainWindow.write_to_ini with arg {tmp_path}\n"
+                "called MainGui.add_item_to_searchlist with arg find_me\n"
                 "called Finder.__init__ with args"
                 f" {{'zoek': 'find_me', 'vervang': None, 'filelist': {testobj.p['filelist']}}}\n"
                 "called Finder.setup_search\n"
+                "called MainWindow.select_search_exclusions_if_requested\n"
                 "called MainGui.set_waitcursor with arg True\n"
                 "called Finder.go\n"
                 "called MainGui.set_waitcursor with arg False\n"
@@ -1917,11 +1972,11 @@ class TestMainFrame:
         testobj.doe()
         assert capsys.readouterr().out == (
                 "called MainWindow.setup_parameters\n"
-                "called MainGui.set_waitcursor with arg find_me\n"
-                f"called MainWindow.write_to_ini with arg {tmp_path}\n"
+                "called MainGui.add_item_to_searchlist with arg find_me\n"
                 "called Finder.__init__ with args"
                 f" {{'zoek': 'find_me', 'vervang': '', 'filelist': {testobj.p['filelist']}}}\n"
                 "called Finder.setup_search\n"
+                "called MainWindow.select_search_exclusions_if_requested\n"
                 "called MainGui.set_waitcursor with arg True\n"
                 "called Finder.go\n"
                 "called MainGui.set_waitcursor with arg False\n"
