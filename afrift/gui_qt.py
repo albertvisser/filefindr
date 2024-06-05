@@ -115,6 +115,7 @@ class ResultsGui(qtw.QDialog):
         # self.setWindowTitle(parent.resulttitel)
         self.setWindowTitle(self.master.parent.resulttitel)
         self.setWindowIcon(gui.QIcon(master.iconame))
+        self.show_result_details = True  # wordt in master.__init__ op juiste waarde gezet
 
     def setup_screen(self, captions):
         "build widgets"
@@ -122,14 +123,14 @@ class ResultsGui(qtw.QDialog):
             "& teken tussenvoegen t.b.v. accelerator"
             return '&'.join((text[0], text[1:]))
         # breedte = 50 if self.master.parent.apptype == "single" else 150  # qt versie
-        breedte = 50 if self.master.parent.apptype.startwith("single") else 150  # qt versie
+        breedte = 50 if self.master.parent.apptype.startswith("single") else 150  # qt versie
         vbox = qtw.QVBoxLayout()
         hbox = qtw.QHBoxLayout()
         self.txt = qtw.QLabel(captions['heading'], self)
         hbox.addWidget(self.txt)
         vbox.addLayout(hbox)
 
-        if self.master.show_result_details:
+        if self.show_result_details:
             hbox = qtw.QHBoxLayout()
             self.lijst = qtw.QTableWidget(self)
             self.lijst.verticalHeader().setVisible(False)
@@ -166,7 +167,7 @@ class ResultsGui(qtw.QDialog):
         btn = qtw.QPushButton(captions['exit'], self)
         btn.clicked.connect(self.klaar)
         hbox.addWidget(btn)
-        if self.master.show_result_details:
+        if self.show_result_details:
             vbox2 = qtw.QVBoxLayout()
             hbox2 = qtw.QHBoxLayout()
             btn = qtw.QPushButton(captions['rpt'], self)
@@ -219,7 +220,7 @@ class ResultsGui(qtw.QDialog):
         vbox.addLayout(hbox)
 
         self.setLayout(vbox)
-        if self.master.show_result_details:
+        if self.show_result_details:
             self.resize(574 + breedte, 488)
 
     def populate_list(self):
