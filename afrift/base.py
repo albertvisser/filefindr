@@ -181,10 +181,12 @@ class Results:
         #     label_txt = self.parent.zoekvervang.rpt[0]
         #     label_txt = label_txt.replace('vervangen', aantal + ' vervangen')
         if self.parent.p['vervang'] and self.parent.apptype == 'single-file':
+            self.gui.show_result_details = False
             aantal = self.parent.zoekvervang.rpt[1].split(None, 1)[1]
             label_txt = self.parent.zoekvervang.rpt[0]
             label_txt = label_txt.replace('vervangen', aantal + ' vervangen')
         else:
+            self.gui.show_result_details = True
             itemcount = len(self.parent.zoekvervang.rpt) - 1
             label_txt = f"{self.parent.zoekvervang.rpt[0]} ({itemcount} items)"
             if self.parent.apptype == "multi":
@@ -603,8 +605,8 @@ class MainFrame:
         if self.zoekvervang.rpt:
             self.gui.error(self.fouttitel, self.zoekvervang.rpt[0])
             return
-        self.zoekvervang.setup_search()
-        if not self.zoekvervang.ok:
+        ok = self.zoekvervang.setup_search()
+        if not ok:
             self.gui.meld(self.resulttitel, f'{self.zoekvervang.rpt}\n{self.zoekvervang.errors}')
             return
         if not self.zoekvervang.filenames:
@@ -640,7 +642,8 @@ class MainFrame:
         if self.apptype != 'single-file':
             if mld := self.checktype(self.gui.get_types_to_search()):
                 return mld
-        if not self.apptype.startswith('single'):
+        # if not self.apptype.startswith('single'):
+        if self.apptype == 'open':
             if mld := self.checkpath(self.gui.get_dir_to_search()):
                 return mld
         if self.apptype != 'single-file':
@@ -721,10 +724,9 @@ class MainFrame:
 
     def checkpath(self, item):
         "controleer zoekpad"
-        test = pathlib.Path(item)
         if not item:
             mld = "Ik wil wel graag weten in welke directory ik moet (beginnen met) zoeken"
-        elif not test.exists():  # pathlib.Path(item).exists():
+        elif not pathlib.Path(item).exists():
             mld = "De opgegeven directory bestaat niet"
         else:
             mld = ""
@@ -732,8 +734,6 @@ class MainFrame:
                 self.mru_items["dirs"].remove(item)
             self.mru_items["dirs"].insert(0, item)
             self.s += f"\nin {item}"
-            self.p["pad"] = test  # item
-            self.p['filelist'] = ''
         return mld
 
     def write_to_ini(self, path=None):
@@ -757,17 +757,16 @@ class MainFrame:
         """determine common part of filenames
         """
         # if self.apptype == 'single':
-        if self.apptype.startswith('single'):
+        if self.apptype == 'single-file':
             result = self.p['filelist'][0]
         elif self.apptype == 'multi':
             test = os.path.commonpath([str(x) for x in self.p['filelist']])
             if os.path.isfile(test):
-                # multi voor 1 filenaam - wordt dat niet automatisch single?
                 result = os.path.dirname(test) + os.sep
             else:
                 result = test + os.sep
         else:
-            result = str(self.p["pad"]) + os.sep
+            result = str(self.p["filelist"][0]) + os.sep
         return result
 
     def select_search_exclusions_if_requested(self):
@@ -821,8 +820,8 @@ class MainFrame:
                 with f_out:
                     print('No results', file=f_out)
             else:
-                mld = "Niks gevonden" if self.zoekvervang.ok else self.zoekvervang.rpt[0]
-                self.gui.meld(self.resulttitel, mld)
+                # mld = "Niks gevonden" if self.zoekvervang.ok else self.zoekvervang.rpt[0]
+                self.gui.meld(self.resulttitel, 'No results')
 
         else:
             dlg = Results(self, self.determine_common())
@@ -860,13 +859,12 @@ def expand_list_file(fnaam):
         raise ValueError('File does not exist')
     if fnpath.is_dir():
         raise ValueError('List file must not be a directory')
-    else:
-        fnames = []
-        with fnpath.open() as f_in:
-            for line in f_in:
-                line = line.strip()
-                if line.endswith(("\\", "/")):
-                    line = line[:-1]
-                line = pathlib.Path(line).expanduser().resolve()
-                fnames.append(line)
+    fnames = []
+    with fnpath.open() as f_in:
+        for line in f_in:
+            line = line.strip()
+            if line.endswith(("\\", "/")):
+                line = line[:-1]
+            line = pathlib.Path(line).expanduser().resolve()
+            fnames.append(line)
     return fnames

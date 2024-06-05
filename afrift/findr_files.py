@@ -12,33 +12,33 @@ contains_default = 'module level code'
 special_chars = ('.', '^', '$', '*', '+', '?', '{', '}', '[', ']', '(', ')', '|', '\\')
 
 
-def determine_split_none(words):
-    """determine word number to split on for regular search
-    argument is provided for compatibility with other variants
+def determine_split(content_type, words):
+    """determine word number to split on idepending on content type and content
+    regular search: always 3
+    python context: different for definitions of class, function or method
     """
+    if content_type == "py":
+        if words[3] == 'class':
+            end = 5
+            if words[5] == 'method':
+                end = 7
+        elif words[3] == 'function':
+            end = 5
+        else:  # if words == 'module':
+            end = 6
+        return end
+    # if content type is None
     return 3
-
-
-def determine_split_py(words):
-    """determine word number to split on for python context sensitive search
-    """
-    if words[3] == 'class':
-        end = 5
-        if words[5] == 'method':
-            end = 7
-    elif words[3] == 'function':
-        end = 5
-    else:  # if words == 'module':
-        end = 6
-    return end
 
 
 def reformat_result(lines, context_type=None):
     """format search results for showing as "summarized"
+
+    the lines before the first blank line do not take part in the "summarizing"
     """
-    start_splitting = False
-    old_program_file = old_context = ''
+    old_source_file = old_context = ''
     lines_out = []
+    start_splitting = False
     for line in lines:
         line = line.strip()
         if not start_splitting:
@@ -48,22 +48,21 @@ def reformat_result(lines, context_type=None):
                 start_splitting = True
             continue
         words = line.split()
-        program_file = words[0]
+        source_file = words[0]
         location = ' '.join(words[1:3])
 
-        end = {None: determine_split_none,
-               "py": determine_split_py}[context_type](words)
+        end = determine_split(context_type, words)
         context = ' '.join(words[3:end]) if end > 3 else ''
 
         split_on = words[end - 1]
         statement = line.split(split_on, 1)[1]
         source_changed = False
-        if program_file != old_program_file:
+        if source_file != old_source_file:
             source_changed = True
-            if old_program_file:
+            if old_source_file:
                 lines_out.append('')
-            old_program_file = program_file
-            lines_out.append(program_file)
+            old_source_file = source_file
+            lines_out.append(source_file)
         if context and context != old_context or source_changed:
             old_context = context
             lines_out.append(context)
@@ -211,10 +210,10 @@ class Finder:
         ## print parms
         self.p = {
             'zoek': '',
-            'vervang': '',
-            'pad': '',
-            'extlist': [],
+            'vervang': None,
+            # 'pad': '',
             'filelist': [],
+            'extlist': [],
             'subdirs': False,
             "case": False,
             "woord": False,
@@ -230,21 +229,15 @@ class Finder:
                 self.p[name] = value
             else:
                 raise TypeError('Onbekende optie ' + name)
-        ## print('On creating Finder instance:', self.p)
-        self.ok = True
+        # self.ok = True
         self.errors = []
-        self.rpt = []  # oorspronkelijk: verslag van wat er gebeurd is
+        self.rpt = []
         self.use_complex = True
         self.rgx, self.ignore = '', ''
-        if not self.p['filelist'] and not self.p['pad']:
-            self.rpt.append("Fout: geen lijst bestanden en geen directory opgegeven")
-        elif self.p['filelist'] and self.p['pad']:
-            self.rpt.append("Fout: lijst bestanden én directory opgegeven")
-        elif not self.p['zoek']:
-            self.rpt.append('Fout: geen zoekstring opgegeven')
-        if self.rpt:
-            self.ok = False
-            return
+        if not self.p['zoek']:
+            raise ValueError('Geen zoekstring opgegeven')
+        if not self.p['filelist']:
+            raise ValueError('Geen zoeklocatie opgegeven')
         self.p['wijzig'] = self.p['vervang'] is not None
         self.extlist_upper = []
         for x in self.p['extlist']:
@@ -257,6 +250,7 @@ class Finder:
         """instellen variabelen t.b.v. zoekactie en output
         """
         # moet hier nog iets mee doen m.h.o.o. woorddelen of niet
+        ok = True
         if self.p['wijzig'] or self.p['regexp']:
             self.use_complex = False
             self.rgx = self.build_regexp_simple()
@@ -267,45 +261,39 @@ class Finder:
             specs.append(f" en dit vervangen door '{self.p['vervang']}'")
         if self.p['extlist']:
             if len(self.p['extlist']) > 1:
-                typs = " en ".join((", ".join(self.p['extlist'][:-1]),
-                                    self.p['extlist'][-1]))
+                types = " en ".join((", ".join(self.p['extlist'][:-1]), self.p['extlist'][-1]))
             else:
-                typs = self.p['extlist'][0]
-            specs.append(f" in bestanden van type {typs}")
+                types = self.p['extlist'][0]
+            specs.append(f" in bestanden van type {types}")
         self.filenames = []
         self.dirnames = set()
-        if self.p['pad']:
-            specs.append(f" in {self.p['pad']}")
-            self.subdirs(self.p['pad'])
+        # if self.p['pad']:
+        #     specs.append(f" in {self.p['pad']}")
+        #     self.subdirs(self.p['pad'])
+        # else:
+        if len(self.p['filelist']) == 1:
+            specs.append(f" in {self.p['filelist'][0]}")
         else:
-            if len(self.p['filelist']) == 1:
-                specs.append(f" in {self.p['filelist'][0]}")
-            else:
-                specs.append(" in opgegeven bestanden/directories")
-            for entry in self.p['filelist']:
-                ## self.subdirs(entry, is_list=False)
-                mld = self.subdirs(entry)
-                if mld:
-                    self.errors.append(mld)
+            specs.append(" in opgegeven bestanden/directories")
+        for entry in self.p['filelist']:
+            ## self.subdirs(entry, is_list=False)
+            mld = self.subdirs(entry)
+            if mld:
+                self.errors.append(mld)
         if self.p['subdirs']:
             specs.append(" en evt. onderliggende directories")
         self.rpt.insert(0, "".join(specs))
         self.specs = specs
         if self.errors:
             self.rpt.append("Zoekactie niet mogelijk")
-            self.ok = False
+            ok = False
+        return ok
 
     ## def subdirs(self, pad, is_list=True, level=0):
     def subdirs(self, pad, level=0):
         """recursieve routine voor zoek/vervang in subdirectories
-        samenstellen lijst met te verwerken bestanden
 
-        als is_list = False dan wordt van de doorgegeven naam eerst een list
-        gemaakt. Daardoor hebben we altijd een iterable met directorynamen.
-        Deze parameter lijkt een probleem te veroorzaken als in multi mode een
-        lijst wordt opgegeven (via self.p['filelist']) met directorynamen erin
-        (misschien is dat recent veranderd) daarom is deze verwijderd en is de
-        except NotADirectoryError toegevoegd
+        samenstellen lijst met te verwerken bestanden
         """
         path = pad
         # try:
@@ -395,10 +383,16 @@ class Finder:
 
     def parse_zoek(self):
         """
-            levert drie lists op:
-            - een lijst met frasen waarvan er tenminste één moet voorkomen
-            - een lijst met frasen die daarnaast ook moeten voorkomen
-            - een lijst met frasen die niet mag voorkomen
+        Analyseer zoekstring met het oog op speciale zoekacties waarbij
+        - zoekstrings omgeven worden met "
+        - een , aangeeft dat de volgende string ook voor mag komen
+        - een + aangeeft dat een volgende string ook voor MOET komen
+        - een - aangeeft dat een volgende string NIET voor mag komen
+
+        levert drie lists op:
+        - een lijst met frasen waarvan er tenminste één moet voorkomen
+        - een lijst met frasen die daarnaast ook moeten voorkomen
+        - een lijst met frasen die niet mag voorkomen
         """
         def add_to_matches():
             """add phrase to the correct phrase list

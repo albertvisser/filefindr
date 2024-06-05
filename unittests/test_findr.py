@@ -5,25 +5,56 @@ import pytest
 from afrift import findr_files as testee
 
 
-def test_determine_split_none(monkeypatch, capsys):
-    """unittest for findr_files.determine_split_none
+def test_determine_split(monkeypatch, capsys):
+    """unittest for findr_files.determine_split
     """
-    assert testee.determine_split_none('whatever') == 3
+    assert testee.determine_split('None', 'whatever') == 3
+    assert testee.determine_split('py', ['', '', '', 'class', '', '']) == 5
+    assert testee.determine_split('py', ['', '', '', 'class', '', 'method']) == 7
+    assert testee.determine_split('py', ['', '', '', 'function']) == 5
+    assert testee.determine_split('py', 'whatever') == 6
 
 
-def test_determine_split_py(monkeypatch, capsys):
-    """unittest for findr_files.determine_split_py
-    """
-    assert testee.determine_split_py(['', '', '', 'class', '', '']) == 5
-    assert testee.determine_split_py(['', '', '', 'class', '', 'method']) == 7
-    assert testee.determine_split_py(['', '', '', 'function']) == 5
-    assert testee.determine_split_py('whatever') == 6
-
-
-def _test_format_result(monkeypatch, capsys):
+def test_reformat_result(monkeypatch, capsys):
     """unittest for findr_files.format_result
     """
-    assert testee.format_result(lines, context_type=None) == "expected_result"
+    def mock_determine(content_type, wordlist):
+        print(f"called determine_split_none with args ('{content_type}', {wordlist})")
+        if content_type == 'py':
+            return 4
+        return 3
+    monkeypatch.setattr(testee, 'determine_split', mock_determine)
+    assert testee.reformat_result([]) == []
+    lines = ['no reformatting', 'before (first) blank line', '',
+             'xx r. 1 qqqqq', 'xx r. 2 rrrrr', 'yy r. 3 ssss', 'zz r. 4 tttt', 'zz r. 5 uuuuu']
+    assert testee.reformat_result(lines) == ['no reformatting', 'before (first) blank line',
+                                             'xx', '',
+                                             'r. 1:  qqqqq', 'r. 2:  rrrrr', '',
+                                             'yy', '',
+                                             'r. 3:  ssss', '',
+                                             'zz', '',
+                                             'r. 4:  tttt', 'r. 5:  uuuuu']
+    assert capsys.readouterr().out == (
+            "called determine_split_none with args ('None', ['xx', 'r.', '1', 'qqqqq'])\n"
+            "called determine_split_none with args ('None', ['xx', 'r.', '2', 'rrrrr'])\n"
+            "called determine_split_none with args ('None', ['yy', 'r.', '3', 'ssss'])\n"
+            "called determine_split_none with args ('None', ['zz', 'r.', '4', 'tttt'])\n"
+            "called determine_split_none with args ('None', ['zz', 'r.', '5', 'uuuuu'])\n")
+    lines = ['', 'xx r. 1 aaaaa qqqqq', 'xx r. 2 aaaaa rrrrr', 'xx r. 3 bbbbb sssss',
+             'yy r. 4 bbbbb ttttt', 'yy r. 5 ccccc uuuuu']
+    # breakpoint()
+    assert testee.reformat_result(lines, 'py') == ['xx',
+                                                   'aaaaa', 'r. 1:  qqqqq', 'r. 2:  rrrrr',
+                                                   'bbbbb', 'r. 3:  sssss', '',
+                                                   'yy',
+                                                   'bbbbb', 'r. 4:  ttttt',
+                                                   'ccccc', 'r. 5:  uuuuu']
+    assert capsys.readouterr().out == (
+            "called determine_split_none with args ('py', ['xx', 'r.', '1', 'aaaaa', 'qqqqq'])\n"
+            "called determine_split_none with args ('py', ['xx', 'r.', '2', 'aaaaa', 'rrrrr'])\n"
+            "called determine_split_none with args ('py', ['xx', 'r.', '3', 'bbbbb', 'sssss'])\n"
+            "called determine_split_none with args ('py', ['yy', 'r.', '4', 'bbbbb', 'ttttt'])\n"
+            "called determine_split_none with args ('py', ['yy', 'r.', '5', 'ccccc', 'uuuuu'])\n")
 
 
 def test_is_single_line_docstring(monkeypatch, capsys):
@@ -86,6 +117,7 @@ def test_read_input_file(monkeypatch, capsys, tmp_path):
     assert testee.read_input_file(as_latin, 'latin-1') == ['thïs\n', 'is\n', 'søme\n', 'tëxt\n']
     assert testee.read_input_file(as_latin, 'utf-32') is None
 
+
 def _test_pyread(monkeypatch, capsys):
     """unittest for findr_files.pyread
     """
@@ -124,42 +156,122 @@ class TestFinder:
         """
         with pytest.raises(TypeError):
             testobj = testee.Finder(gargl=False)
-        testobj = testee.Finder()
-        assert not testobj.ok
-        assert testobj.rpt == ["Fout: geen lijst bestanden en geen directory opgegeven"]
-        testobj = testee.Finder(filelist=['x'], pad='hier')
-        assert not testobj.ok
-        assert testobj.rpt == ["Fout: lijst bestanden én directory opgegeven"]
-        testobj = testee.Finder(pad='hier')
-        assert not testobj.ok
-        assert testobj.rpt == ['Fout: geen zoekstring opgegeven']
-        testobj = testee.Finder(pad='hier', zoek='Vind')
-        assert testobj.ok
+        with pytest.raises(ValueError) as exc:
+            testobj = testee.Finder()
+        assert str(exc.value) == 'Geen zoekstring opgegeven'
+        with pytest.raises(ValueError) as exc:
+            testobj = testee.Finder(zoek='Vind')
+        assert str(exc.value) == 'Geen zoeklocatie opgegeven'
+        with pytest.raises(ValueError) as exc:
+            testobj = testee.Finder(filelist=[])
+        assert str(exc.value) == 'Geen zoekstring opgegeven'
+        testobj = testee.Finder(zoek='Vind', filelist=[''])
+        assert testobj.p['zoek'] == 'Vind'
+        assert testobj.p['vervang'] is None
+        assert not testobj.p['wijzig']
+        assert testobj.p['extlist'] == []
+        assert testobj.extlist_upper == []
+        testobj = testee.Finder(zoek='Vind', vervang=None, filelist= ['xx'])
+        assert testobj.p['zoek'] == 'Vind'
+        assert testobj.p['vervang'] is None
+        assert not testobj.p['wijzig']
+        assert testobj.p['extlist'] == []
+        assert testobj.extlist_upper == []
+        testobj = testee.Finder(zoek='Vind', vervang='', filelist=['xx'])
         assert testobj.p['zoek'] == 'Vind'
         assert testobj.p['vervang'] == ''
         assert testobj.p['wijzig'] is True
         assert testobj.p['extlist'] == []
         assert testobj.extlist_upper == []
-        testobj = testee.Finder(pad='hier', zoek='Vind', vervang=None, extlist=['py', '.pyw'])
-        assert testobj.ok
+        testobj = testee.Finder(zoek='Vind', vervang='Vond', filelist=['xx'], extlist=['py', '.pyw'])
         assert testobj.p['zoek'] == 'Vind'
-        assert testobj.p['vervang'] is None
-        assert testobj.p['wijzig'] is False
+        assert testobj.p['vervang'] == 'Vond'
+        assert testobj.p['wijzig'] is True
         assert testobj.p['extlist'] == ['py', '.pyw']
         assert testobj.extlist_upper == ['.PY', '.PYW']
-        # etcetera, nu hier even niet mee bezig
-        # missing coverage:
-        # 269     self.p['extlist'] is truthy and len(self.p['extlist'] <= 1
-        # 277-285 self.p['pad'] is falsey
-        # 287     self.p['subdirs'] is truthy
-        # 291-292 self errors is truthy
 
-    def _test_setup_search(self, monkeypatch, capsys):
+    def test_setup_search(self, monkeypatch, capsys):
         """unittest for Finder.setup_search
         """
+        def mock_build_simple():
+            print('called Finder.build_regexp_simple')
+            return 'simple_regex'
+        def mock_build():
+            print('called Finder.build_regexes')
+            return 'find_regex', 'ignore_regex'
+        def mock_subdirs(name):
+            print(f"called Finder.subdirs with arg '{name}'")
+            return []
+        def mock_subdirs_2(name):
+            print(f"called Finder.subdirs with arg '{name}'")
+            return '???'
         testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.setup_search() == "expected_result"
-        assert capsys.readouterr().out == ("")
+        testobj.build_regexp_simple = mock_build_simple
+        testobj.build_regexes = mock_build
+        testobj.subdirs = mock_subdirs
+        testobj.rpt = ['---']
+        testobj.errors = []
+        testobj.use_complex = True
+        testobj.rgx = testobj.ignore = ''
+        testobj.p['zoek'] = 'findstr'
+        testobj.p['wijzig'] = False
+        testobj.p['regexp'] = True
+        testobj.p['extlist'] = ['xx']
+        testobj.p['filelist'] = ['single file']
+        testobj.p['subdirs'] = False
+        assert testobj.setup_search()
+        assert not testobj.use_complex
+        assert testobj.rgx == 'simple_regex'
+        assert testobj.ignore == ''
+        # assert self.filenames == []   # niet zo interessant hier omdat deze in
+        # assert self.dirnames == {}    # subdirs() aangevuld worden ipv in setup_search()
+        assert testobj.errors == []
+        assert testobj.rpt == ["Gezocht naar 'findstr' in bestanden van type xx in single file",
+                               '---']
+        assert capsys.readouterr().out == ("called Finder.build_regexp_simple\n"
+                                           "called Finder.subdirs with arg 'single file'\n")
+        testobj.rpt = ['---']
+        testobj.errors = []
+        testobj.use_complex = True
+        testobj.rgx = testobj.ignore = ''
+        testobj.p['zoek'] = 'findstr'
+        testobj.p['vervang'] = 'replstr'
+        testobj.p['wijzig'] = True
+        testobj.p['regexp'] = False
+        testobj.p['extlist'] = []
+        testobj.p['filelist'] = ['a file', 'another file']
+        testobj.p['subdirs'] = False
+        assert testobj.setup_search()
+        assert not testobj.use_complex
+        assert testobj.rgx == 'simple_regex'
+        assert testobj.ignore == ''
+        assert testobj.errors == []
+        assert testobj.rpt == ["Gezocht naar 'findstr' en dit vervangen door 'replstr'"
+                               " in opgegeven bestanden/directories", '---']
+        assert capsys.readouterr().out == ("called Finder.build_regexp_simple\n"
+                                           "called Finder.subdirs with arg 'a file'\n"
+                                           "called Finder.subdirs with arg 'another file'\n")
+        testobj.subdirs = mock_subdirs_2
+        testobj.rpt = ['---']
+        testobj.errors = []
+        testobj.use_complex = True
+        testobj.rgx = testobj.ignore = ''
+        testobj.p['zoek'] = 'findstr'
+        testobj.p['wijzig'] = False
+        testobj.p['regexp'] = False
+        testobj.p['extlist'] = ['xx', 'yy', 'zz']
+        testobj.p['filelist'] = ['a directory']
+        testobj.p['subdirs'] = True
+        assert not testobj.setup_search()
+        assert testobj.use_complex
+        assert testobj.rgx == 'find_regex'
+        assert testobj.ignore == 'ignore_regex'
+        assert testobj.errors == ['???']
+        assert testobj.rpt == ["Gezocht naar 'findstr' in bestanden van type xx, yy en zz"
+                               " in a directory en evt. onderliggende directories", '---',
+                               "Zoekactie niet mogelijk"]
+        assert capsys.readouterr().out == ("called Finder.build_regexes\n"
+                                           "called Finder.subdirs with arg 'a directory'\n")
 
     def _test_subdirs(self, monkeypatch, capsys):
         """unittest for Finder.subdirs
@@ -199,7 +311,7 @@ class TestFinder:
         assert testobj.build_regexes() == "expected_result"
         assert capsys.readouterr().out == ("")
 
-    def test_parse_zoek(self, monkeypatch, capsys):
+    def _test_parse_zoek(self, monkeypatch, capsys):
         """unittest for Finder.parse_zoek
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
@@ -214,12 +326,27 @@ class TestFinder:
         # 428-429 self.p['zoek'] contains + not inside quotes
         # 431-432 self.p['zoek'] contains - not inside quotes
 
-    def _test_go(self, monkeypatch, capsys):
+    def test_go(self, monkeypatch, capsys):
         """unittest for Finder.go
         """
+        def mock_zoek(naam):
+            print(f"called Finder.zoek with arg '{naam}'")
+        def mock_add():
+            print("called Finder.add_context")
         testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.go() == "expected_result"
-        assert capsys.readouterr().out == ("")
+        testobj.zoek = mock_zoek
+        testobj.add_context = mock_add
+        testobj.filenames = ['xxx']
+        testobj.p["context"] = False
+        testobj.go()
+        assert capsys.readouterr().out == ("called Finder.zoek with arg 'xxx'\n")
+        testobj.filenames = ['xxx', 'yyy', 'zzz']
+        testobj.p["context"] = True
+        testobj.go()
+        assert capsys.readouterr().out == ("called Finder.zoek with arg 'xxx'\n"
+                                           "called Finder.zoek with arg 'yyy'\n"
+                                           "called Finder.zoek with arg 'zzz'\n"
+                                           "called Finder.add_context\n")
 
     def _test_zoek(self, monkeypatch, capsys):
         """unittest for Finder.zoek
