@@ -865,6 +865,6 @@ def expand_list_file(fnaam):
             line = line.strip()
             if line.endswith(("\\", "/")):
                 line = line[:-1]
-            line = pathlib.Path(line).expanduser().resolve()
+            line = pathlib.Path(line).expanduser().absolute()
             fnames.append(line)
     return fnames
