@@ -131,6 +131,17 @@ def _test_pyread(monkeypatch, capsys):
         assert capsys.readouterr().out == ("")
 
 
+def test_rgxescape():
+    "unittest for findr_files.rgxescape"
+    assert testee.rgxescape(r'`1234567890-=') == r'`1234567890-='
+    assert testee.rgxescape(r'~!@#$%^&*()_+') == r'~!@#\$%\^&\*\(\)_\+'
+    assert testee.rgxescape(r'qwertyuiop[]\ ') == r'qwertyuiop\[\]\\ '
+    assert testee.rgxescape(r'QWERTYUIOP{}|') == r'QWERTYUIOP\{\}\|'
+    assert testee.rgxescape(r"asdfghjkl;'") == r"asdfghjkl;'"
+    assert testee.rgxescape(r'ASDFGHJKL:"') == r'ASDFGHJKL:"'
+    assert testee.rgxescape(r'zxcvbnm,./') == r'zxcvbnm,\./'
+    assert testee.rgxescape(r'ZXCVBNM<>?') == r'ZXCVBNM<>\?'
+
 class TestFinder:
     """unittest for findr_files.Finder
     """
@@ -304,19 +315,36 @@ class TestFinder:
         assert testobj.build_regexp_simple() == (
                 f"called re.compile with args ('xy\\\\!z', {flags_multi})")
 
-    def _test_build_regexes(self, monkeypatch, capsys):
+    def test_build_regexes(self, monkeypatch, capsys):
         """unittest for Finder.build_regexes
         """
+        def mock_parse():
+            print('called Finder.parse_zoekstring')
+            return ['xxx', 'yyy'], ['zzz'], ['qqq']
         testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.build_regexes() == "expected_result"
-        assert capsys.readouterr().out == ("")
+        testobj.p = {'zoek': 'xyz', 'case': False, 'regexp': True, 'wijzig': True}
+        assert testobj.build_regexes() == (
+                [testee.re.compile('xyz', testee.re.IGNORECASE|testee.re.MULTILINE)], "")
+        assert capsys.readouterr().out == ""
+        testobj.p = {'zoek': 'xyz', 'case': True, 'regexp': True, 'wijzig': False}
+        assert testobj.build_regexes() == ([testee.re.compile('xyz', testee.re.MULTILINE)], "")
+        assert capsys.readouterr().out == ""
+        testobj.p = {'zoek': 'xyz', 'case': True, 'regexp': False, 'wijzig': True}
+        assert testobj.build_regexes() == ([testee.re.compile('xyz', testee.re.MULTILINE)], "")
+        assert capsys.readouterr().out == ""
+        testobj.parse_zoekstring = mock_parse
+        testobj.p = {'zoek': 'xyz', 'case': True, 'regexp': False, 'wijzig': False}
+        assert testobj.build_regexes() == ([testee.re.compile('xxx|yyy', testee.re.MULTILINE),
+                                            testee.re.compile('zzz', testee.re.MULTILINE)],
+                                           testee.re.compile('qqq', testee.re.MULTILINE))
+        assert capsys.readouterr().out == ("called Finder.parse_zoekstring\n")
 
-    def _test_parse_zoek(self, monkeypatch, capsys):
+    def _test_parse_zoekstring(self, monkeypatch, capsys):
         """unittest for Finder.parse_zoek
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.p['zoek'] = 'test'
-        assert testobj.parse_zoek() == (['test'], [], [])  # te testen methode
+        assert testobj.parse_zoekstring() == (['test'], [], [])  # te testen methode
         # missing coverage:
         # 406     add_to_matches: zoekitem is falsey
         # 408     add_to_matches: also_requires is truthy

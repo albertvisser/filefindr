@@ -203,6 +203,17 @@ def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
     return sorted(itemlist)
 
 
+def rgxescape(data):   # only for strings
+    """escape special characters in regexes when they are not to be interpreted
+    """
+    zoek = ''
+    for char in data:
+        if char in special_chars:
+            zoek += "\\"
+        zoek += char
+    return zoek
+
+
 class Finder:
     """interpreteren van de parameters en aansturen van de zoek/vervang routine
     """
@@ -356,32 +367,23 @@ class Finder:
         this version makes a complex search possible by looking for special
         separators
 
-        returns a list of re's to look for and a re of strings to ignore"""
-        def escape(data):   # only for strings
-            """escape special characters when they are not to be interpreted
-            """
-            zoek = ''
-            for char in data:
-                if char in special_chars:
-                    zoek += "\\"
-                zoek += char
-            return zoek
+        returns a list of re's to look for and a re of strings to Iignore"""
 
         negeer = ''
         flags = re.MULTILINE
         if not self.p['case']:
             flags |= re.IGNORECASE
         if self.p['regexp'] or self.p['wijzig']:  # in these cases: always take literally
-            zoek = [re.compile(escape(self.p['zoek']), flags)]
+            zoek = [re.compile(rgxescape(self.p['zoek']), flags)]
         else:
-            zoek_naar, zoek_ook, zoek_niet = self.parse_zoek()
-            zoek = [re.compile('|'.join([escape(x) for x in zoek_naar]), flags)]
-            zoek += [re.compile(escape(x), flags) for x in zoek_ook]
+            zoek_naar, zoek_ook, zoek_niet = self.parse_zoekstring()
+            zoek = [re.compile('|'.join([rgxescape(x) for x in zoek_naar]), flags)]
+            zoek += [re.compile(rgxescape(x), flags) for x in zoek_ook]
             if zoek_niet:
-                negeer = re.compile('|'.join([escape(x) for x in zoek_niet]), flags)
+                negeer = re.compile('|'.join([rgxescape(x) for x in zoek_niet]), flags)
         return zoek, negeer
 
-    def parse_zoek(self):
+    def parse_zoekstring(self):
         """
         Analyseer zoekstring met het oog op speciale zoekacties waarbij
         - zoekstrings omgeven worden met "
