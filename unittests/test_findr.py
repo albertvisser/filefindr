@@ -142,6 +142,7 @@ def test_rgxescape():
     assert testee.rgxescape(r'zxcvbnm,./') == r'zxcvbnm,\./'
     assert testee.rgxescape(r'ZXCVBNM<>?') == r'ZXCVBNM<>\?'
 
+
 class TestFinder:
     """unittest for findr_files.Finder
     """
@@ -284,12 +285,88 @@ class TestFinder:
         assert capsys.readouterr().out == ("called Finder.build_regexes\n"
                                            "called Finder.subdirs with arg 'a directory'\n")
 
-    def _test_subdirs(self, monkeypatch, capsys):
+    def test_subdirs(self, monkeypatch, capsys, tmp_path):
         """unittest for Finder.subdirs
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.subdirs(pad, level=0) == "expected_result"
-        assert capsys.readouterr().out == ("")
+        testobj.p['maxdepth'] = -1
+        testobj.p['follow_symlinks'] = False
+        testobj.p['extlist'] = []
+        testobj.p['subdirs'] = False
+        testobj.dirnames = set()
+        testobj.filenames = []
+        assert testobj.subdirs('/lost+found') == ""  # PermissionError
+        assert testobj.dirnames == {'/lost+found'}
+        assert testobj.filenames == []
+
+        testpath = tmp_path / 'testfile'
+        testobj.dirnames = set()
+        testobj.filenames = []
+        assert testobj.subdirs(testpath) == f"File not found: {tmp_path}/testfile"
+        assert testobj.dirnames == set()
+        assert testobj.filenames == []
+
+        testpath.touch()
+        testobj.dirnames = set()
+        testobj.filenames = []
+        assert testobj.subdirs(testpath) == ""   # NotADirectoryError
+        assert testobj.dirnames == set()
+        assert testobj.filenames == [testpath]
+
+        testpath = tmp_path / 'testdir'
+        testpath.mkdir()
+        testobj.dirnames = set()
+        testobj.filenames = []
+        assert testobj.subdirs(testpath) == ""
+        assert testobj.dirnames == {f'{tmp_path}/testdir'}
+        assert testobj.filenames == []
+
+        testobj.p['extlist'] = ['py']
+        testobj.p['maxdepth'] = 2
+        testobj.p['follow_symlinks'] = True
+        testobj.p['subdirs'] = True
+        testobj.extlist_upper = ['.PY']
+        (testpath / 'testfile.py').touch()
+        (testpath / 'testfile.c').touch()
+        (testpath / 'testfile').symlink_to(tmp_path / 'testfile.py')
+        (testpath / 'subdir').mkdir()
+        (testpath / 'subdir' / 'testfile.py').touch()
+        (testpath / 'subdir' / 'subdir').mkdir()
+        (testpath / 'subdir' / 'subdir' / 'testfile.py').touch()
+        testobj.dirnames = set()
+        testobj.filenames = []
+        assert testobj.subdirs(testpath) == ""
+        assert testobj.dirnames == {f'{tmp_path}/testdir',
+                                    f'{tmp_path}/testdir/subdir',
+                                    f'{tmp_path}/testdir/subdir/subdir'}
+        assert testobj.filenames == [tmp_path / 'testdir' / 'testfile.py',
+                                     tmp_path / 'testdir' / 'subdir' / 'testfile.py']
+
+        testobj.p['extlist'] = []
+        testobj.p['maxdepth'] = 3
+        testobj.dirnames = set()
+        testobj.filenames = []
+        assert testobj.subdirs(testpath) == ""
+        assert testobj.dirnames == {f'{tmp_path}/testdir',
+                                    f'{tmp_path}/testdir/subdir',
+                                    f'{tmp_path}/testdir/subdir/subdir'}
+        assert testobj.filenames == [tmp_path / 'testdir' / 'testfile.py',
+                                     tmp_path / 'testdir' / 'testfile.c',
+                                     # waarom niet ook testfile (als zijnde een symlink) ?
+                                     tmp_path / 'testdir' / 'subdir' / 'testfile.py',
+                                     tmp_path / 'testdir' / 'subdir' / 'subdir' / 'testfile.py']
+
+        testobj.p['follow_symlinks'] = False
+        testobj.dirnames = set()
+        testobj.filenames = []
+        assert testobj.subdirs(testpath) == ""
+        assert testobj.dirnames == {f'{tmp_path}/testdir',
+                                    f'{tmp_path}/testdir/subdir',
+                                    f'{tmp_path}/testdir/subdir/subdir'}
+        assert testobj.filenames == [tmp_path / 'testdir' / 'testfile.py',
+                                     tmp_path / 'testdir' / 'testfile.c',
+                                     tmp_path / 'testdir' / 'subdir' / 'testfile.py',
+                                     tmp_path / 'testdir' / 'subdir' / 'subdir' / 'testfile.py']
 
     def test_build_regexp_simple(self, monkeypatch, capsys):
         """unittest for Finder.build_regexp_simple
@@ -323,36 +400,50 @@ class TestFinder:
             return ['xxx', 'yyy'], ['zzz'], ['qqq']
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.p = {'zoek': 'xyz', 'case': False, 'regexp': True, 'wijzig': True}
+        testobj.use_complex = not (testobj.p['regexp'] or testobj.p['wijzig'])
         assert testobj.build_regexes() == (
                 [testee.re.compile('xyz', testee.re.IGNORECASE|testee.re.MULTILINE)], "")
         assert capsys.readouterr().out == ""
         testobj.p = {'zoek': 'xyz', 'case': True, 'regexp': True, 'wijzig': False}
+        testobj.use_complex = not (testobj.p['regexp'] or testobj.p['wijzig'])
         assert testobj.build_regexes() == ([testee.re.compile('xyz', testee.re.MULTILINE)], "")
         assert capsys.readouterr().out == ""
         testobj.p = {'zoek': 'xyz', 'case': True, 'regexp': False, 'wijzig': True}
+        testobj.use_complex = not (testobj.p['regexp'] or testobj.p['wijzig'])
         assert testobj.build_regexes() == ([testee.re.compile('xyz', testee.re.MULTILINE)], "")
         assert capsys.readouterr().out == ""
         testobj.parse_zoekstring = mock_parse
         testobj.p = {'zoek': 'xyz', 'case': True, 'regexp': False, 'wijzig': False}
+        testobj.use_complex = not (testobj.p['regexp'] or testobj.p['wijzig'])
         assert testobj.build_regexes() == ([testee.re.compile('xxx|yyy', testee.re.MULTILINE),
                                             testee.re.compile('zzz', testee.re.MULTILINE)],
                                            testee.re.compile('qqq', testee.re.MULTILINE))
         assert capsys.readouterr().out == ("called Finder.parse_zoekstring\n")
 
-    def _test_parse_zoekstring(self, monkeypatch, capsys):
+    def test_parse_zoekstring(self, monkeypatch, capsys):
         """unittest for Finder.parse_zoek
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.p['zoek'] = ''
+        assert testobj.parse_zoekstring() == ([], [], [])
         testobj.p['zoek'] = 'test'
-        assert testobj.parse_zoekstring() == (['test'], [], [])  # te testen methode
-        # missing coverage:
-        # 406     add_to_matches: zoekitem is falsey
-        # 408     add_to_matches: also_requires is truthy
-        # 410     add_to_matches: forbidden is truthy
-        # 422-424 self.p['zoek'] contains "
-        # 426     self.p['zoek'] contains , not inside quotes
-        # 428-429 self.p['zoek'] contains + not inside quotes
-        # 431-432 self.p['zoek'] contains - not inside quotes
+        assert testobj.parse_zoekstring() == (['test'], [], [])
+        testobj.p['zoek'] = '"test"'
+        assert testobj.parse_zoekstring() == (['test'], [], [])
+        testobj.p['zoek'] = "'test'"
+        assert testobj.parse_zoekstring() == (['test'], [], [])
+        testobj.p['zoek'] = "'test, text'"
+        assert testobj.parse_zoekstring() == (['test, text'], [], [])
+        testobj.p['zoek'] = "'test', 'text'"
+        assert testobj.parse_zoekstring() == (['test', 'text'], [], [])
+        testobj.p['zoek'] = "'test' + 'text'"
+        assert testobj.parse_zoekstring() == (['test'], ['text'], [])
+        testobj.p['zoek'] = "'test' - 'text'"
+        assert testobj.parse_zoekstring() == (['test'], [], ['text'])
+        testobj.p['zoek'] = "'test', 'text' - 'xxxx', 'yyyy' + 'aaaa', 'bbbb'"
+        assert testobj.parse_zoekstring() == (['test', 'text', 'yyyy', 'bbbb'], ['aaaa'], ['xxxx'])
+        testobj.p['zoek'] = "'test', 'text' - 'xxxx' - 'yyyy' + 'aaaa' + 'bbbb'"
+        assert testobj.parse_zoekstring() == (['test', 'text'], ['aaaa', 'bbbb'], ['xxxx', 'yyyy'])
 
     def test_go(self, monkeypatch, capsys):
         """unittest for Finder.go
@@ -360,10 +451,10 @@ class TestFinder:
         def mock_zoek(naam):
             print(f"called Finder.zoek with arg '{naam}'")
         def mock_add():
-            print("called Finder.add_context")
+            print("called Finder.add_context_to_search_results")
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.zoek = mock_zoek
-        testobj.add_context = mock_add
+        testobj.add_context_to_search_results = mock_add
         testobj.filenames = ['xxx']
         testobj.p["context"] = False
         testobj.go()
@@ -374,28 +465,424 @@ class TestFinder:
         assert capsys.readouterr().out == ("called Finder.zoek with arg 'xxx'\n"
                                            "called Finder.zoek with arg 'yyy'\n"
                                            "called Finder.zoek with arg 'zzz'\n"
-                                           "called Finder.add_context\n")
+                                           "called Finder.add_context_to_search_results\n")
 
-    def _test_zoek(self, monkeypatch, capsys):
+    def test_zoek(self, monkeypatch, capsys):
         """unittest for Finder.zoek
         """
+        def mock_read(*args):
+            print('called read_input_file with args', args)
+            return None
+        def mock_read_2(*args):
+            print('called read_input_file with args', args)
+            return []
+        def mock_read_3(*args):
+            print('called read_input_file with args', args)
+            return ['some\n', 'test   \n', 'data lines\n']
+        def mock_complex(*args):
+            print("called Finder.complex_search with args", args)
+            return []
+        def mock_complex_2(*args):
+            print("called Finder.complex_search with args", args)
+            return [1, 2]
+        def mock_old(*args):
+            print("called Finder.old_rgx_search with args", args)
+            return False
+        def mock_old_2(*args):
+            print("called Finder.old_rgx_search with args", args)
+            return True
+        def mock_replace(*args):
+            print("called Finder.replace_and_report with args", args)
+        monkeypatch.setattr(testee, 'read_input_file', mock_read)
         testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.zoek(best) == "expected_result"
-        assert capsys.readouterr().out == ("")
+        testobj.complex_search = mock_complex
+        testobj.old_rgx_search = mock_old
+        testobj.replace_and_report = mock_replace
+        testobj.rpt = []
+        testobj.p = {'fallback_encoding': 'xxx', 'wijzig': False}
+        testobj.use_complex = True
+        testobj.zoek('testfile')
+        assert testobj.rpt == ['testfile: overgeslagen, waarschijnlijk geen tekstbestand']
+        assert capsys.readouterr().out == "called read_input_file with args ('testfile', 'xxx')\n"
 
-    def _test_complex_search(self, monkeypatch, capsys):
+        testobj.rpt = []
+        monkeypatch.setattr(testee, 'read_input_file', mock_read_2)
+        testobj.zoek('testfile')
+        assert testobj.rpt == []
+        assert capsys.readouterr().out == (
+                "called read_input_file with args ('testfile', 'xxx')\n"
+                "called Finder.complex_search with args ([], [0])\n")
+
+        testobj.rpt = []
+        monkeypatch.setattr(testee, 'read_input_file', mock_read_3)
+        testobj.zoek('testfile')
+        assert testobj.rpt == []
+        assert capsys.readouterr().out == (
+                "called read_input_file with args ('testfile', 'xxx')\n"
+                "called Finder.complex_search with args"
+                " (['some\\n', 'test   \\n', 'data lines\\n'], [0, 5, 13, 24])\n")
+
+        testobj.rpt = []
+        testobj.complex_search = mock_complex_2
+        testobj.zoek('testfile')
+        assert testobj.rpt == ['testfile r. 1: some', 'testfile r. 2: test']
+        assert capsys.readouterr().out == (
+                "called read_input_file with args ('testfile', 'xxx')\n"
+                "called Finder.complex_search with args"
+                " (['some\\n', 'test   \\n', 'data lines\\n'], [0, 5, 13, 24])\n")
+
+        testobj.rpt = []
+        testobj.use_complex = False
+        monkeypatch.setattr(testee, 'read_input_file', mock_read_2)
+        testobj.zoek('testfile')
+        assert testobj.rpt == []
+        assert capsys.readouterr().out == (
+                "called read_input_file with args ('testfile', 'xxx')\n"
+                "called Finder.old_rgx_search with args ([], [0], 'testfile')\n")
+
+        testobj.rpt = []
+        monkeypatch.setattr(testee, 'read_input_file', mock_read_3)
+        testobj.zoek('testfile')
+        assert testobj.rpt == []
+        assert capsys.readouterr().out == (
+                "called read_input_file with args ('testfile', 'xxx')\n"
+                "called Finder.old_rgx_search with args"
+                " (['some\\n', 'test   \\n', 'data lines\\n'], [0, 5, 13, 24], 'testfile')\n")
+
+        testobj.rpt = []
+        testobj.old_rgx_search = mock_old_2
+        testobj.zoek('testfile')
+        assert testobj.rpt == []
+        assert capsys.readouterr().out == (
+                "called read_input_file with args ('testfile', 'xxx')\n"
+                "called Finder.old_rgx_search with args"
+                " (['some\\n', 'test   \\n', 'data lines\\n'], [0, 5, 13, 24], 'testfile')\n")
+
+        testobj.rpt = []
+        testobj.p['wijzig'] = True
+        testobj.zoek('testfile')
+        assert testobj.rpt == []
+        assert capsys.readouterr().out == (
+                "called read_input_file with args ('testfile', 'xxx')\n"
+                "called Finder.old_rgx_search with args"
+                " (['some\\n', 'test   \\n', 'data lines\\n'], [0, 5, 13, 24], 'testfile')\n"
+                "called Finder.replace_and_report with args"
+                " (['some\\n', 'test   \\n', 'data lines\\n'], 'testfile')\n")
+
+    def test_add_context_to_search_results(self, monkeypatch, capsys):
+        """unittest for Finder.add_context_to_search_results
+        """
+        def mock_type(entry):
+            print(f"called determine_filetype for '{entry}'")
+            if entry.endswith('.py'):
+                return 'py'
+            return ''
+        def mock_pyread(*args):
+            print('called pyread with args', args)
+            return ['']
+        counter = 0
+        def mock_context(*args):
+            nonlocal counter
+            print('called Finder.determine_context_from_locations with args', args)
+            counter += 1
+            if counter == 1:
+                return ''
+            if counter == 2:
+                return 'comment'
+            if counter == 3:
+                return 'docstring'
+            if counter == 4:
+                return 'ignore'
+            return 'somewhere in the code'
+        monkeypatch.setattr(testee, 'determine_filetype', mock_type)
+        monkeypatch.setattr(testee, 'pyread', mock_pyread)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.p = {'fallback_encoding': 'uuu', 'negeer': False}
+        testobj.filenames = ['testfile', 'testfile.py']
+        testobj.rpt = ['cannot be split', 'testfile r. 3', 'testfile.py r. 1 xxx',
+                       'testfile.py r. 1: xxx', 'testfile.py r. 2: xxx', 'testfile.py r. 3: xxx',
+                       'testfile.py r. 4: xxx', 'testfile.py r. 5: xxx']
+        testobj.determine_context_from_locations = mock_context
+        testobj.add_context_to_search_results()
+        assert testobj.rpt == ['cannot be split', 'testfile.py r. 1 xxx',
+                               'testfile.py r. 1 (): xxx', 'testfile.py r. 2 (comment): xxx',
+                               'testfile.py r. 3 (docstring): xxx',
+                               'testfile.py r. 5 (somewhere in the code): xxx']
+        assert capsys.readouterr().out == (
+                "called determine_filetype for 'testfile'\n"
+                "called determine_filetype for 'testfile.py'\n"
+                "called pyread with args ('testfile.py', 'uuu', False)\n"
+                "called Finder.determine_context_from_locations with args ('1', 'xxx', [''])\n"
+                "called Finder.determine_context_from_locations with args ('2', 'xxx', [''])\n"
+                "called Finder.determine_context_from_locations with args ('3', 'xxx', [''])\n"
+                "called Finder.determine_context_from_locations with args ('4', 'xxx', [''])\n"
+                "called Finder.determine_context_from_locations with args ('5', 'xxx', [''])\n")
+        counter = 0
+        testobj.p['negeer'] = True
+        testobj.rpt = ['cannot be split', 'testfile r. 3', 'testfile.py r. 1 xxx',
+                       'testfile.py r. 1: xxx', 'testfile.py r. 2: xxx', 'testfile.py r. 3: xxx',
+                       'testfile.py r. 4: xxx']
+        testobj.add_context_to_search_results()
+        assert testobj.rpt == ['cannot be split', 'testfile.py r. 1 xxx',
+                               'testfile.py r. 1 (): xxx']
+        assert capsys.readouterr().out == (
+                "called determine_filetype for 'testfile'\n"
+                "called determine_filetype for 'testfile.py'\n"
+                "called pyread with args ('testfile.py', 'uuu', True)\n"
+                "called Finder.determine_context_from_locations with args ('1', 'xxx', [''])\n"
+                "called Finder.determine_context_from_locations with args ('2', 'xxx', [''])\n"
+                "called Finder.determine_context_from_locations with args ('3', 'xxx', [''])\n"
+                "called Finder.determine_context_from_locations with args ('4', 'xxx', [''])\n")
+
+    def test_determine_context_from_locations(self, monkeypatch, capsys):
+        """unittest for Finder.determine_context_from_locations
+        """
+        monkeypatch.setattr(testee, 'contains_default', 'xxx')
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.p = {'zoek': 'Arg'}
+        locations = [((0, 0), (5, -1), 'yyy'),
+                     ((8, 8), (12, -1), 'comment'),
+                     ((15, 4), (30, -1), 'zzz')]
+        assert testobj.determine_context_from_locations(4, 'qqq', locations) == "yyy"
+        assert testobj.determine_context_from_locations(8, '        gargl', locations) == "xxx"
+        assert testobj.determine_context_from_locations(9, '        gargl', locations) == "comment"
+        assert testobj.determine_context_from_locations(12, 'gargl', locations) == "xxx"
+        assert testobj.determine_context_from_locations(13, 'gargl', locations) == "xxx"
+        assert testobj.determine_context_from_locations(15, 'oink', locations) == "xxx"
+        assert testobj.determine_context_from_locations(16, 'oink', locations) == "zzz"
+
+    def test_complex_search(self, monkeypatch, capsys):
         """unittest for Finder.complex_search
         """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.complex_search(data, lines) == "expected_result"
-        assert capsys.readouterr().out == ("")
+        class MockMatch:
+            def __init__(self, seq):
+                self._seq = seq
+            def start(self):
+                return self._seq
+        class MockRgx:
+            def __init__(self, zoek):
+                self._zoek = zoek
+            def __repr__(self):
+                return f"<Rgx '{self._zoek}'>"
+            def finditer(self, find):
+                if self._zoek == "find":
+                    return MockMatch(1), MockMatch(7), MockMatch(13)
+                if self._zoek == "find also":
+                    return MockMatch(1), MockMatch(13), MockMatch(19)
+                if self._zoek == "ignore":
+                    return MockMatch(1), MockMatch(7)
 
-    def _test_replace_selected(self, monkeypatch, capsys):
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        lines = ['test data', 'to search through', 'for stuff']
+        linestarts = (0, 1, 5, 12, 20)
+
+        testobj.rgx = []
+        testobj.ignore = None
+        assert testobj.complex_search(lines, linestarts) == []
+        assert capsys.readouterr().out == ("found_in_lines: []\n"
+                                           "found_in_lines: []\n"
+                                           "lines_found: defaultdict(<class 'set'>, {})\n"
+                                           "all_searches: set()\n")
+
+        testobj.rgx = [MockRgx('find')]
+        assert testobj.complex_search(lines, linestarts) == [2, 3, 4]
+        assert capsys.readouterr().out == (
+                "found_in_lines: [(1, 0), (7, 0), (13, 0)]\n"
+                "found_in_lines: [(1, 0), (7, 0), (13, 0)]\n"
+                "itemstart, number: 1 0\n"
+                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
+                "itemstart ligt vóór linestart => gevonden in regel 2\n"
+                "itemstart, number: 7 0\n"
+                "ix, linestart: 0 5\nix, linestart: 1 12\n"
+                "itemstart ligt vóór linestart => gevonden in regel 3\n"
+                "itemstart, number: 13 0\n"
+                "ix, linestart: 0 1\nix, linestart: 1 5\nix, linestart: 2 12\nix, linestart: 3 20\n"
+                "itemstart ligt vóór linestart => gevonden in regel 4\n"
+                "lines_found: defaultdict(<class 'set'>, {2: {0}, 3: {0}, 4: {0}})\n"
+                "all_searches: {0}\n"
+                "in_line, values: 2 {0}\n"
+                "in_line, values: 3 {0}\n"
+                "in_line, values: 4 {0}\n")
+
+        testobj.ignore = MockRgx('ignore')
+        assert testobj.complex_search(lines, linestarts) == [4]
+        assert capsys.readouterr().out == (
+                "found_in_lines: [(1, 0), (7, 0), (13, 0)]\n"
+                "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, -1), (7, -1)]\n"
+                "itemstart, number: 1 -1\n"
+                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
+                "itemstart ligt vóór linestart => gevonden in regel 2\n"
+                "itemstart, number: 1 0\n"
+                "ix, linestart: 0 5\n"
+                "itemstart ligt vóór linestart => gevonden in regel 2\n"
+                "itemstart, number: 7 -1\n"
+                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\nix, linestart: 3 12\n"
+                "itemstart ligt vóór linestart => gevonden in regel 3\n"
+                "itemstart, number: 7 0\n"
+                "ix, linestart: 0 12\n"
+                "itemstart ligt vóór linestart => gevonden in regel 3\n"
+                "itemstart, number: 13 0\n"
+                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\nix, linestart: 3 12\n"
+                "ix, linestart: 4 20\n"
+                "itemstart ligt vóór linestart => gevonden in regel 4\n"
+                "lines_found: defaultdict(<class 'set'>, {2: {0, -1}, 3: {0, -1}, 4: {0}})\n"
+                "all_searches: {0}\n"
+                "in_line, values: 2 {0, -1}\n"
+                "in_line, values: 3 {0, -1}\n"
+                "in_line, values: 4 {0}\n")
+
+        testobj.rgx = [MockRgx('find'), MockRgx('find also')]
+        testobj.ignore = None
+        assert testobj.complex_search(lines, linestarts) == [2, 4]
+        assert capsys.readouterr().out == (
+                "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, 1), (13, 1), (19, 1)]\n"
+                "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, 1), (13, 1), (19, 1)]\n"
+                "itemstart, number: 1 0\n"
+                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
+                "itemstart ligt vóór linestart => gevonden in regel 2\n"
+                "itemstart, number: 1 1\n"
+                "ix, linestart: 0 5\n"
+                "itemstart ligt vóór linestart => gevonden in regel 2\n"
+                "itemstart, number: 7 0\n"
+                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\nix, linestart: 3 12\n"
+                "itemstart ligt vóór linestart => gevonden in regel 3\n"
+                "itemstart, number: 13 0\n"
+                "ix, linestart: 0 12\nix, linestart: 1 20\n"
+                "itemstart ligt vóór linestart => gevonden in regel 4\n"
+                "itemstart, number: 13 1\n"
+                "ix, linestart: 0 1\nix, linestart: 1 5\nix, linestart: 2 12\nix, linestart: 3 20\n"
+                "itemstart ligt vóór linestart => gevonden in regel 4\n"
+                "itemstart, number: 19 1\nix, linestart: 0 12\nix, linestart: 1 20\n"
+                "itemstart ligt vóór linestart => gevonden in regel 4\n"
+                "lines_found: defaultdict(<class 'set'>, {2: {0, 1}, 3: {0}, 4: {0, 1}})\n"
+                "all_searches: {0, 1}\n"
+                "in_line, values: 2 {0, 1}\n"
+                "in_line, values: 3 {0}\nnot all searches satisfied\n"
+                "in_line, values: 4 {0, 1}\n")
+
+        testobj.rgx = [MockRgx('find'), MockRgx('find also')]
+        testobj.ignore = MockRgx('ignore')
+        assert testobj.complex_search(lines, linestarts) == [4]
+        assert capsys.readouterr().out == (
+                "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, 1), (13, 1), (19, 1)]\n"
+                "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, 1), (13, 1), (19, 1),"
+                " (1, -1), (7, -1)]\n"
+                "itemstart, number: 1 -1\n"
+                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
+                "itemstart ligt vóór linestart => gevonden in regel 2\n"
+                "itemstart, number: 1 0\n"
+                "ix, linestart: 0 5\n"
+                "itemstart ligt vóór linestart => gevonden in regel 2\n"
+                "itemstart, number: 1 1\n"
+                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
+                "itemstart ligt vóór linestart => gevonden in regel 2\n"
+                "itemstart, number: 7 -1\n"
+                "ix, linestart: 0 5\nix, linestart: 1 12\n"
+                "itemstart ligt vóór linestart => gevonden in regel 3\n"
+                "itemstart, number: 7 0\n"
+                "ix, linestart: 0 1\nix, linestart: 1 5\nix, linestart: 2 12\n"
+                "itemstart ligt vóór linestart => gevonden in regel 3\n"
+                "itemstart, number: 13 0\n"
+                "ix, linestart: 0 5\nix, linestart: 1 12\nix, linestart: 2 20\n"
+                "itemstart ligt vóór linestart => gevonden in regel 4\n"
+                "itemstart, number: 13 1\n"
+                "ix, linestart: 0 5\nix, linestart: 1 12\nix, linestart: 2 20\n"
+                "itemstart ligt vóór linestart => gevonden in regel 4\n"
+                "itemstart, number: 19 1\n"
+                "ix, linestart: 0 5\nix, linestart: 1 12\nix, linestart: 2 20\n"
+                "itemstart ligt vóór linestart => gevonden in regel 4\n"
+                "lines_found: defaultdict(<class 'set'>, {2: {0, 1, -1}, 3: {0, -1}, 4: {0, 1}})\n"
+                "all_searches: {0, 1}\n"
+                "in_line, values: 2 {0, 1, -1}\n"
+                "in_line, values: 3 {0, -1}\n"
+                "in_line, values: 4 {0, 1}\n")
+
+    def test_old_rgx_search(self, monkeypatch, capsys):
+        """unittest for Finder.old_rgx_search
+        """
+        class MockMatch:
+            def __init__(self, start):
+                self._start = start
+            def start(self):
+                return self._start
+        class MockRegex:
+            def finditer(self, arg):
+                print(f"called regex.finditer with arg '{arg}'")
+                return []
+        class MockRegex2:
+            def finditer(self, arg):
+                print(f"called regex.finditer with arg '{arg}'")
+                return [MockMatch(4), MockMatch(18)]
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.rpt = []
+        testobj.p = {'wijzig': False}
+        testobj.rgx = MockRegex()
+        assert not testobj.old_rgx_search(['test', 'data', 'lines'], [0, 5, 12, 20], 'testfile')
+        assert testobj.rpt == []
+        assert capsys.readouterr().out == "called regex.finditer with arg 'testdatalines'\n"
+
+        testobj.rgx = MockRegex2()
+        assert testobj.old_rgx_search(['test', 'data', 'lines'], [0, 5, 12, 20], 'testfile')
+        assert testobj.rpt == ['testfile r. 1: test', 'testfile r. 3: lines']
+        assert capsys.readouterr().out == "called regex.finditer with arg 'testdatalines'\n"
+
+        testobj.rpt = []
+        testobj.p = {'wijzig': True}
+        assert testobj.old_rgx_search(['test', 'data', 'lines'], [0, 5, 12, 20], 'testfile')
+        assert testobj.rpt == []
+        assert capsys.readouterr().out == "called regex.finditer with arg 'testdatalines'\n"
+
+    def test_replace_and_report(self, monkeypatch, capsys, tmp_path):
+        """unittest for Finder.replace_and_report
+        """
+        class MockRegex:
+            def subn(self, *args):
+                print('called regex.subn with args', args)
+                return 'ndata', 5
+        def mock_backup(fname):
+            print(f"called Finder.backup_if_needed with arg '{fname}'")
+        filename = tmp_path / 'testfile'
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.backup_if_needed = mock_backup
+        testobj.p = {'vervang': 'yyy'}
+        testobj.rpt = []
+        testobj.rgx = MockRegex()
+        testobj.replace_and_report('data', filename)
+        assert testobj.rpt == [f"{filename}: 5 keer"]
+        assert filename.read_text() == 'ndata'
+        assert capsys.readouterr().out == (
+                f"called regex.subn with args ('yyy', 'data')\n"
+                f"called Finder.backup_if_needed with arg '{filename}'\n")
+
+    def test_replace_selected(self, monkeypatch, capsys, tmp_path):
         """unittest for Finder.replace_selected
         """
+        def mock_backup(name):
+            print(f"called Finder.backup_if_needed with arg '{name}'")
+        file0 = tmp_path / 'single_file'
+        file1 = tmp_path / 'file1'
+        file2 = tmp_path / 'file2'
+        file0.write_text('aaxxxbb\nccc\nxxx xxx\nyyy\n')
+        file1.write_text('2xaaxxxbb\nxxx xxx\nccc\nyyy\n')
+        file2.write_text('ccc\nyyy\nxxxaabb\nxxx xxx\n')
         testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.replace_selected(text, lines_to_replace) == "expected_result"
-        assert capsys.readouterr().out == ("")
+        testobj.backup_if_needed = mock_backup
+
+        testobj.p = {'zoek': 'xxx', 'filelist': [str(file0)]}
+        lines_to_replace = [[1], [3]]
+        assert testobj.replace_selected('yyy', lines_to_replace) == len(lines_to_replace)
+        assert file0.read_text() == "aayyybb\nccc\nyyy yyy\nyyy\n"
+        assert capsys.readouterr().out == (
+                f"called Finder.backup_if_needed with arg '{file0}'\n")
+
+        testobj.p = {'zoek': 'xxx', 'filelist': [str(tmp_path / 'file1'), str(tmp_path / 'file2')]}
+        lines_to_replace = [[str(file1), 1], [str(file1), 2], [str(file2), 3], [str(file2), 4]]
+        assert testobj.replace_selected('yyy', lines_to_replace) == len(lines_to_replace)
+        assert file1.read_text() == "2xaayyybb\nyyy yyy\nccc\nyyy\n"
+        assert file2.read_text() == "ccc\nyyy\nyyyaabb\nyyy yyy\n"
+        assert capsys.readouterr().out == (
+                f"called Finder.backup_if_needed with arg '{file1}'\n"
+                f"called Finder.backup_if_needed with arg '{file2}'\n")
 
     def test_backup_if_needed(self, monkeypatch, capsys):
         """unittest for Finder.backup_if_needed

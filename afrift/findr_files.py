@@ -218,7 +218,6 @@ class Finder:
     """interpreteren van de parameters en aansturen van de zoek/vervang routine
     """
     def __init__(self, **parms):
-        ## print parms
         self.p = {
             'zoek': '',
             'vervang': None,
@@ -329,16 +328,13 @@ class Finder:
         except PermissionError:
             _list = []
         except FileNotFoundError:
-            return 'File not found: {path.resolve()}'
+            return f'File not found: {path.resolve()}'
         ## else:
             ## _list = (pad,)
         for entry in _list:
-            if entry.is_dir():
-                if self.p['subdirs']:
-                    self.subdirs(entry.path, level=level)
-            elif entry.is_symlink() and not self.p['follow_symlinks']:
-                pass
-            else:
+            if entry.is_symlink() and not self.p['follow_symlinks']:
+                continue
+            if entry.is_file():
                 try:
                     ext = entry.suffix
                 except AttributeError:
@@ -346,6 +342,8 @@ class Finder:
                     ext = entry.suffix
                 if self.p['extlist'] == [] or ext.upper() in self.extlist_upper:
                     self.filenames.append(entry)
+            elif self.p['subdirs']:
+                self.subdirs(entry.path, level=level)
         return ''
 
     def build_regexp_simple(self):
@@ -373,14 +371,15 @@ class Finder:
         flags = re.MULTILINE
         if not self.p['case']:
             flags |= re.IGNORECASE
-        if self.p['regexp'] or self.p['wijzig']:  # in these cases: always take literally
-            zoek = [re.compile(rgxescape(self.p['zoek']), flags)]
-        else:
+        if self.use_complex:
             zoek_naar, zoek_ook, zoek_niet = self.parse_zoekstring()
             zoek = [re.compile('|'.join([rgxescape(x) for x in zoek_naar]), flags)]
             zoek += [re.compile(rgxescape(x), flags) for x in zoek_ook]
             if zoek_niet:
                 negeer = re.compile('|'.join([rgxescape(x) for x in zoek_niet]), flags)
+        else:
+            # self.p['regexp'] or self.p['wijzig']:  # in these cases: always take literally
+            zoek = [re.compile(rgxescape(self.p['zoek']), flags)]
         return zoek, negeer
 
     def parse_zoekstring(self):
@@ -417,7 +416,7 @@ class Finder:
         possible_matches = []
         required_matches = []
         forbidden_matches = []
-        for char in self.p['zoek']:
+        for char in self.p['zoek'].replace("'", '"'):
             if char == '"':
                 if in_quotes:
                     add_to_matches()
@@ -441,72 +440,31 @@ class Finder:
         for entry in self.filenames:
             self.zoek(entry)
         if self.p['context']:
-            self.add_context()
+            self.add_context_to_search_results()
 
     def zoek(self, best):
         "daadwerkelijk uitvoeren van de zoek/vervang actie op een bepaald bestand"
-        pos, lines, regels = 0, [], []
-        msg = ""
-        try_again = False
-        with best.open("r") as f_in:
-            try:
-                for x in f_in:
-                    lines.append(pos)
-                    x = x.rstrip() + os.linesep
-                    regels.append(x)
-                    pos += len(x)
-            except UnicodeDecodeError:
-                try_again = True
-        if try_again:
-            pos, lines, regels = 0, [], []
-            with best.open("r", encoding=self.p['fallback_encoding']) as f_in:
-                try:
-                    for x in f_in:
-                        lines.append(pos)
-                        x = x.rstrip() + os.linesep
-                        regels.append(x)
-                        pos += len(x)
-                except UnicodeDecodeError:
-                    msg = best + ": overgeslagen, waarschijnlijk geen tekstbestand"
-        if msg:
-            self.rpt.append(msg)
+        lines = read_input_file(best, self.p['fallback_encoding'])
+        if lines is None:
+            self.rpt.append(f"{best}: overgeslagen, waarschijnlijk geen tekstbestand")
             return
-        lines.append(pos)
-        data = "".join(regels)
-        found = False
-        from_line = 0
-        last_in_line = 0
+        pos, linestarts, linedata = 0, [], []
+        for line in lines:
+            linestarts.append(pos)
+            linedata.append(line.rstrip() + os.linesep)
+            pos += len(line)
+        linestarts.append(pos)
         if self.use_complex:
-            result_list = self.complex_search(data, lines)
+            result_list = self.complex_search(lines, linestarts)
             for lineno in result_list:
-                found = True
-                self.rpt.append(f"{best} r. {lineno}: {regels[lineno - 1].rstrip()}")
-            return
+                self.rpt.append(f"{best} r. {lineno}: {lines[lineno - 1].rstrip()}")
+        else:
+            # gebruik de oude manier van zoeken bij vervangen of bij regexp zoekstring
+            found = self.old_rgx_search(lines, linestarts, best)
+            if found and self.p['wijzig']:
+                self.replace_and_report(lines, best)
 
-        # gebruik de oude manier van zoeken bij vervangen of bij regexp zoekstring
-        result_list = self.rgx.finditer(data)
-        for vind in result_list:
-            found = True
-            ## print(vind, vind.span(), sep = " ")
-            for lineno, linestart in enumerate(lines[from_line:]):
-                ## print(from_line,lineno,linestart)
-                if vind.start() < linestart:
-                    if not self.p['wijzig']:
-                        in_line = lineno + from_line
-                        if in_line != last_in_line:
-                            self.rpt.append(f"{best} r. {in_line}: {regels[in_line - 1].rstrip()}")
-                        last_in_line = in_line
-                    from_line = lineno
-                    break
-        if found and self.p['wijzig']:
-            ndata, aant = self.rgx.subn(self.p["vervang"], data)
-            best_s = str(best)
-            self.rpt.append(f"{best_s}: {aant} keer")
-            self.backup_if_needed(best_s)
-            with best.open("w") as f_out:
-                f_out.write(ndata)
-
-    def add_context(self):
+    def add_context_to_search_results(self):
         """determine locations and add into search results
         """
         results, self.rpt = self.rpt, []
@@ -530,38 +488,47 @@ class Finder:
                 self.rpt.append(item)
                 continue
             lineno, text = test
-            contains = contains_default
-            for loc in locations[best]:
-                lineno = int(lineno)
-                if loc[0][0] < lineno <= loc[1][0]:
-                    old_contains = contains
-                    contains = loc[2]
-                    if contains == 'comment':
-                        where = text.upper().find(self.p['zoek'].upper())
-                        if where < loc[0][1]:
-                            contains = old_contains
-                if loc[0][0] > lineno:
-                    break
+            contains = self.determine_context_from_locations(lineno, text, locations[best])
             if self.p['negeer'] and contains in ('comment', 'docstring'):
                 continue
             if contains != 'ignore':
                 self.rpt.append(f'{best} r. {lineno} ({contains}): {text}')
 
-    def complex_search(self, data, lines):
+    def determine_context_from_locations(self, lineno, text, locations):
+        """determine which "location" to add into search result
+        """
+        contains = contains_default
+        for loc in locations:
+            lineno = int(lineno)
+            if loc[0][0] < lineno <= loc[1][0]:
+                old_contains = contains
+                contains = loc[2]
+                if contains == 'comment':
+                    where = text.upper().find(self.p['zoek'].upper())
+                    if where < loc[0][1]:
+                        contains = old_contains
+            if loc[0][0] > lineno:
+                break
+        return contains
+
+    def complex_search(self, lines, linestarts):
         """extended search using phrases we want to find and phrases we don't want to find
         """
+        data = "".join(lines)
         # maak een lijst van alle locaties waar een string gevonden is
         # (plus de index van de  regexp die er bij hoort)
         found_in_lines = []
         for ix, rgx in enumerate(self.rgx):
             new_lines = [(x.start(), ix) for x in rgx.finditer(data)]
             found_in_lines += new_lines
+        print('found_in_lines:', found_in_lines)
 
         # vul de lijst aan met alle locaties waar gevonden is wat we niet willen vinden
         # (gemarkeerd met index -1)
         if self.ignore:
             donotwant = [(x.start(), -1) for x in self.ignore.finditer(data)]
             found_in_lines += donotwant
+        print('found_in_lines:', found_in_lines)
 
         # loop de lijst langs om hiervan een dictionary te maken op regelnummer
         # met alle regexp indexen waar deze bij gevonden is
@@ -569,40 +536,84 @@ class Finder:
         lines_found = collections.defaultdict(set)
         from_line = 0  # houdt bij vanaf welke regel het zin heeft om de inhoud te controleren
         for itemstart, number in sorted(found_in_lines):
-            for lineno, linestart in enumerate(lines[from_line:]):
+            print('itemstart, number:', itemstart, number)
+            for ix, linestart in enumerate(linestarts[from_line:]):
+                print('ix, linestart:', ix, linestart)
                 if itemstart < linestart:
-                    in_line = lineno + from_line    # bereken het actuele regelnummer
-                    from_line = lineno
+                    in_line = ix + from_line    # bereken het actuele regelnummer
+                    print('itemstart ligt vóór linestart => gevonden in regel', in_line)
+                    from_line = ix
                     break
             lines_found[in_line].add(number)
+        print('lines_found:', lines_found)
 
         # uitfilteren welke regel niet in alle zoekacties voorkomt of juist weggelaten met worden
         all_searches = set(range(len(self.rgx)))
+        print('all_searches:', all_searches)
         lines_left_over = []
-        for line, values in lines_found.items():
-            if -1 in values:
+        for in_line, searches in lines_found.items():
+            print('in_line, values:', in_line, searches)
+            if -1 in searches:
                 continue
-            if values == all_searches:
-                lines_left_over.append(line)
+            if searches == all_searches:
+                lines_left_over.append(in_line)
+            else:
+                print('not all searches satisfied')
         lines_left_over.sort()
         return lines_left_over
 
+    def old_rgx_search(self, lines, linestarts, best):
+        """search via regex and format results for output
+        """
+        found = False
+        from_line = 0
+        last_in_line = 0
+        result_list = self.rgx.finditer("".join(lines))
+        for vind in result_list:
+            found = True
+            for lineno, linestart in enumerate(linestarts[from_line:]):
+                if vind.start() < linestart:
+                    if not self.p['wijzig']:
+                        in_line = lineno + from_line
+                        if in_line != last_in_line:
+                            self.rpt.append(f"{best} r. {in_line}: {lines[in_line - 1].rstrip()}")
+                        last_in_line = in_line
+                    from_line = lineno
+                    break
+        return found
+
+    def replace_and_report(self, lines, best):
+        """replace via regex
+        """
+        ndata, aant = self.rgx.subn(self.p["vervang"], "".join(lines))
+        best_s = str(best)
+        self.rpt.append(f"{best_s}: {aant} keer")
+        self.backup_if_needed(best_s)
+        with best.open("w") as f_out:
+            f_out.write(ndata)
+
     def replace_selected(self, text, lines_to_replace):
         "achteraf vervangen in geselecteerde regels"
-        replaced = 0
-        single_mode = len(lines_to_replace[0]) == 1
-        file_to_replace, lines = '', []
-        for line in sorted(lines_to_replace):
+        def determine_filename_lineno(line):
             if single_mode:
                 filename, lineno = str(self.p['filelist'][0]), line[0]
             else:
                 filename, lineno = line
             lineno = int(lineno) - 1
+            return filename, lineno
+        def write_replacement(file_to_replace, lines):
+            "write back modifications"
+            if file_to_replace:
+                self.backup_if_needed(file_to_replace)
+                with open(file_to_replace, 'w') as out:
+                    out.writelines(lines)
+        replaced = 0
+        single_mode = len(lines_to_replace[0]) == 1
+        file_to_replace, lines = '', []
+        for line in sorted(lines_to_replace):
+            filename, lineno = determine_filename_lineno(line)
             if filename != file_to_replace:
-                if file_to_replace:
-                    self.backup_if_needed(file_to_replace)
-                    with open(file_to_replace, 'w') as out:
-                        out.writelines(lines)
+                write_replacement(file_to_replace, lines)
                 file_to_replace = filename
                 with open(file_to_replace) as in_:
                     lines = in_.readlines()
@@ -610,9 +621,7 @@ class Finder:
             lines[lineno] = lines[lineno].replace(self.p['zoek'], text)
             if lines[lineno] != oldline:
                 replaced += 1
-        self.backup_if_needed(file_to_replace)
-        with open(file_to_replace, 'w') as out:
-            out.writelines(lines)
+        write_replacement(file_to_replace, lines)
         return replaced
 
     def backup_if_needed(self, fname):
