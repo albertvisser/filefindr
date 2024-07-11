@@ -118,19 +118,6 @@ def test_read_input_file(monkeypatch, capsys, tmp_path):
     assert testee.read_input_file(as_latin, 'utf-32') is None
 
 
-def _test_pyread(monkeypatch, capsys):
-    """unittest for findr_files.pyread
-    """
-    assert testee.pyread(file, fallback_encoding='latin-1', negeer_docs=False) == "expected_result"
-
-    def _test_pop_construct(self, monkeypatch, capsys):
-        """unittest for .pop_construct
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.pop_construct(last_line) == "expected_result"
-        assert capsys.readouterr().out == ("")
-
-
 class TestPyRead:
     def setup_testobj(self, monkeypatch, capsys):
         """testdouble for findr_files.PyRead object
@@ -1041,7 +1028,7 @@ class TestFinder:
         """
         def mock_type(entry):
             print(f"called determine_filetype for '{entry}'")
-            if entry.endswith('.py'):
+            if str(entry).endswith('.py'):
                 return 'py'
             return ''
         class MockPyRead:

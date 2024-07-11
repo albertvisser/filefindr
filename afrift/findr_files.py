@@ -69,25 +69,6 @@ def reformat_result(lines, context_type=None):
         lines_out.append(f'{location}: {statement}')
     return lines_out
 
-# moved to PyRead class
-# def is_single_line_docstring(inp):
-#     """return True if input is a valid single-line docstring (with correct delimiters)
-#     """
-#     test = inp[0]
-#     while test in ('"', "'"):
-#         try:
-#             ix = inp.index(test, 1)
-#         # het is een syntax error als een single-quote niet wordt afgesloten op dezelfde regel
-#         # dus hoef ik hier wel naar te kijken?
-#         # except IndexError:
-#         except ValueError:
-#             return False
-#         inp = inp[ix + 1:].strip()
-#         if not inp:
-#             return True
-#         test = inp[0]
-#     return False
-
 
 def determine_filetype(entry):
     """Try to discover what kind of file this is and return which context-sensitive search to use
@@ -247,96 +228,6 @@ class PyRead:
             construct = list(self.in_construct.pop())
             construct.append(last_line)
             self.constructs.append(self.in_construct + [construct])
-
-
-# vervangen door hiervóór gedefinieerde klasse
-def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
-    """context-aware search in Python files
-
-    this routine produces a list of contexts
-    """
-    def pop_construct(last_line):
-        """if needed, add construct(s) to list
-        """
-        while in_construct and indentpos <= in_construct[-1][0]:
-            construct = list(in_construct.pop())
-            construct.append(last_line)
-            constructs.append(in_construct + [construct])
-    lines = read_input_file(file, fallback_encoding)
-    if lines is None:
-        return lines
-    itemlist = []
-    modlevel_start = 1
-    constructs = []
-    in_construct = []
-    docstring = ''
-    docstring_start = 0
-    docstring_delim = ''
-    indentpos = prev_lineno = 0
-    start_of_code = False
-    for ix, line in enumerate(lines):
-        if line.strip() == "":
-            continue
-        lineno = ix + 1
-        code = line.lstrip()
-        if code.startswith('#') and negeer_docs:
-            itemlist.append(((lineno, 0), (lineno, -1), 'comment'))
-            if not start_of_code:
-                modlevel_start = lineno + 1
-            continue
-        if code.startswith('#') and line.index(code) < indentpos:
-            pass
-        else:
-            indentpos = line.index(code)
-        if negeer_docs:
-            if docstring_delim and line.rstrip().endswith(docstring_delim):
-                # dit mist de situatie dat er een commentaar volgt na de docstring
-                docstring_delim = ''
-                # doctring_start is eerder ingesteld
-                itemlist.append(((docstring_start, indentpos), (lineno, -1), "docstring"))
-                if not start_of_code:
-                    modlevel_start = lineno + 1
-                continue
-            if code.startswith(('"""', "'''")):
-                docstring_delim = code[:3]
-                docstring_start = lineno
-                if code[3:].rstrip().endswith(docstring_delim):
-                    docstring_delim = ''
-                    itemlist.append(((docstring_start, indentpos), (lineno, -1), "docstring"))
-                if not start_of_code:
-                    modlevel_start = lineno + 1
-                continue
-            # het is een syntax error als een single-quote niet wordt afgesloten op dezelfde regel
-            # dus is de extra controle wel nodig?
-            if code.startswith(('"', "'")) and is_single_line_docstring(code.rstrip()):
-                itemlist.append(((lineno, indentpos), (lineno, -1), 'docstring'))
-                if not start_of_code:
-                    modlevel_start = lineno + 1
-                continue
-        if not start_of_code:
-            start_of_code = True
-            itemlist.append(((modlevel_start, 0), (len(lines), -1), default_location))
-        pop_construct(prev_lineno)
-        if code.startswith(('def ', 'class ')):
-            words = code.split()
-            construct = (indentpos, words[0], words[1].split(':')[0].split('(')[0], lineno)
-            in_construct.append(construct)
-        if '#' in code and negeer_docs:
-            pos = code.index('#')
-            itemlist.append(((lineno, pos), (lineno, -1), 'comment'))
-        prev_lineno = lineno
-    indentpos = 0
-    pop_construct(prev_lineno - 1)
-    for item in constructs:
-        _, _, _, start, end = item[-1]
-        construct = []
-        for part in item:
-            type_, name = part[1:3]
-            if type_ == "def":
-                type_ = "method" if construct and construct[-2] == "class" else "function"
-            construct.extend([type_, name])
-        itemlist.append(((start, 0), (end, -1), " ".join(construct)))
-    return sorted(itemlist)
 
 
 def rgxescape(data):   # only for strings
