@@ -8,7 +8,7 @@ import re
 import shutil
 import collections
 import subprocess
-contains_default = 'module level code'
+default_location = 'module level code'
 special_chars = ('.', '^', '$', '*', '+', '?', '{', '}', '[', ']', '(', ')', '|', '\\')
 
 
@@ -69,24 +69,24 @@ def reformat_result(lines, context_type=None):
         lines_out.append(f'{location}: {statement}')
     return lines_out
 
-
-def is_single_line_docstring(inp):
-    """return True if input is a valid single-line docstring (with correct delimiters)
-    """
-    test = inp[0]
-    while test in ('"', "'"):
-        try:
-            ix = inp.index(test, 1)
-        # het is een syntax error als een single-quote niet wordt afgesloten op dezelfde regel
-        # dus hoef ik hier wel naar te kijken?
-        # except IndexError:
-        except ValueError:
-            return False
-        inp = inp[ix + 1:].strip()
-        if not inp:
-            return True
-        test = inp[0]
-    return False
+# moved to PyRead class
+# def is_single_line_docstring(inp):
+#     """return True if input is a valid single-line docstring (with correct delimiters)
+#     """
+#     test = inp[0]
+#     while test in ('"', "'"):
+#         try:
+#             ix = inp.index(test, 1)
+#         # het is een syntax error als een single-quote niet wordt afgesloten op dezelfde regel
+#         # dus hoef ik hier wel naar te kijken?
+#         # except IndexError:
+#         except ValueError:
+#             return False
+#         inp = inp[ix + 1:].strip()
+#         if not inp:
+#             return True
+#         test = inp[0]
+#     return False
 
 
 def determine_filetype(entry):
@@ -114,10 +114,146 @@ def read_input_file(file, fallback_encoding):
             return None
 
 
+class PyRead:
+    """context-aware search in Python files
+    """
+    def __init__(self, file, fallback_encoding='latin-1', negeer_docs=False):
+        self.lines = read_input_file(file, fallback_encoding)
+        if not self.lines:
+            raise EOFError('No lines in file')
+        self.negeer_docs = negeer_docs  # eigenlijk omkeren? hoe is dit bedoeld?
+        self.itemlist = []
+        self.modlevel_start = 1
+        self.constructs = []
+        self.in_construct = []
+        self.docstring = ''
+        self.docstring_start = 0
+        self.docstring_delim = ''
+        self.indentpos = self.prev_lineno = 0
+        self.start_of_code = False
+
+    def go(self):
+        "convenience wrapper for main processing routines"
+        self.process_codelines()
+        self.build_contexts()
+        return self.filter_comments()
+
+    def process_codelines(self):
+        """this routine produces a list of constructs and if requested one of comment contexts
+        """
+        for ix, line in enumerate(self.lines):
+            lineno = ix + 1
+            code = self.analyze_line(lineno, line)
+            if not code:
+                continue
+            self.pop_construct(self.prev_lineno)
+            if code.startswith(('def ', 'class ')):
+                words = code.split()
+                construct = (self.indentpos, words[0], words[1].split(':')[0].split('(')[0],
+                             lineno)
+                self.in_construct.append(construct)
+            if '#' in code:
+                pos = code.index('#')
+                self.itemlist.append(((lineno, pos), (lineno, -1), 'comment'))
+            self.prev_lineno = lineno
+        self.indentpos = 0
+        self.pop_construct(self.prev_lineno - 1)
+
+    def build_contexts(self):
+        "turn constructs into contexts"
+        for item in self.constructs:
+            _, _, _, start, end = item[-1]
+            construct = []
+            for part in item:
+                type_, name = part[1:3]
+                if type_ == "def":
+                    type_ = "method" if construct and construct[-2] == "class" else "function"
+                construct.extend([type_, name])
+            self.itemlist.append(((start, 0), (end, -1), " ".join(construct)))
+
+    def filter_comments(self):
+        """leave out comment / docstring contexts if requested
+        """
+        contexts = []
+        for item in self.itemlist:
+            if item[-1] in ('docstring', 'comment') and self.negeer_docs:
+                continue
+            contexts.append(item)
+        return sorted(contexts)
+
+    def analyze_line(self, lineno, line):
+        "build constructs from code or condense into docstring / comment indicator"
+        code = line.lstrip()
+        self.indentpos = line.index(code)
+        if self.docstring_delim and self.docstring_delim in line:
+            pos = line.index(self.docstring_delim) + len(self.docstring_delim)
+            self.docstring_delim = ''
+            code = line[pos:].lstrip()
+            if not code:
+                self.add_context(((self.docstring_start, self.indentpos), (lineno, -1), "docstring"),
+                                 lineno)
+                return ''
+            self.add_context(((self.docstring_start, self.indentpos), (lineno, pos), "docstring"),
+                             lineno)
+            self.indentpos = pos + line[pos:].index(code)
+        if code.startswith('#'):
+            self.add_context(((lineno, self.indentpos), (lineno, -1), 'comment'), lineno)
+            return ''
+        if code.startswith(('"""', "'''")):
+            self.docstring_delim = code[:3]
+            self.docstring_start = lineno
+            if code[3:].rstrip().endswith(self.docstring_delim):
+                self.docstring_delim = ''
+                self.itemlist.append(((self.docstring_start, self.indentpos), (lineno, -1),
+                                      "docstring"))
+            if not self.start_of_code:
+                self.modlevel_start = lineno + 1
+            return ''
+        if code.startswith(('"', "'")) and self.is_single_line_docstring(code.rstrip()):
+            self.add_context(((lineno, self.indentpos), (lineno, -1), 'docstring'), lineno)
+            return ''
+        if not self.start_of_code:
+            self.start_of_code = True
+            self.itemlist.append(((self.modlevel_start, 0), (len(self.lines), -1), default_location))
+        return code
+
+    def add_context(self, context, lineno):
+        """add entry to list of contexts instead of list of constructs
+        update possible start of subsequent module-level code
+        """
+        self.itemlist.append(context)
+        if not self.start_of_code:
+            self.modlevel_start = lineno + 1
+
+    def is_single_line_docstring(self, inp):
+        """return True if input is a valid single-line docstring (with correct delimiters)
+        """
+        test = inp[0]
+        while test in ('"', "'"):
+            try:
+                ix = inp.index(test, 1)
+            except ValueError:
+                return False
+            inp = inp[ix + 1:].strip()
+            if not inp:
+                return True
+            test = inp[0]
+        return False
+
+    def pop_construct(self, last_line):
+        """if needed, add construct(s) to list
+        """
+        while self.in_construct and self.indentpos <= self.in_construct[-1][0]:
+            construct = list(self.in_construct.pop())
+            construct.append(last_line)
+            self.constructs.append(self.in_construct + [construct])
+
+
+# vervangen door hiervóór gedefinieerde klasse
 def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
     """context-aware search in Python files
 
-    this routine procduces a list of contexts
+    this routine produces a list of contexts
     """
     def pop_construct(last_line):
         """if needed, add construct(s) to list
@@ -164,8 +300,8 @@ def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
             if code.startswith(('"""', "'''")):
                 docstring_delim = code[:3]
                 docstring_start = lineno
-                if line.rstrip().endswith(docstring):
-                    docstring = ''
+                if code[3:].rstrip().endswith(docstring_delim):
+                    docstring_delim = ''
                     itemlist.append(((docstring_start, indentpos), (lineno, -1), "docstring"))
                 if not start_of_code:
                     modlevel_start = lineno + 1
@@ -179,7 +315,7 @@ def pyread(file, fallback_encoding='latin-1', negeer_docs=False):
                 continue
         if not start_of_code:
             start_of_code = True
-            itemlist.append(((modlevel_start, 0), (len(lines), -1), contains_default))
+            itemlist.append(((modlevel_start, 0), (len(lines), -1), default_location))
         pop_construct(prev_lineno)
         if code.startswith(('def ', 'class ')):
             words = code.split()
@@ -465,14 +601,16 @@ class Finder:
                 self.replace_and_report(lines, best)
 
     def add_context_to_search_results(self):
-        """determine locations and add into search results
+        """determine locations and match with search results
         """
         results, self.rpt = self.rpt, []
         locations = {}
         for entry in self.filenames:
             ftype = determine_filetype(entry)
             if ftype == 'py':
-                locations[str(entry)] = pyread(entry, self.p['fallback_encoding'], self.p['negeer'])
+                # locations[str(entry)] = pyread(entry, self.p['fallback_encoding'], self.p['negeer'])
+                locations[str(entry)] = PyRead(entry, self.p['fallback_encoding'],
+                                               self.p['negeer']).go()
             else:
                 locations[str(entry)] = []
         for item in results:
@@ -497,7 +635,7 @@ class Finder:
     def determine_context_from_locations(self, lineno, text, locations):
         """determine which "location" to add into search result
         """
-        contains = contains_default
+        contains = default_location
         for loc in locations:
             lineno = int(lineno)
             if loc[0][0] < lineno <= loc[1][0]:
@@ -521,14 +659,14 @@ class Finder:
         for ix, rgx in enumerate(self.rgx):
             new_lines = [(x.start(), ix) for x in rgx.finditer(data)]
             found_in_lines += new_lines
-        print('found_in_lines:', found_in_lines)
+        # print('found_in_lines:', found_in_lines)
 
         # vul de lijst aan met alle locaties waar gevonden is wat we niet willen vinden
         # (gemarkeerd met index -1)
         if self.ignore:
             donotwant = [(x.start(), -1) for x in self.ignore.finditer(data)]
             found_in_lines += donotwant
-        print('found_in_lines:', found_in_lines)
+        # print('found_in_lines:', found_in_lines)
 
         # loop de lijst langs om hiervan een dictionary te maken op regelnummer
         # met alle regexp indexen waar deze bij gevonden is
@@ -536,29 +674,29 @@ class Finder:
         lines_found = collections.defaultdict(set)
         from_line = 0  # houdt bij vanaf welke regel het zin heeft om de inhoud te controleren
         for itemstart, number in sorted(found_in_lines):
-            print('itemstart, number:', itemstart, number)
+            # print('itemstart, number:', itemstart, number)
             for ix, linestart in enumerate(linestarts[from_line:]):
-                print('ix, linestart:', ix, linestart)
+                # print('ix, linestart:', ix, linestart)
                 if itemstart < linestart:
                     in_line = ix + from_line    # bereken het actuele regelnummer
-                    print('itemstart ligt vóór linestart => gevonden in regel', in_line)
+                    # print('itemstart ligt vóór linestart => gevonden in regel', in_line)
                     from_line = ix
                     break
             lines_found[in_line].add(number)
-        print('lines_found:', lines_found)
+        # print('lines_found:', lines_found)
 
         # uitfilteren welke regel niet in alle zoekacties voorkomt of juist weggelaten met worden
         all_searches = set(range(len(self.rgx)))
-        print('all_searches:', all_searches)
+        # print('all_searches:', all_searches)
         lines_left_over = []
         for in_line, searches in lines_found.items():
-            print('in_line, values:', in_line, searches)
+            # print('in_line, values:', in_line, searches)
             if -1 in searches:
                 continue
             if searches == all_searches:
                 lines_left_over.append(in_line)
-            else:
-                print('not all searches satisfied')
+            # else:
+            #     print('not all searches satisfied')
         lines_left_over.sort()
         return lines_left_over
 
@@ -601,12 +739,14 @@ class Finder:
                 filename, lineno = line
             lineno = int(lineno) - 1
             return filename, lineno
+
         def write_replacement(file_to_replace, lines):
             "write back modifications"
             if file_to_replace:
                 self.backup_if_needed(file_to_replace)
                 with open(file_to_replace, 'w') as out:
                     out.writelines(lines)
+
         replaced = 0
         single_mode = len(lines_to_replace[0]) == 1
         file_to_replace, lines = '', []

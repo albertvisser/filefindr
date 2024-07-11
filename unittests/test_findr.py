@@ -56,21 +56,21 @@ def test_reformat_result(monkeypatch, capsys):
             "called determine_split_none with args ('py', ['yy', 'r.', '4', 'bbbbb', 'ttttt'])\n"
             "called determine_split_none with args ('py', ['yy', 'r.', '5', 'ccccc', 'uuuuu'])\n")
 
-
-def test_is_single_line_docstring(monkeypatch, capsys):
-    """unittest for findr_files.is_single_line_docstring
-    """
-    assert not testee.is_single_line_docstring('hello')
-    assert testee.is_single_line_docstring('"hello"')
-    assert not testee.is_single_line_docstring('"hello')
-    assert not testee.is_single_line_docstring('""hello""')
-    assert testee.is_single_line_docstring('"""hello"""')
-    assert not testee.is_single_line_docstring('"""hello')
-    assert testee.is_single_line_docstring("'hello'")
-    assert not testee.is_single_line_docstring("'hello")
-    assert not testee.is_single_line_docstring("''hello''")
-    assert testee.is_single_line_docstring("'''hello'''")
-    assert not testee.is_single_line_docstring("'''hello")
+# moved to PyRead class
+# def test_is_single_line_docstring(monkeypatch, capsys):
+#     """unittest for findr_files.is_single_line_docstring
+#     """
+#     assert not testee.is_single_line_docstring('hello')
+#     assert testee.is_single_line_docstring('"hello"')
+#     assert not testee.is_single_line_docstring('"hello')
+#     assert not testee.is_single_line_docstring('""hello""')
+#     assert testee.is_single_line_docstring('"""hello"""')
+#     assert not testee.is_single_line_docstring('"""hello')
+#     assert testee.is_single_line_docstring("'hello'")
+#     assert not testee.is_single_line_docstring("'hello")
+#     assert not testee.is_single_line_docstring("''hello''")
+#     assert testee.is_single_line_docstring("'''hello'''")
+#     assert not testee.is_single_line_docstring("'''hello")
 
 
 def test_determine_filetype(monkeypatch, capsys):
@@ -129,6 +129,473 @@ def _test_pyread(monkeypatch, capsys):
         testobj = self.setup_testobj(monkeypatch, capsys)
         assert testobj.pop_construct(last_line) == "expected_result"
         assert capsys.readouterr().out == ("")
+
+
+class TestPyRead:
+    def setup_testobj(self, monkeypatch, capsys):
+        """testdouble for findr_files.PyRead object
+
+        create the object skipping the normal initialization
+        intercept messages during creation
+        return the object so that other methods can be monkeypatched in the caller
+        """
+        def mock_init(self):
+            """stub
+            """
+            print('called PyRead.__init__')
+        monkeypatch.setattr(testee.PyRead, '__init__', mock_init)
+        testobj = testee.PyRead()
+        assert capsys.readouterr().out == 'called PyRead.__init__\n'
+        return testobj
+
+    def test_init(self, monkeypatch, capsys):
+        """unittest for PyRead.__init__
+        """
+        def mock_read(*args):
+            print('called read_input_file with args', args)
+            return []
+        def mock_read_2(*args):
+            print('called read_input_file with args', args)
+            return ['xxx\n']
+        monkeypatch.setattr(testee, 'read_input_file', mock_read)
+        with pytest.raises(EOFError) as exc:
+            testee.PyRead('testfile')
+        assert str(exc.value) == 'No lines in file'
+        assert capsys.readouterr().out == (
+                "called read_input_file with args ('testfile', 'latin-1')\n")
+
+        monkeypatch.setattr(testee, 'read_input_file', mock_read_2)
+        testobj = testee.PyRead('testfile')
+        assert testobj.lines == ['xxx\n']
+        assert not testobj.negeer_docs
+        assert testobj.itemlist == []
+        assert testobj.modlevel_start == 1
+        assert testobj.constructs == []
+        assert testobj.in_construct == []
+        assert testobj.docstring == ''
+        assert testobj.docstring_start == 0
+        assert testobj.docstring_delim == ''
+        assert testobj.indentpos == 0
+        assert testobj.prev_lineno == 0
+        assert not testobj.start_of_code
+        assert capsys.readouterr().out == (
+                "called read_input_file with args ('testfile', 'latin-1')\n")
+
+        testobj = testee.PyRead('testfile', 'qqq', True)
+        assert testobj.lines == ['xxx\n']
+        assert testobj.negeer_docs
+        assert testobj.itemlist == []
+        assert testobj.modlevel_start == 1
+        assert testobj.constructs == []
+        assert testobj.in_construct == []
+        assert testobj.docstring == ''
+        assert testobj.docstring_start == 0
+        assert testobj.docstring_delim == ''
+        assert testobj.indentpos == 0
+        assert testobj.prev_lineno == 0
+        assert not testobj.start_of_code
+        assert capsys.readouterr().out == (
+                "called read_input_file with args ('testfile', 'qqq')\n")
+
+    def test_go(self, monkeypatch, capsys):
+        """unittest for PyRead.go
+        """
+        def mock_process():
+            print('called PyRead.process_codelines')
+        def mock_build():
+            print('called PyRead.build_contexts')
+        def mock_filter():
+            print('called PyRead.filter_comments')
+            return ['xxx']
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.process_codelines = mock_process
+        testobj.build_contexts = mock_build
+        testobj.filter_comments = mock_filter
+        assert testobj.go() == ['xxx']
+        assert capsys.readouterr().out == ("called PyRead.process_codelines\n"
+                                           "called PyRead.build_contexts\n"
+                                           "called PyRead.filter_comments\n")
+
+    def test_process_codelines(self, monkeypatch, capsys):
+        """unittest for PyRead.process_codelines
+        """
+        def mock_analyze(*args):
+            print('called PyRead.analyze_line with args', args)
+            return args[1]
+        def mock_pop(lineno):
+            print(f"called testobj.pop_construct with arg {lineno}")
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.analyze_line = mock_analyze
+        testobj.pop_construct = mock_pop
+        testobj.lines = []
+        testobj.prev_lineno = 1
+        testobj.in_construct = []
+        testobj.process_codelines()
+        assert testobj.indentpos == 0
+        assert capsys.readouterr().out == "called testobj.pop_construct with arg 0\n"
+        testobj.lines = ['']
+        testobj.process_codelines()
+        assert testobj.indentpos == 0
+        assert capsys.readouterr().out == ("called PyRead.analyze_line with args (1, '')\n"
+                                           "called testobj.pop_construct with arg 0\n")
+        testobj.lines = ['   xxxx', 'yyyy # zzz']
+        testobj.itemlist = []
+        testobj.process_codelines()
+        assert testobj.indentpos == 0
+        assert testobj.itemlist == [((2, 5), (2, -1), 'comment')]
+        assert capsys.readouterr().out == (
+                "called PyRead.analyze_line with args (1, '   xxxx')\n"
+                "called testobj.pop_construct with arg 1\n"
+                "called PyRead.analyze_line with args (2, 'yyyy # zzz')\n"
+                "called testobj.pop_construct with arg 1\n"
+                "called testobj.pop_construct with arg 1\n")
+        testobj.itemlist = []
+        testobj.in_construct = []
+        testobj.lines = ['def myfunction(arg1, arg2):', 'class MyClass: # a class']
+        testobj.process_codelines()
+        assert testobj.indentpos == 0
+        assert testobj.itemlist == [((2, 15), (2, -1), 'comment')]
+        assert capsys.readouterr().out == (
+                "called PyRead.analyze_line with args (1, 'def myfunction(arg1, arg2):')\n"
+                "called testobj.pop_construct with arg 2\n"
+                "called PyRead.analyze_line with args (2, 'class MyClass: # a class')\n"
+                "called testobj.pop_construct with arg 1\n"
+                "called testobj.pop_construct with arg 1\n")
+
+    def test_build_contexts(self, monkeypatch, capsys):
+        """unittest for PyRead.build_contexts
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.itemlist = []
+        testobj.constructs = [(('', 'import', 'os', 1, 1),)]
+        testobj.build_contexts()
+        assert testobj.itemlist == [((1, 0), (1, -1), 'import os'),]
+        testobj.itemlist = []
+        testobj.constructs = [(('', 'class', 'TestClass', ''), ('', 'def', 'testmethod', 1, 2)),
+                              (('', 'def', 'testfunction', 3, 4),)]
+        testobj.build_contexts()
+        assert testobj.itemlist == [((1, 0), (2, -1), 'class TestClass method testmethod'),
+                                    ((3, 0), (4, -1), 'function testfunction')]
+
+    def test_filter_comments(self, monkeypatch, capsys):
+        """unittest for PyRead.filter_comments
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.itemlist = []
+        assert testobj.filter_comments() == []
+        testobj.itemlist = [(3, 4, 'xxx'), (1, 2, 'docstring'), (5, 5, 'comment')]
+        testobj.negeer_docs = True
+        assert testobj.filter_comments() == [(3, 4, 'xxx')]
+        testobj.negeer_docs = False
+        assert testobj.filter_comments() == [(1, 2, 'docstring'), (3, 4, 'xxx'), (5, 5, 'comment', )]
+
+    def test_analyze_line(self, monkeypatch, capsys):
+        """unittest for PyRead.analyze_line
+        """
+        def mock_add(*args):
+            print('called PyRead.add_context with args', args)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.add_context = mock_add
+        testobj.docstring_delim = ''
+        testobj.itemlist = []
+        testobj.modlevel_start = 1
+        testobj.lines = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        testobj.start_of_code = True
+        assert testobj.analyze_line(10, '    xxxx yyyy zzzz') == 'xxxx yyyy zzzz'
+        assert testobj.indentpos == 4
+
+        testobj.start_of_code = False
+        assert testobj.analyze_line(10, '    xxxx yyyy zzzz') == 'xxxx yyyy zzzz'
+        assert testobj.indentpos == 4
+        assert testobj.start_of_code
+        assert testobj.itemlist == [((1, 0), (9, -1), 'module level code')]
+
+        testobj.docstring_delim = 'xxx'
+        testobj.docstring_start = 3
+        assert testobj.analyze_line(5, '    last line of docstring xxx') == ''
+        assert testobj.docstring_delim == ''
+        assert testobj.modlevel_start == 1
+        assert capsys.readouterr().out == (
+                "called PyRead.add_context with args (((3, 4), (5, -1), 'docstring'), 5)\n")
+
+        testobj.docstring_delim = 'xxx'
+        assert testobj.analyze_line(5, '    xxx # is not the end of this line') == ''
+        assert testobj.modlevel_start == 1
+        assert capsys.readouterr().out == (
+                "called PyRead.add_context with args (((3, 4), (5, 7), 'docstring'), 5)\n"
+                "called PyRead.add_context with args (((5, 8), (5, -1), 'comment'), 5)\n")
+        # commentaar op zelfde regel als docstring eind-delimiter, niet erg waarschijnlijk
+
+        testobj.docstring_delim = 'xxx'
+        assert testobj.analyze_line(5, '    xxx is not the end of this line') == (
+                'is not the end of this line')
+        assert testobj.modlevel_start == 1
+        assert capsys.readouterr().out == (
+                "called PyRead.add_context with args (((3, 4), (5, 7), 'docstring'), 5)\n")
+        # tekst op zelfde regel als einde-docstring, kan eigenlijk niet (syntax error bij uitvoeren)
+
+        testobj.docstring_delim = ''
+        testobj.itemlist = []
+        assert testobj.analyze_line(5, '   # this is a comment') == ''
+        assert testobj.modlevel_start == 1
+        assert capsys.readouterr().out == (
+                "called PyRead.add_context with args (((5, 3), (5, -1), 'comment'), 5)\n")
+
+        testobj.start_of_code = False
+        testobj.docstring_start = 0
+        assert testobj.analyze_line(5, '   """complete docstring"""') == ''
+        assert testobj.docstring_delim == ''
+        assert testobj.docstring_start == 5
+        assert testobj.itemlist == [((5, 3), (5, -1), 'docstring')]
+        assert testobj.modlevel_start == 6
+        assert capsys.readouterr().out == ''
+
+        testobj.itemlist = []
+        testobj.modlevel_start = 1
+        testobj.docstring_start = 0
+        assert testobj.analyze_line(5, '   """start of a docstring') == ''
+        assert testobj.docstring_delim == '"""'
+        assert testobj.docstring_start == 5
+        assert testobj.itemlist == []
+        assert testobj.modlevel_start == 6
+        assert capsys.readouterr().out == ''
+
+        testobj.docstring_delim = ''
+        testobj.docstring_start = 0
+        testobj.modlevel_start = 1
+        assert testobj.analyze_line(5, '   "complete docstring"') == ''
+        assert testobj.docstring_delim == ''
+        assert testobj.docstring_start == 0
+        assert testobj.itemlist == []
+        assert testobj.modlevel_start == 1
+        assert capsys.readouterr().out == (
+                "called PyRead.add_context with args (((5, 3), (5, -1), 'docstring'), 5)\n")
+
+    def test_add_context(self, monkeypatch, capsys):
+        """unittest for PyRead.add_context
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.itemlist = []
+        testobj.start_of_code = False
+        testobj.modlevel_start = 1
+        testobj.add_context('xxx', 15)
+        assert testobj.itemlist == ['xxx']
+        assert testobj.modlevel_start == 16
+        testobj.itemlist = []
+        testobj.start_of_code = True
+        testobj.modlevel_start = 1
+        testobj.add_context('xxx', 15)
+        assert testobj.itemlist == ['xxx']
+        assert testobj.modlevel_start == 1
+
+    def test_is_single_line_docstring(self, monkeypatch, capsys):
+        """unittest for PyRead.is_single_line_docstring
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert not testobj.is_single_line_docstring('hello')
+        assert testobj.is_single_line_docstring('"hello"')
+        assert not testobj.is_single_line_docstring('"hello')
+        assert not testobj.is_single_line_docstring('""hello""')
+        assert testobj.is_single_line_docstring('"""hello"""')
+        assert not testobj.is_single_line_docstring('"""hello')
+        assert testobj.is_single_line_docstring("'hello'")
+        assert not testobj.is_single_line_docstring("'hello")
+        assert not testobj.is_single_line_docstring("''hello''")
+        assert testobj.is_single_line_docstring("'''hello'''")
+        assert not testobj.is_single_line_docstring("'''hello")
+
+    def test_pop_construct(self, monkeypatch, capsys):
+        """unittest for PyRead.pop_construct
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'def', 'functienaam', 9)]
+        testobj.indentpos = 0
+        testobj.pop_construct('another line')
+        assert testobj.constructs == [[[0, 'def', 'functienaam', 9, 'another line']]]
+        assert testobj.in_construct == []
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'def', 'functienaam', 9)]
+        testobj.indentpos = 1
+        testobj.pop_construct('another line')
+        assert testobj.constructs == []
+        assert testobj.in_construct == [(0, 'def', 'functienaam', 9)]
+
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'def', 'functienaam', 9), (4, 'def', 'functienaam', 11)]
+        testobj.indentpos = 0
+        testobj.pop_construct('another line')
+        assert testobj.constructs == [[(0, 'def', 'functienaam', 9),
+                                       [4, 'def', 'functienaam', 11, 'another line']],
+                                      [[0, 'def', 'functienaam', 9, 'another line']]]
+        assert testobj.in_construct == []
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'def', 'functienaam', 9), (4, 'def', 'functienaam', 11)]
+        testobj.indentpos = 4
+        testobj.pop_construct('another line')
+        assert testobj.constructs == [[(0, 'def', 'functienaam', 9),
+                                       [4, 'def', 'functienaam', 11, 'another line']]]
+        assert testobj.in_construct == [(0, 'def', 'functienaam', 9)]
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'def', 'functienaam', 9), (4, 'def', 'functienaam', 11)]
+        testobj.indentpos = 5
+        testobj.pop_construct('another line')
+        assert testobj.constructs == []
+        assert testobj.in_construct == [(0, 'def', 'functienaam', 9), (4, 'def', 'functienaam', 11)]
+
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11)]
+        testobj.indentpos = 0
+        testobj.pop_construct('another line')
+        assert testobj.constructs == [[(0, 'class', 'classnaam', 9),
+                                       [4, 'def', 'methodnaam', 11, 'another line']],
+                                      [[0, 'class', 'classnaam', 9, 'another line']]]
+        assert testobj.in_construct == []
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11)]
+        testobj.indentpos = 4
+        testobj.pop_construct('another line')
+        assert testobj.constructs == [[(0, 'class', 'classnaam', 9),
+                                       [4, 'def', 'methodnaam', 11, 'another line']]]
+        assert testobj.in_construct == [(0, 'class', 'classnaam', 9)]
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11)]
+        testobj.indentpos = 5
+        testobj.pop_construct('another line')
+        assert testobj.constructs == []
+        assert testobj.in_construct == [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11)]
+
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                               (12, 'def', 'functienaam', 13)]
+        testobj.indentpos = 0
+        testobj.pop_construct('another line')
+        assert testobj.constructs == [[(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                       [12, 'def', 'functienaam', 13, 'another line']],
+                                      [(0, 'class', 'classnaam', 9),
+                                       [4, 'def', 'methodnaam', 11, 'another line']],
+                                      [[0, 'class', 'classnaam', 9, 'another line']]]
+        assert testobj.in_construct == []
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                               (12, 'def', 'functienaam', 13)]
+        testobj.indentpos = 4
+        testobj.pop_construct('another line')
+        assert testobj.constructs == [[(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                       [12, 'def', 'functienaam', 13, 'another line']],
+                                      [(0, 'class', 'classnaam', 9),
+                                       [4, 'def', 'methodnaam', 11, 'another line']]]
+        assert testobj.in_construct == [(0, 'class', 'classnaam', 9)]
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                               (12, 'def', 'functienaam', 13)]
+        testobj.indentpos = 8
+        testobj.pop_construct('another line')
+        assert testobj.constructs == [[(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                       [12, 'def', 'functienaam', 13, 'another line']]]
+        assert testobj.in_construct == [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11)]
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                               (12, 'def', 'functienaam', 13)]
+        testobj.indentpos = 12
+        testobj.pop_construct('another line')
+        assert testobj.constructs == [[(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                       [12, 'def', 'functienaam', 13, 'another line']]]
+        assert testobj.in_construct == [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11)]
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                               (12, 'def', 'functienaam', 13)]
+        testobj.indentpos = 13
+        testobj.pop_construct('another line')
+        assert testobj.constructs == []
+        assert testobj.in_construct == [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                        (12, 'def', 'functienaam', 13)]
+
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                               (12, 'class', 'classnaam', 13), (16, 'def', 'methodnaam', 16)]
+        testobj.indentpos = 0
+        testobj.pop_construct('another line')
+        assert testobj.constructs == [[(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                       (12, 'class', 'classnaam', 13),
+                                       [16, 'def', 'methodnaam', 16, 'another line']],
+                                      [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                       [12, 'class', 'classnaam', 13, 'another line']],
+                                      [(0, 'class', 'classnaam', 9),
+                                       [4, 'def', 'methodnaam', 11, 'another line']],
+                                      [[0, 'class', 'classnaam', 9, 'another line']]]
+        assert testobj.in_construct == []
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                               (12, 'class', 'classnaam', 13), (16, 'def', 'methodnaam', 16)]
+        testobj.indentpos = 4
+        testobj.pop_construct('another line')
+        assert testobj.constructs == [[(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                       (12, 'class', 'classnaam', 13),
+                                       [16, 'def', 'methodnaam', 16, 'another line']],
+                                      [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                       [12, 'class', 'classnaam', 13, 'another line']],
+                                      [(0, 'class', 'classnaam', 9),
+                                       [4, 'def', 'methodnaam', 11, 'another line']]]
+        assert testobj.in_construct == [(0, 'class', 'classnaam', 9)]
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                               (12, 'class', 'classnaam', 13), (16, 'def', 'methodnaam', 16)]
+        testobj.indentpos = 8
+        testobj.pop_construct('another line')
+        assert testobj.constructs == [[(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                       (12, 'class', 'classnaam', 13),
+                                       [16, 'def', 'methodnaam', 16, 'another line']],
+                                      [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                       [12, 'class', 'classnaam', 13, 'another line']]]
+        assert testobj.in_construct == [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11)]
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                               (12, 'class', 'classnaam', 13), (16, 'def', 'methodnaam', 16)]
+        testobj.indentpos = 12
+        testobj.pop_construct('another line')
+        assert testobj.constructs == [[(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                       (12, 'class', 'classnaam', 13),
+                                       [16, 'def', 'methodnaam', 16, 'another line']],
+                                      [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                       [12, 'class', 'classnaam', 13, 'another line']]]
+        assert testobj.in_construct == [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11)]
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                               (12, 'class', 'classnaam', 13), (16, 'def', 'methodnaam', 16)]
+        testobj.indentpos = 16
+        testobj.pop_construct('another line')
+        assert testobj.constructs == [[(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                       (12, 'class', 'classnaam', 13),
+                                       [16, 'def', 'methodnaam', 16, 'another line']]]
+        assert testobj.in_construct == [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                        (12, 'class', 'classnaam', 13)]
+
+        testobj.constructs = []
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                               (12, 'class', 'classnaam', 13), (16, 'def', 'methodnaam', 16)]
+        testobj.indentpos = 17
+        testobj.pop_construct('another line')
+        assert testobj.constructs == []
+        assert testobj.in_construct == [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                                        (12, 'class', 'classnaam', 13), (16, 'def', 'methodnaam', 16)]
 
 
 def test_rgxescape():
@@ -577,7 +1044,13 @@ class TestFinder:
             if entry.endswith('.py'):
                 return 'py'
             return ''
-        def mock_pyread(*args):
+        class MockPyRead:
+            def __init__(self, *args):
+                print('called PyRead.__init__ with args', args)
+            def go(self):
+                print('called PyRead.go')
+                return ['']
+        def mock_pyread(self, *args):
             print('called pyread with args', args)
             return ['']
         counter = 0
@@ -595,10 +1068,11 @@ class TestFinder:
                 return 'ignore'
             return 'somewhere in the code'
         monkeypatch.setattr(testee, 'determine_filetype', mock_type)
-        monkeypatch.setattr(testee, 'pyread', mock_pyread)
+        # monkeypatch.setattr(testee, 'pyread', mock_pyread)
+        monkeypatch.setattr(testee, 'PyRead', MockPyRead)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.p = {'fallback_encoding': 'uuu', 'negeer': False}
-        testobj.filenames = ['testfile', 'testfile.py']
+        testobj.filenames = [testee.pathlib.Path('testfile'), testee.pathlib.Path('testfile.py')]
         testobj.rpt = ['cannot be split', 'testfile r. 3', 'testfile.py r. 1 xxx',
                        'testfile.py r. 1: xxx', 'testfile.py r. 2: xxx', 'testfile.py r. 3: xxx',
                        'testfile.py r. 4: xxx', 'testfile.py r. 5: xxx']
@@ -611,7 +1085,9 @@ class TestFinder:
         assert capsys.readouterr().out == (
                 "called determine_filetype for 'testfile'\n"
                 "called determine_filetype for 'testfile.py'\n"
-                "called pyread with args ('testfile.py', 'uuu', False)\n"
+                # "called pyread with args ('testfile.py', 'uuu', False)\n"
+                "called PyRead.__init__ with args (PosixPath('testfile.py'), 'uuu', False)\n"
+                "called PyRead.go\n"
                 "called Finder.determine_context_from_locations with args ('1', 'xxx', [''])\n"
                 "called Finder.determine_context_from_locations with args ('2', 'xxx', [''])\n"
                 "called Finder.determine_context_from_locations with args ('3', 'xxx', [''])\n"
@@ -628,7 +1104,9 @@ class TestFinder:
         assert capsys.readouterr().out == (
                 "called determine_filetype for 'testfile'\n"
                 "called determine_filetype for 'testfile.py'\n"
-                "called pyread with args ('testfile.py', 'uuu', True)\n"
+                # "called pyread with args ('testfile.py', 'uuu', True)\n"
+                "called PyRead.__init__ with args (PosixPath('testfile.py'), 'uuu', True)\n"
+                "called PyRead.go\n"
                 "called Finder.determine_context_from_locations with args ('1', 'xxx', [''])\n"
                 "called Finder.determine_context_from_locations with args ('2', 'xxx', [''])\n"
                 "called Finder.determine_context_from_locations with args ('3', 'xxx', [''])\n"
@@ -637,7 +1115,7 @@ class TestFinder:
     def test_determine_context_from_locations(self, monkeypatch, capsys):
         """unittest for Finder.determine_context_from_locations
         """
-        monkeypatch.setattr(testee, 'contains_default', 'xxx')
+        monkeypatch.setattr(testee, 'default_location', 'xxx')
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.p = {'zoek': 'Arg'}
         locations = [((0, 0), (5, -1), 'yyy'),
@@ -679,123 +1157,128 @@ class TestFinder:
         testobj.rgx = []
         testobj.ignore = None
         assert testobj.complex_search(lines, linestarts) == []
-        assert capsys.readouterr().out == ("found_in_lines: []\n"
-                                           "found_in_lines: []\n"
-                                           "lines_found: defaultdict(<class 'set'>, {})\n"
-                                           "all_searches: set()\n")
+        assert capsys.readouterr().out == ""
+        # assert capsys.readouterr().out == ("found_in_lines: []\n"
+        #                                    "found_in_lines: []\n"
+        #                                    "lines_found: defaultdict(<class 'set'>, {})\n"
+        #                                    "all_searches: set()\n")
 
         testobj.rgx = [MockRgx('find')]
         assert testobj.complex_search(lines, linestarts) == [2, 3, 4]
-        assert capsys.readouterr().out == (
-                "found_in_lines: [(1, 0), (7, 0), (13, 0)]\n"
-                "found_in_lines: [(1, 0), (7, 0), (13, 0)]\n"
-                "itemstart, number: 1 0\n"
-                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
-                "itemstart ligt vóór linestart => gevonden in regel 2\n"
-                "itemstart, number: 7 0\n"
-                "ix, linestart: 0 5\nix, linestart: 1 12\n"
-                "itemstart ligt vóór linestart => gevonden in regel 3\n"
-                "itemstart, number: 13 0\n"
-                "ix, linestart: 0 1\nix, linestart: 1 5\nix, linestart: 2 12\nix, linestart: 3 20\n"
-                "itemstart ligt vóór linestart => gevonden in regel 4\n"
-                "lines_found: defaultdict(<class 'set'>, {2: {0}, 3: {0}, 4: {0}})\n"
-                "all_searches: {0}\n"
-                "in_line, values: 2 {0}\n"
-                "in_line, values: 3 {0}\n"
-                "in_line, values: 4 {0}\n")
+        assert capsys.readouterr().out == ""
+        # assert capsys.readouterr().out == (
+        #         "found_in_lines: [(1, 0), (7, 0), (13, 0)]\n"
+        #         "found_in_lines: [(1, 0), (7, 0), (13, 0)]\n"
+        #         "itemstart, number: 1 0\n"
+        #         "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
+        #         "itemstart ligt vóór linestart => gevonden in regel 2\n"
+        #         "itemstart, number: 7 0\n"
+        #         "ix, linestart: 0 5\nix, linestart: 1 12\n"
+        #         "itemstart ligt vóór linestart => gevonden in regel 3\n"
+        #         "itemstart, number: 13 0\n"
+        #         "ix, linestart: 0 1\nix, linestart: 1 5\nix, linestart: 2 12\nix, linestart: 3 20\n"
+        #         "itemstart ligt vóór linestart => gevonden in regel 4\n"
+        #         "lines_found: defaultdict(<class 'set'>, {2: {0}, 3: {0}, 4: {0}})\n"
+        #         "all_searches: {0}\n"
+        #         "in_line, values: 2 {0}\n"
+        #         "in_line, values: 3 {0}\n"
+        #         "in_line, values: 4 {0}\n")
 
         testobj.ignore = MockRgx('ignore')
         assert testobj.complex_search(lines, linestarts) == [4]
-        assert capsys.readouterr().out == (
-                "found_in_lines: [(1, 0), (7, 0), (13, 0)]\n"
-                "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, -1), (7, -1)]\n"
-                "itemstart, number: 1 -1\n"
-                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
-                "itemstart ligt vóór linestart => gevonden in regel 2\n"
-                "itemstart, number: 1 0\n"
-                "ix, linestart: 0 5\n"
-                "itemstart ligt vóór linestart => gevonden in regel 2\n"
-                "itemstart, number: 7 -1\n"
-                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\nix, linestart: 3 12\n"
-                "itemstart ligt vóór linestart => gevonden in regel 3\n"
-                "itemstart, number: 7 0\n"
-                "ix, linestart: 0 12\n"
-                "itemstart ligt vóór linestart => gevonden in regel 3\n"
-                "itemstart, number: 13 0\n"
-                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\nix, linestart: 3 12\n"
-                "ix, linestart: 4 20\n"
-                "itemstart ligt vóór linestart => gevonden in regel 4\n"
-                "lines_found: defaultdict(<class 'set'>, {2: {0, -1}, 3: {0, -1}, 4: {0}})\n"
-                "all_searches: {0}\n"
-                "in_line, values: 2 {0, -1}\n"
-                "in_line, values: 3 {0, -1}\n"
-                "in_line, values: 4 {0}\n")
+        assert capsys.readouterr().out == ""
+        # assert capsys.readouterr().out == (
+        #         "found_in_lines: [(1, 0), (7, 0), (13, 0)]\n"
+        #         "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, -1), (7, -1)]\n"
+        #         "itemstart, number: 1 -1\n"
+        #         "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
+        #         "itemstart ligt vóór linestart => gevonden in regel 2\n"
+        #         "itemstart, number: 1 0\n"
+        #         "ix, linestart: 0 5\n"
+        #         "itemstart ligt vóór linestart => gevonden in regel 2\n"
+        #         "itemstart, number: 7 -1\n"
+        #         "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\nix, linestart: 3 12\n"
+        #         "itemstart ligt vóór linestart => gevonden in regel 3\n"
+        #         "itemstart, number: 7 0\n"
+        #         "ix, linestart: 0 12\n"
+        #         "itemstart ligt vóór linestart => gevonden in regel 3\n"
+        #         "itemstart, number: 13 0\n"
+        #         "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\nix, linestart: 3 12\n"
+        #         "ix, linestart: 4 20\n"
+        #         "itemstart ligt vóór linestart => gevonden in regel 4\n"
+        #         "lines_found: defaultdict(<class 'set'>, {2: {0, -1}, 3: {0, -1}, 4: {0}})\n"
+        #         "all_searches: {0}\n"
+        #         "in_line, values: 2 {0, -1}\n"
+        #         "in_line, values: 3 {0, -1}\n"
+        #         "in_line, values: 4 {0}\n")
 
         testobj.rgx = [MockRgx('find'), MockRgx('find also')]
         testobj.ignore = None
         assert testobj.complex_search(lines, linestarts) == [2, 4]
-        assert capsys.readouterr().out == (
-                "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, 1), (13, 1), (19, 1)]\n"
-                "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, 1), (13, 1), (19, 1)]\n"
-                "itemstart, number: 1 0\n"
-                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
-                "itemstart ligt vóór linestart => gevonden in regel 2\n"
-                "itemstart, number: 1 1\n"
-                "ix, linestart: 0 5\n"
-                "itemstart ligt vóór linestart => gevonden in regel 2\n"
-                "itemstart, number: 7 0\n"
-                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\nix, linestart: 3 12\n"
-                "itemstart ligt vóór linestart => gevonden in regel 3\n"
-                "itemstart, number: 13 0\n"
-                "ix, linestart: 0 12\nix, linestart: 1 20\n"
-                "itemstart ligt vóór linestart => gevonden in regel 4\n"
-                "itemstart, number: 13 1\n"
-                "ix, linestart: 0 1\nix, linestart: 1 5\nix, linestart: 2 12\nix, linestart: 3 20\n"
-                "itemstart ligt vóór linestart => gevonden in regel 4\n"
-                "itemstart, number: 19 1\nix, linestart: 0 12\nix, linestart: 1 20\n"
-                "itemstart ligt vóór linestart => gevonden in regel 4\n"
-                "lines_found: defaultdict(<class 'set'>, {2: {0, 1}, 3: {0}, 4: {0, 1}})\n"
-                "all_searches: {0, 1}\n"
-                "in_line, values: 2 {0, 1}\n"
-                "in_line, values: 3 {0}\nnot all searches satisfied\n"
-                "in_line, values: 4 {0, 1}\n")
+        assert capsys.readouterr().out == ""
+        # assert capsys.readouterr().out == (
+        #         "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, 1), (13, 1), (19, 1)]\n"
+        #         "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, 1), (13, 1), (19, 1)]\n"
+        #         "itemstart, number: 1 0\n"
+        #         "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
+        #         "itemstart ligt vóór linestart => gevonden in regel 2\n"
+        #         "itemstart, number: 1 1\n"
+        #         "ix, linestart: 0 5\n"
+        #         "itemstart ligt vóór linestart => gevonden in regel 2\n"
+        #         "itemstart, number: 7 0\n"
+        #         "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\nix, linestart: 3 12\n"
+        #         "itemstart ligt vóór linestart => gevonden in regel 3\n"
+        #         "itemstart, number: 13 0\n"
+        #         "ix, linestart: 0 12\nix, linestart: 1 20\n"
+        #         "itemstart ligt vóór linestart => gevonden in regel 4\n"
+        #         "itemstart, number: 13 1\n"
+        #         "ix, linestart: 0 1\nix, linestart: 1 5\nix, linestart: 2 12\nix, linestart: 3 20\n"
+        #         "itemstart ligt vóór linestart => gevonden in regel 4\n"
+        #         "itemstart, number: 19 1\nix, linestart: 0 12\nix, linestart: 1 20\n"
+        #         "itemstart ligt vóór linestart => gevonden in regel 4\n"
+        #         "lines_found: defaultdict(<class 'set'>, {2: {0, 1}, 3: {0}, 4: {0, 1}})\n"
+        #         "all_searches: {0, 1}\n"
+        #         "in_line, values: 2 {0, 1}\n"
+        #         "in_line, values: 3 {0}\nnot all searches satisfied\n"
+        #         "in_line, values: 4 {0, 1}\n")
 
         testobj.rgx = [MockRgx('find'), MockRgx('find also')]
         testobj.ignore = MockRgx('ignore')
         assert testobj.complex_search(lines, linestarts) == [4]
-        assert capsys.readouterr().out == (
-                "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, 1), (13, 1), (19, 1)]\n"
-                "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, 1), (13, 1), (19, 1),"
-                " (1, -1), (7, -1)]\n"
-                "itemstart, number: 1 -1\n"
-                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
-                "itemstart ligt vóór linestart => gevonden in regel 2\n"
-                "itemstart, number: 1 0\n"
-                "ix, linestart: 0 5\n"
-                "itemstart ligt vóór linestart => gevonden in regel 2\n"
-                "itemstart, number: 1 1\n"
-                "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
-                "itemstart ligt vóór linestart => gevonden in regel 2\n"
-                "itemstart, number: 7 -1\n"
-                "ix, linestart: 0 5\nix, linestart: 1 12\n"
-                "itemstart ligt vóór linestart => gevonden in regel 3\n"
-                "itemstart, number: 7 0\n"
-                "ix, linestart: 0 1\nix, linestart: 1 5\nix, linestart: 2 12\n"
-                "itemstart ligt vóór linestart => gevonden in regel 3\n"
-                "itemstart, number: 13 0\n"
-                "ix, linestart: 0 5\nix, linestart: 1 12\nix, linestart: 2 20\n"
-                "itemstart ligt vóór linestart => gevonden in regel 4\n"
-                "itemstart, number: 13 1\n"
-                "ix, linestart: 0 5\nix, linestart: 1 12\nix, linestart: 2 20\n"
-                "itemstart ligt vóór linestart => gevonden in regel 4\n"
-                "itemstart, number: 19 1\n"
-                "ix, linestart: 0 5\nix, linestart: 1 12\nix, linestart: 2 20\n"
-                "itemstart ligt vóór linestart => gevonden in regel 4\n"
-                "lines_found: defaultdict(<class 'set'>, {2: {0, 1, -1}, 3: {0, -1}, 4: {0, 1}})\n"
-                "all_searches: {0, 1}\n"
-                "in_line, values: 2 {0, 1, -1}\n"
-                "in_line, values: 3 {0, -1}\n"
-                "in_line, values: 4 {0, 1}\n")
+        assert capsys.readouterr().out == ""
+        #assert capsys.readouterr().out == (
+        #        "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, 1), (13, 1), (19, 1)]\n"
+        #        "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, 1), (13, 1), (19, 1),"
+        #        " (1, -1), (7, -1)]\n"
+        #        "itemstart, number: 1 -1\n"
+        #        "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
+        #        "itemstart ligt vóór linestart => gevonden in regel 2\n"
+        #        "itemstart, number: 1 0\n"
+        #        "ix, linestart: 0 5\n"
+        #        "itemstart ligt vóór linestart => gevonden in regel 2\n"
+        #        "itemstart, number: 1 1\n"
+        #        "ix, linestart: 0 0\nix, linestart: 1 1\nix, linestart: 2 5\n"
+        #        "itemstart ligt vóór linestart => gevonden in regel 2\n"
+        #        "itemstart, number: 7 -1\n"
+        #        "ix, linestart: 0 5\nix, linestart: 1 12\n"
+        #        "itemstart ligt vóór linestart => gevonden in regel 3\n"
+        #        "itemstart, number: 7 0\n"
+        #        "ix, linestart: 0 1\nix, linestart: 1 5\nix, linestart: 2 12\n"
+        #        "itemstart ligt vóór linestart => gevonden in regel 3\n"
+        #        "itemstart, number: 13 0\n"
+        #        "ix, linestart: 0 5\nix, linestart: 1 12\nix, linestart: 2 20\n"
+        #        "itemstart ligt vóór linestart => gevonden in regel 4\n"
+        #        "itemstart, number: 13 1\n"
+        #        "ix, linestart: 0 5\nix, linestart: 1 12\nix, linestart: 2 20\n"
+        #        "itemstart ligt vóór linestart => gevonden in regel 4\n"
+        #        "itemstart, number: 19 1\n"
+        #        "ix, linestart: 0 5\nix, linestart: 1 12\nix, linestart: 2 20\n"
+        #        "itemstart ligt vóór linestart => gevonden in regel 4\n"
+        #        "lines_found: defaultdict(<class 'set'>, {2: {0, 1, -1}, 3: {0, -1}, 4: {0, 1}})\n"
+        #        "all_searches: {0, 1}\n"
+        #        "in_line, values: 2 {0, 1, -1}\n"
+        #        "in_line, values: 3 {0, -1}\n"
+        #        "in_line, values: 4 {0, 1}\n")
 
     def test_old_rgx_search(self, monkeypatch, capsys):
         """unittest for Finder.old_rgx_search
