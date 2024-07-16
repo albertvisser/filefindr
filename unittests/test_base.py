@@ -1248,13 +1248,16 @@ class TestMainFrame:
         monkeypatch.setattr(testee.os.path, 'commonpath', mock_commonpath)
         monkeypatch.setattr(testee.os.path, 'isfile', mock_isfile)
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.p = {'filelist': [testee.pathlib.Path('xxx'), testee.pathlib.Path('yyy')],
-                     'pad': testee.pathlib.Path('zzz')}
+        testobj.p = {'filelist': [testee.pathlib.Path('xxx'), testee.pathlib.Path('yyy')]}
+                     # 'pad': testee.pathlib.Path('zzz')}
         testobj.apptype = ''
-        assert testobj.determine_common() == f"zzz{testee.os.sep}"
+        assert testobj.determine_common() == f"xxx{testee.os.sep}"
         assert capsys.readouterr().out == ""
-        testobj.apptype = 'single'
+        testobj.apptype = 'single-file'
         assert testobj.determine_common() == testee.pathlib.PosixPath("xxx")
+        assert capsys.readouterr().out == ""
+        testobj.apptype = 'single-dir'
+        assert testobj.determine_common() == "xxx/"
         assert capsys.readouterr().out == ""
         testobj.apptype = 'multi'
         assert testobj.determine_common() == "qqq/"
@@ -1381,8 +1384,6 @@ class TestMainFrame:
         assert testobj.checkpath('/home') == ""
         assert testobj.mru_items['dirs'] == ['/home', '']
         assert testobj.s == 'xx\nin /home'
-        assert testobj.p['pad'] == testee.pathlib.PosixPath('/home')
-        assert testobj.p['filelist'] == ''
 
     def test_setup_parameters(self, monkeypatch, capsys):
         """unittest for MainFrame.setup_parameters
@@ -1508,7 +1509,7 @@ class TestMainFrame:
         testobj.checktype = mock_checktype_2
         testobj.s = 'zz'
         testobj.p = {'filelist': ['xx']}
-        testobj.apptype = 'not single'
+        testobj.apptype = 'open'
         assert testobj.setup_parameters() == 'message from checkpath'
         assert testobj.p == {'filelist': ['xx']}
         assert testobj.s == 'zz'
@@ -1540,8 +1541,6 @@ class TestMainFrame:
                                            "called MainWindow.checkattr with arg attr\n"
                                            "called MainGui.get_types_to_search\n"
                                            "called MainWindow.checktype with arg types\n"
-                                           "called MainGui.get_dir_to_search\n"
-                                           "called MainWindow.checkpath with arg dir\n"
                                            "called MainGui.get_subdirs_to_search\n"
                                            "called MainGui.get_backup\n"
                                            "called MainGui.get_ignore\n"
@@ -1564,8 +1563,6 @@ class TestMainFrame:
                                            "called MainWindow.checkattr with arg attr\n"
                                            "called MainGui.get_types_to_search\n"
                                            "called MainWindow.checktype with arg types\n"
-                                           "called MainGui.get_dir_to_search\n"
-                                           "called MainWindow.checkpath with arg dir\n"
                                            "called MainGui.get_subdirs_to_search\n"
                                            "called MainGui.get_backup\n"
                                            "called MainGui.get_ignore\n"
@@ -1657,12 +1654,12 @@ class TestMainFrame:
         testobj.extraopts['output_file'] = None
         testobj.show_results()
         assert capsys.readouterr().out == (
-                "called MainGui.meld with args ('showing results', 'Niks gevonden')\n")
+                "called MainGui.meld with args ('showing results', 'No results')\n")
 
         testobj.zoekvervang.ok = False
         testobj.show_results()
         assert capsys.readouterr().out == (
-                "called MainGui.meld with args ('showing results', '1 regel')\n")
+                "called MainGui.meld with args ('showing results', 'No results')\n")
 
         testobj.extraopts['output_file'] = outfilename.open('w')
         testobj.show_results()
@@ -1770,7 +1767,6 @@ class TestMainFrame:
         class MockFinder:
             """stub
             """
-            ok = False
             filenames = []
             errors = ''
 
@@ -1780,8 +1776,8 @@ class TestMainFrame:
             def setup_search(self):
                 print('called Finder.setup_search')
                 self.rpt = 'header'
-                self.ok = False
                 self.errors = 'message'
+                return False
             def go(self):
                 print('called Finder.go')
         def mockfinder_init_2(self, **kwargs):
@@ -1790,12 +1786,12 @@ class TestMainFrame:
         def mockfinder_setup_search_2(self):
             print('called Finder.setup_search')
             self.rpt = 'header'
-            self.ok = True
+            return True
         def mockfinder_setup_search_3(self):
             print('called Finder.setup_search')
             self.rpt = 'header'
-            self.ok = True
             self.filenames = ['xxxxx']
+            return True
         def mock_setup():
             print('called MainWindow.setup_parameters')
             return 'xxx'
@@ -1863,6 +1859,7 @@ class TestMainFrame:
         MockFinder.setup_search = mockfinder_setup_search_2
         testobj.extraopts['dont_save'] = False
         testobj.p['filelist'] = [tmp_path]
+        # breakpoint()
         testobj.doe()
         assert capsys.readouterr().out == (
                 "called MainWindow.setup_parameters\n"
