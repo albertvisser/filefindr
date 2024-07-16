@@ -360,23 +360,7 @@ class MainFrameGui(qtw.QWidget):
         self.vraag_verv.completer().setCaseSensitivity(core.Qt.CaseSensitive)
         self.vraag_leeg = self.add_checkbox_row(captions['empty'], self.master.always_replace)
 
-        # self.master.checkpath_necessary = True
         if self.master.apptype == "open":
-            # if len(self.master.p['filelist']) == 1:
-            #     # self.vraag_dir = self.add_combobox_row(captions['in'],
-            #     #                                        self.master.mru_items["dirs"],
-            #     #                                        initial=str(self.master.p['filelist'][0]))
-            #     # self.vraag_dir.setEditable(False)
-            #     # # self.vraag_dir.setCurrentText(str(self.master.p['filelist'][0]))
-            #     # self.vraag_dir.setItemText(0, str(self.master.p['filelist'][0]))
-            #     self.row += 1
-            #     self.grid.addWidget(qtw.QLabel(captions['in']), self.row, 0)
-            #     box = qtw.QHBoxLayout()
-            #     box.addWidget(qtw.QLabel(str(self.master.p['filelist'][0])))
-            #     box.addStretch()
-            #     self.grid.addLayout(box, self.row, 1)
-            #     self.master.checkpath_necessary = False
-            # else:
             initial = str(self.master.p['filelist'][0]) if self.master.p['filelist'] else ''
             self.zoek = qtw.QPushButton(captions['zoek'])
             self.zoek.clicked.connect(self.zoekdir)
@@ -399,7 +383,6 @@ class MainFrameGui(qtw.QWidget):
             self.lb.insertItems(0, [str(x) for x in self.master.p['filelist']])
             self.grid.addWidget(self.lb, self.row, 0, 1, 2)
 
-        # if self.master.apptype != "single" or self.mayster.p['filelist'][0].is_dir():
         if self.master.apptype != "single-file":
             txt = captions['subs_m'] if self.master.apptype == "multi" else ""
             self.vraag_subs = self.add_checkbox_row(txt + captions['subs'], self.master.p["subdirs"])
