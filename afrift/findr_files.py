@@ -117,7 +117,8 @@ class PyRead:
         "convenience wrapper for main processing routines"
         self.process_codelines()
         self.build_contexts()
-        return self.filter_comments()
+        # return self.filter_comments()
+        return sorted(self.itemlist)
 
     def process_codelines(self):
         """this routine produces a list of constructs and if requested one of comment contexts
@@ -135,7 +136,8 @@ class PyRead:
                 self.in_construct.append(construct)
             if '#' in code:
                 pos = code.index('#')
-                self.itemlist.append(((lineno, pos), (lineno, -1), 'comment'))
+                # self.itemlist.append(((lineno, pos), (lineno, -1), 'comment'))
+                self.build_comment_context(lineno, lineno, pos, context_type='comment')
             self.prev_lineno = lineno
         self.indentpos = 0
         self.pop_construct(self.prev_lineno - 1)
@@ -143,12 +145,13 @@ class PyRead:
     def build_contexts(self):
         "turn constructs into contexts"
         for item in self.constructs:
-            _, _, _, start, end = item[-1]
+            start, end = item[-1][-2:]
             construct = []
             for part in item:
                 type_, name = part[1:3]
                 if type_ == "def":
                     type_ = "method" if construct and construct[-2] == "class" else "function"
+                    start = start + 1  # liever: zelfde start maar positie instellen op de :
                 construct.extend([type_, name])
             self.itemlist.append(((start, 0), (end, -1), " ".join(construct)))
 
@@ -171,32 +174,53 @@ class PyRead:
             self.docstring_delim = ''
             code = line[pos:].lstrip()
             if not code:
-                self.add_context(((self.docstring_start, self.indentpos), (lineno, -1), "docstring"),
-                                 lineno)
+                # self.add_context(((self.docstring_start, self.indentpos), (lineno, -1),
+                #                   "docstring"),lineno)
+                self.build_comment_context(self.docstring_start, lineno, self.indentpos,
+                                           advance_lineno=lineno)
                 return ''
-            self.add_context(((self.docstring_start, self.indentpos), (lineno, pos), "docstring"),
-                             lineno)
+            # self.add_context(((self.docstring_start, self.indentpos), (lineno, pos), "docstring"),
+            #                  lineno)
+            self.build_comment_context(self.docstring_start, lineno, self.indentpos,
+                                       advance_lineno=lineno)
             self.indentpos = pos + line[pos:].index(code)
         if code.startswith('#'):
-            self.add_context(((lineno, self.indentpos), (lineno, -1), 'comment'), lineno)
+            # self.add_context(((lineno, self.indentpos), (lineno, -1), 'comment'), lineno)
+            self.build_comment_context(lineno, lineno, self.indentpos, context_type='comment')
             return ''
         if code.startswith(('"""', "'''")):
             self.docstring_delim = code[:3]
             self.docstring_start = lineno
             if code[3:].rstrip().endswith(self.docstring_delim):
                 self.docstring_delim = ''
-                self.itemlist.append(((self.docstring_start, self.indentpos), (lineno, -1),
-                                      "docstring"))
+                # self.itemlist.append(((self.docstring_start, self.indentpos), (lineno, -1),
+                #                       "docstring"))
+                self.build_comment_context(self.docstring_start, lineno, self.indentpos)
             if not self.start_of_code:
                 self.modlevel_start = lineno + 1
             return ''
         if code.startswith(('"', "'")) and self.is_single_line_docstring(code.rstrip()):
-            self.add_context(((lineno, self.indentpos), (lineno, -1), 'docstring'), lineno)
+            # self.add_context(((lineno, self.indentpos), (lineno, -1), 'docstring'), lineno)
+            self.build_comment_context(lineno, lineno, self.indentpos, advance_lineno=lineno)
             return ''
         if not self.start_of_code:
             self.start_of_code = True
             self.itemlist.append(((self.modlevel_start, 0), (len(self.lines), -1), default_location))
         return code
+
+    def build_comment_context(self, start, end, startpos=0, endpos=-1, context_type='docstring',
+                              advance_lineno=-1):
+        "build the context for a docstring / comment entry"
+        construct = []
+        for part in self.in_construct:
+            type_, name = part[1:3]
+            if type_ == "def":
+                type_ = "method" if construct and construct[-2] == "class" else "function"
+            construct.extend([type_, name])
+        construct.append(context_type)
+        self.itemlist.append(((start, startpos), (end, endpos), " ".join(construct)))
+        if advance_lineno > -1 and not self.start_of_code:
+            self.modlevel_start = advance_lineno + 1
 
     def add_context(self, context, lineno):
         """add entry to list of contexts instead of list of constructs
@@ -494,16 +518,15 @@ class Finder:
     def add_context_to_search_results(self):
         """determine locations and match with search results
         """
-        results, self.rpt = self.rpt, []
         locations = {}
         for entry in self.filenames:
             ftype = determine_filetype(entry)
             if ftype == 'py':
-                # locations[str(entry)] = pyread(entry, self.p['fallback_encoding'], self.p['negeer'])
-                locations[str(entry)] = PyRead(entry, self.p['fallback_encoding'],
-                                               self.p['negeer']).go()
+                locations[str(entry)] = PyRead(entry, self.p['fallback_encoding']).go()
+                # print(locations[str(entry)])
             else:
                 locations[str(entry)] = []
+        results, self.rpt = self.rpt, []
         for item in results:
             test = item.split(' r. ', 1)
             if len(test) == 1:
@@ -518,7 +541,7 @@ class Finder:
                 continue
             lineno, text = test
             contains = self.determine_context_from_locations(lineno, text, locations[best])
-            if self.p['negeer'] and contains in ('comment', 'docstring'):
+            if self.p['negeer'] and contains.endswith(('comment', 'docstring')):
                 continue
             if contains != 'ignore':
                 self.rpt.append(f'{best} r. {lineno} ({contains}): {text}')
@@ -526,19 +549,26 @@ class Finder:
     def determine_context_from_locations(self, lineno, text, locations):
         """determine which "location" to add into search result
         """
-        contains = default_location
+        pos = text.upper().index(self.p['zoek'].upper()) + 1
+        # TODO: bovenstaande werkt wrschl niet bij alle zoekmanieren
+        # alleen nodig als het gaat om een regel waar een commentaar in staat
+        locs = []
         for loc in locations:
             lineno = int(lineno)
-            if loc[0][0] < lineno <= loc[1][0]:
-                old_contains = contains
-                contains = loc[2]
-                if contains == 'comment':
-                    where = text.upper().find(self.p['zoek'].upper())
-                    if where < loc[0][1]:
-                        contains = old_contains
-            if loc[0][0] > lineno:
-                break
-        return contains
+            if loc[1][1] == -1:
+                loc = (loc[0], (loc[1][0], len(text)), loc[2])
+            if loc[0][0] <= lineno <= loc[1][0] and loc[0][1] <= pos <= loc[1][1]:
+                # print(loc)
+                linedelta = (lineno - loc[0][0], loc[1][0] - lineno)
+                posdelta = (pos - loc[0][1], loc[1][1] - pos)
+                locs.append((linedelta, posdelta, loc))
+        # print(locs)
+        return self.find_smallest_context(locs)
+
+    def find_smallest_context(self, locs):
+        """find the narrowest context that contains the search result
+        """
+        return sorted(locs)[0][2][2]
 
     def complex_search(self, lines, linestarts):
         """extended search using phrases we want to find and phrases we don't want to find

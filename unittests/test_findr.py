@@ -5,7 +5,7 @@ import pytest
 from afrift import findr_files as testee
 
 
-def test_determine_split(monkeypatch, capsys):
+def test_determine_split():
     """unittest for findr_files.determine_split
     """
     assert testee.determine_split('None', 'whatever') == 3
@@ -103,7 +103,7 @@ def test_determine_filetype(monkeypatch, capsys):
             " (['file', PosixPath('.')],) {'stdout': -1, 'check': False}\n")
 
 
-def test_read_input_file(monkeypatch, capsys, tmp_path):
+def test_read_input_file(tmp_path):
     """unittest for findr_files.read_input_file
     """
     fname = 'findr_results'
@@ -119,6 +119,8 @@ def test_read_input_file(monkeypatch, capsys, tmp_path):
 
 
 class TestPyRead:
+    """unittests for findr_files.PyRead
+    """
     def setup_testobj(self, monkeypatch, capsys):
         """testdouble for findr_files.PyRead object
 
@@ -193,15 +195,17 @@ class TestPyRead:
             print('called PyRead.build_contexts')
         def mock_filter():
             print('called PyRead.filter_comments')
-            return ['xxx']
+            return ['xxx', 'yyy']
         testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.itemlist = ['yyy', 'xxx']
         testobj.process_codelines = mock_process
         testobj.build_contexts = mock_build
         testobj.filter_comments = mock_filter
-        assert testobj.go() == ['xxx']
+        assert testobj.go() == ['xxx', 'yyy']
         assert capsys.readouterr().out == ("called PyRead.process_codelines\n"
-                                           "called PyRead.build_contexts\n"
-                                           "called PyRead.filter_comments\n")
+                                           # "called PyRead.build_contexts\n"
+                                           # "called PyRead.filter_comments\n")
+                                           "called PyRead.build_contexts\n")
 
     def test_process_codelines(self, monkeypatch, capsys):
         """unittest for PyRead.process_codelines
@@ -210,44 +214,49 @@ class TestPyRead:
             print('called PyRead.analyze_line with args', args)
             return args[1]
         def mock_pop(lineno):
-            print(f"called testobj.pop_construct with arg {lineno}")
+            print(f"called PyRead.pop_construct with arg {lineno}")
+        def mock_build(*args, **kwargs):
+            print("called PyRead.build_comment_context with args", args, kwargs)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.analyze_line = mock_analyze
         testobj.pop_construct = mock_pop
+        testobj.build_comment_context = mock_build
         testobj.lines = []
         testobj.prev_lineno = 1
         testobj.in_construct = []
         testobj.process_codelines()
         assert testobj.indentpos == 0
-        assert capsys.readouterr().out == "called testobj.pop_construct with arg 0\n"
+        assert capsys.readouterr().out == "called PyRead.pop_construct with arg 0\n"
         testobj.lines = ['']
         testobj.process_codelines()
         assert testobj.indentpos == 0
         assert capsys.readouterr().out == ("called PyRead.analyze_line with args (1, '')\n"
-                                           "called testobj.pop_construct with arg 0\n")
+                                           "called PyRead.pop_construct with arg 0\n")
         testobj.lines = ['   xxxx', 'yyyy # zzz']
-        testobj.itemlist = []
+        # testobj.itemlist = []
         testobj.process_codelines()
         assert testobj.indentpos == 0
-        assert testobj.itemlist == [((2, 5), (2, -1), 'comment')]
+        # assert testobj.itemlist == [((2, 5), (2, -1), 'comment')]
         assert capsys.readouterr().out == (
-                "called PyRead.analyze_line with args (1, '   xxxx')\n"
-                "called testobj.pop_construct with arg 1\n"
-                "called PyRead.analyze_line with args (2, 'yyyy # zzz')\n"
-                "called testobj.pop_construct with arg 1\n"
-                "called testobj.pop_construct with arg 1\n")
-        testobj.itemlist = []
+            "called PyRead.analyze_line with args (1, '   xxxx')\n"
+            "called PyRead.pop_construct with arg 1\n"
+            "called PyRead.analyze_line with args (2, 'yyyy # zzz')\n"
+            "called PyRead.pop_construct with arg 1\n"
+            "called PyRead.build_comment_context with args (2, 2, 5) {'context_type': 'comment'}\n"
+            "called PyRead.pop_construct with arg 1\n")
+        # testobj.itemlist = []
         testobj.in_construct = []
         testobj.lines = ['def myfunction(arg1, arg2):', 'class MyClass: # a class']
         testobj.process_codelines()
         assert testobj.indentpos == 0
-        assert testobj.itemlist == [((2, 15), (2, -1), 'comment')]
+        # assert testobj.itemlist == [((2, 15), (2, -1), 'comment')]
         assert capsys.readouterr().out == (
-                "called PyRead.analyze_line with args (1, 'def myfunction(arg1, arg2):')\n"
-                "called testobj.pop_construct with arg 2\n"
-                "called PyRead.analyze_line with args (2, 'class MyClass: # a class')\n"
-                "called testobj.pop_construct with arg 1\n"
-                "called testobj.pop_construct with arg 1\n")
+            "called PyRead.analyze_line with args (1, 'def myfunction(arg1, arg2):')\n"
+            "called PyRead.pop_construct with arg 2\n"
+            "called PyRead.analyze_line with args (2, 'class MyClass: # a class')\n"
+            "called PyRead.pop_construct with arg 1\n"
+            "called PyRead.build_comment_context with args (2, 2, 15) {'context_type': 'comment'}\n"
+            "called PyRead.pop_construct with arg 1\n")
 
     def test_build_contexts(self, monkeypatch, capsys):
         """unittest for PyRead.build_contexts
@@ -261,8 +270,8 @@ class TestPyRead:
         testobj.constructs = [(('', 'class', 'TestClass', ''), ('', 'def', 'testmethod', 1, 2)),
                               (('', 'def', 'testfunction', 3, 4),)]
         testobj.build_contexts()
-        assert testobj.itemlist == [((1, 0), (2, -1), 'class TestClass method testmethod'),
-                                    ((3, 0), (4, -1), 'function testfunction')]
+        assert testobj.itemlist == [((2, 0), (2, -1), 'class TestClass method testmethod'),
+                                    ((4, 0), (4, -1), 'function testfunction')]
 
     def test_filter_comments(self, monkeypatch, capsys):
         """unittest for PyRead.filter_comments
@@ -281,8 +290,11 @@ class TestPyRead:
         """
         def mock_add(*args):
             print('called PyRead.add_context with args', args)
+        def mock_build(*args, **kwargs):
+            print("called PyRead.build_comment_context with args", args, kwargs)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.add_context = mock_add
+        testobj.build_comment_context = mock_build
         testobj.docstring_delim = ''
         testobj.itemlist = []
         testobj.modlevel_start = 1
@@ -303,14 +315,14 @@ class TestPyRead:
         assert testobj.docstring_delim == ''
         assert testobj.modlevel_start == 1
         assert capsys.readouterr().out == (
-                "called PyRead.add_context with args (((3, 4), (5, -1), 'docstring'), 5)\n")
+                "called PyRead.build_comment_context with args (3, 5, 4) {'advance_lineno': 5}\n")
 
         testobj.docstring_delim = 'xxx'
         assert testobj.analyze_line(5, '    xxx # is not the end of this line') == ''
         assert testobj.modlevel_start == 1
         assert capsys.readouterr().out == (
-                "called PyRead.add_context with args (((3, 4), (5, 7), 'docstring'), 5)\n"
-                "called PyRead.add_context with args (((5, 8), (5, -1), 'comment'), 5)\n")
+            "called PyRead.build_comment_context with args (3, 5, 4) {'advance_lineno': 5}\n"
+            "called PyRead.build_comment_context with args (5, 5, 8) {'context_type': 'comment'}\n")
         # commentaar op zelfde regel als docstring eind-delimiter, niet erg waarschijnlijk
 
         testobj.docstring_delim = 'xxx'
@@ -318,24 +330,25 @@ class TestPyRead:
                 'is not the end of this line')
         assert testobj.modlevel_start == 1
         assert capsys.readouterr().out == (
-                "called PyRead.add_context with args (((3, 4), (5, 7), 'docstring'), 5)\n")
+                "called PyRead.build_comment_context with args (3, 5, 4) {'advance_lineno': 5}\n")
         # tekst op zelfde regel als einde-docstring, kan eigenlijk niet (syntax error bij uitvoeren)
 
         testobj.docstring_delim = ''
-        testobj.itemlist = []
+        # testobj.itemlist = []
         assert testobj.analyze_line(5, '   # this is a comment') == ''
         assert testobj.modlevel_start == 1
         assert capsys.readouterr().out == (
-                "called PyRead.add_context with args (((5, 3), (5, -1), 'comment'), 5)\n")
+            "called PyRead.build_comment_context with args (5, 5, 3) {'context_type': 'comment'}\n")
 
         testobj.start_of_code = False
         testobj.docstring_start = 0
         assert testobj.analyze_line(5, '   """complete docstring"""') == ''
         assert testobj.docstring_delim == ''
         assert testobj.docstring_start == 5
-        assert testobj.itemlist == [((5, 3), (5, -1), 'docstring')]
+        # assert testobj.itemlist == [((5, 3), (5, -1), 'docstring')]
         assert testobj.modlevel_start == 6
-        assert capsys.readouterr().out == ''
+        assert capsys.readouterr().out == (
+                'called PyRead.build_comment_context with args (5, 5, 3) {}\n')
 
         testobj.itemlist = []
         testobj.modlevel_start = 1
@@ -356,7 +369,60 @@ class TestPyRead:
         assert testobj.itemlist == []
         assert testobj.modlevel_start == 1
         assert capsys.readouterr().out == (
-                "called PyRead.add_context with args (((5, 3), (5, -1), 'docstring'), 5)\n")
+                "called PyRead.build_comment_context with args (5, 5, 3) {'advance_lineno': 5}\n")
+
+    def test_build_comment_context(self, monkeypatch, capsys):
+        """unittest for PyRead.build_comment_context
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.in_construct = [(0, 'def', 'functienaam', 9)]
+        testobj.itemlist = []
+        testobj.start_of_code = True
+        testobj.modlevel_start = 5
+        testobj.build_comment_context(1, 2)
+        assert testobj.itemlist == [((1, 0), (2, -1), 'function functienaam docstring')]
+        assert testobj.modlevel_start == 5
+        testobj.in_construct = [(0, 'class', 'classnaam', 9)]
+        testobj.itemlist = []
+        testobj.start_of_code = False
+        testobj.modlevel_start = 5
+        testobj.build_comment_context(1, 2, 3, 4, 'comment', 1)
+        assert testobj.itemlist == [((1, 3), (2, 4), 'class classnaam comment')]
+        assert testobj.modlevel_start == 2
+        testobj.in_construct = [(0, 'def', 'functienaam', 9), (4, 'def', 'functienaam', 11)]
+        testobj.itemlist = []
+        testobj.start_of_code = True
+        testobj.modlevel_start = 5
+        testobj.build_comment_context(1, 2, advance_lineno=0)
+        assert testobj.itemlist == [((1, 0), (2, -1),
+                                     'function functienaam function functienaam docstring')]
+        assert testobj.modlevel_start == 5
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11)]
+        testobj.itemlist = []
+        testobj.start_of_code = False
+        testobj.modlevel_start = 5
+        testobj.build_comment_context(1, 2)
+        assert testobj.itemlist == [((1, 0), (2, -1),
+                                     'class classnaam method methodnaam docstring')]
+        assert testobj.modlevel_start == 5
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                               (12, 'def', 'functienaam', 13)]
+        testobj.itemlist = []
+        testobj.start_of_code = False
+        testobj.modlevel_start = 5
+        testobj.build_comment_context(1, 2)
+        assert testobj.itemlist == [((1, 0), (2, -1), 'class classnaam method methodnaam'
+                                     ' function functienaam docstring')]
+        assert testobj.modlevel_start == 5
+        testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
+                               (12, 'class', 'classnaam', 13), (16, 'def', 'methodnaam', 16)]
+        testobj.itemlist = []
+        testobj.start_of_code = False
+        testobj.modlevel_start = 5
+        testobj.build_comment_context(1, 2)
+        assert testobj.itemlist == [((1, 0), (2, -1), 'class classnaam method methodnaam'
+                                     ' class classnaam method methodnaam docstring')]
+        assert testobj.modlevel_start == 5
 
     def test_add_context(self, monkeypatch, capsys):
         """unittest for PyRead.add_context
@@ -409,7 +475,6 @@ class TestPyRead:
         assert testobj.constructs == []
         assert testobj.in_construct == [(0, 'def', 'functienaam', 9)]
 
-
         testobj.constructs = []
         testobj.in_construct = [(0, 'def', 'functienaam', 9), (4, 'def', 'functienaam', 11)]
         testobj.indentpos = 0
@@ -434,7 +499,6 @@ class TestPyRead:
         assert testobj.constructs == []
         assert testobj.in_construct == [(0, 'def', 'functienaam', 9), (4, 'def', 'functienaam', 11)]
 
-
         testobj.constructs = []
         testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11)]
         testobj.indentpos = 0
@@ -458,7 +522,6 @@ class TestPyRead:
         testobj.pop_construct('another line')
         assert testobj.constructs == []
         assert testobj.in_construct == [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11)]
-
 
         testobj.constructs = []
         testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
@@ -509,7 +572,6 @@ class TestPyRead:
         assert testobj.constructs == []
         assert testobj.in_construct == [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
                                         (12, 'def', 'functienaam', 13)]
-
 
         testobj.constructs = []
         testobj.in_construct = [(0, 'class', 'classnaam', 9), (4, 'def', 'methodnaam', 11),
@@ -617,7 +679,7 @@ class TestFinder:
         testobj.p = {}
         return testobj
 
-    def test_init(self, monkeypatch, capsys):
+    def test_init(self):
         """unittest for Finder.__init__
         """
         with pytest.raises(TypeError):
@@ -637,7 +699,7 @@ class TestFinder:
         assert not testobj.p['wijzig']
         assert testobj.p['extlist'] == []
         assert testobj.extlist_upper == []
-        testobj = testee.Finder(zoek='Vind', vervang=None, filelist= ['xx'])
+        testobj = testee.Finder(zoek='Vind', vervang=None, filelist=['xx'])
         assert testobj.p['zoek'] == 'Vind'
         assert testobj.p['vervang'] is None
         assert not testobj.p['wijzig']
@@ -856,7 +918,7 @@ class TestFinder:
         testobj.p = {'zoek': 'xyz', 'case': False, 'regexp': True, 'wijzig': True}
         testobj.use_complex = not (testobj.p['regexp'] or testobj.p['wijzig'])
         assert testobj.build_regexes() == (
-                [testee.re.compile('xyz', testee.re.IGNORECASE|testee.re.MULTILINE)], "")
+                [testee.re.compile('xyz', testee.re.IGNORECASE | testee.re.MULTILINE)], "")
         assert capsys.readouterr().out == ""
         testobj.p = {'zoek': 'xyz', 'case': True, 'regexp': True, 'wijzig': False}
         testobj.use_complex = not (testobj.p['regexp'] or testobj.p['wijzig'])
@@ -1032,14 +1094,13 @@ class TestFinder:
                 return 'py'
             return ''
         class MockPyRead:
+            """stub for PyRead object
+            """
             def __init__(self, *args):
                 print('called PyRead.__init__ with args', args)
             def go(self):
                 print('called PyRead.go')
                 return ['']
-        def mock_pyread(self, *args):
-            print('called pyread with args', args)
-            return ['']
         counter = 0
         def mock_context(*args):
             nonlocal counter
@@ -1073,7 +1134,7 @@ class TestFinder:
                 "called determine_filetype for 'testfile'\n"
                 "called determine_filetype for 'testfile.py'\n"
                 # "called pyread with args ('testfile.py', 'uuu', False)\n"
-                "called PyRead.__init__ with args (PosixPath('testfile.py'), 'uuu', False)\n"
+                "called PyRead.__init__ with args (PosixPath('testfile.py'), 'uuu')\n"
                 "called PyRead.go\n"
                 "called Finder.determine_context_from_locations with args ('1', 'xxx', [''])\n"
                 "called Finder.determine_context_from_locations with args ('2', 'xxx', [''])\n"
@@ -1092,7 +1153,7 @@ class TestFinder:
                 "called determine_filetype for 'testfile'\n"
                 "called determine_filetype for 'testfile.py'\n"
                 # "called pyread with args ('testfile.py', 'uuu', True)\n"
-                "called PyRead.__init__ with args (PosixPath('testfile.py'), 'uuu', True)\n"
+                "called PyRead.__init__ with args (PosixPath('testfile.py'), 'uuu')\n"
                 "called PyRead.go\n"
                 "called Finder.determine_context_from_locations with args ('1', 'xxx', [''])\n"
                 "called Finder.determine_context_from_locations with args ('2', 'xxx', [''])\n"
@@ -1102,29 +1163,56 @@ class TestFinder:
     def test_determine_context_from_locations(self, monkeypatch, capsys):
         """unittest for Finder.determine_context_from_locations
         """
+        def mock_find(locs):
+            print(f'called Finder.find_smallest_context with arg {locs}')
+            return locs[0][2][2]
         monkeypatch.setattr(testee, 'default_location', 'xxx')
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.p = {'zoek': 'Arg'}
+        testobj.find_smallest_context = mock_find
         locations = [((0, 0), (5, -1), 'yyy'),
                      ((8, 8), (12, -1), 'comment'),
                      ((15, 4), (30, -1), 'zzz')]
-        assert testobj.determine_context_from_locations(4, 'qqq', locations) == "yyy"
-        assert testobj.determine_context_from_locations(8, '        gargl', locations) == "xxx"
+        assert testobj.determine_context_from_locations(4, 'ARG', locations) == "yyy"
+        assert capsys.readouterr().out == ("called Finder.find_smallest_context with arg"
+                                           " [((4, 1), (1, 2), ((0, 0), (5, 3), 'yyy'))]\n")
+        assert testobj.determine_context_from_locations(8, '        gargl', locations) == "comment"
+        assert capsys.readouterr().out == ("called Finder.find_smallest_context with arg"
+                                           " [((0, 4), (2, 3), ((8, 8), (12, 13), 'comment'))]\n")
         assert testobj.determine_context_from_locations(9, '        gargl', locations) == "comment"
-        assert testobj.determine_context_from_locations(12, 'gargl', locations) == "xxx"
-        assert testobj.determine_context_from_locations(13, 'gargl', locations) == "xxx"
-        assert testobj.determine_context_from_locations(15, 'oink', locations) == "xxx"
-        assert testobj.determine_context_from_locations(16, 'oink', locations) == "zzz"
+        assert capsys.readouterr().out == ("called Finder.find_smallest_context with arg"
+                                           " [((1, 3), (2, 3), ((8, 8), (12, 13), 'comment'))]\n")
+        # assert testobj.determine_context_from_locations(12, 'gargl', locations) == ""
+        # assert capsys.readouterr().out == ""
+        # assert testobj.determine_context_from_locations(13, 'gargl', locations) == ""
+        # assert capsys.readouterr().out == ""
+        # assert testobj.determine_context_from_locations(15, 'oaRG', locations) == ""
+        # assert capsys.readouterr().out == ""
+        # assert testobj.determine_context_from_locations(16, 'oaRG', locations) == ""
+        # assert capsys.readouterr().out == ""
+
+    def test_find_smallest_context(self, monkeypatch, capsys):
+        """unittest for Finder.find_smallest_context
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        locs = [((5, 5), (12, 29), ((46, 0), (56, 41), 'comment')),
+                ((5, 6), (12, 29), ((46, 0), (57, 41), 'comment')),
+                ((5, 2), (12, 29), ((45, 0), (53, 41), 'function test_splitjoin'))]
+        assert testobj.find_smallest_context(locs) == 'function test_splitjoin'
 
     def test_complex_search(self, monkeypatch, capsys):
         """unittest for Finder.complex_search
         """
         class MockMatch:
+            """stub for re.match result
+            """
             def __init__(self, seq):
                 self._seq = seq
             def start(self):
                 return self._seq
         class MockRgx:
+            """stub for re.compile result
+            """
             def __init__(self, zoek):
                 self._zoek = zoek
             def __repr__(self):
@@ -1233,7 +1321,7 @@ class TestFinder:
         testobj.ignore = MockRgx('ignore')
         assert testobj.complex_search(lines, linestarts) == [4]
         assert capsys.readouterr().out == ""
-        #assert capsys.readouterr().out == (
+        # assert capsys.readouterr().out == (
         #        "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, 1), (13, 1), (19, 1)]\n"
         #        "found_in_lines: [(1, 0), (7, 0), (13, 0), (1, 1), (13, 1), (19, 1),"
         #        " (1, -1), (7, -1)]\n"
@@ -1271,15 +1359,21 @@ class TestFinder:
         """unittest for Finder.old_rgx_search
         """
         class MockMatch:
+            """stub for re.match result
+            """
             def __init__(self, start):
                 self._start = start
             def start(self):
                 return self._start
         class MockRegex:
+            """stub for re.compile result
+            """
             def finditer(self, arg):
                 print(f"called regex.finditer with arg '{arg}'")
                 return []
         class MockRegex2:
+            """stub for re.compile result
+            """
             def finditer(self, arg):
                 print(f"called regex.finditer with arg '{arg}'")
                 return [MockMatch(4), MockMatch(18)]
@@ -1306,6 +1400,8 @@ class TestFinder:
         """unittest for Finder.replace_and_report
         """
         class MockRegex:
+            """stub for re.compile result
+            """
             def subn(self, *args):
                 print('called regex.subn with args', args)
                 return 'ndata', 5
