@@ -9,9 +9,11 @@ def test_determine_split():
     """unittest for findr_files.determine_split
     """
     assert testee.determine_split('None', 'whatever') == 3
-    assert testee.determine_split('py', ['', '', '', 'class', '', '']) == 5
-    assert testee.determine_split('py', ['', '', '', 'class', '', 'method']) == 7
-    assert testee.determine_split('py', ['', '', '', 'function']) == 5
+    assert testee.determine_split('py', ['', '', '', 'class', '', '', '', '']) == 5
+    assert testee.determine_split('py', ['', '', '', 'class', '', 'docstring', '', '']) == 6
+    assert testee.determine_split('py', ['', '', '', 'class', '', 'method', '', '']) == 7
+    assert testee.determine_split('py', ['', '', '', 'class', '', 'method', '', 'comment']) == 8
+    assert testee.determine_split('py', ['', '', '', 'function', '', '']) == 5
     assert testee.determine_split('py', 'whatever') == 6
 
 

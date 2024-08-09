@@ -13,7 +13,7 @@ special_chars = ('.', '^', '$', '*', '+', '?', '{', '}', '[', ']', '(', ')', '|'
 
 
 def determine_split(content_type, words):
-    """determine word number to split on idepending on content type and content
+    """determine word number to split on depending on content type and content
     regular search: always 3
     python context: different for definitions of class, function or method
     """
@@ -26,6 +26,8 @@ def determine_split(content_type, words):
             end = 5
         else:  # if words == 'module':
             end = 6
+        if words[end] in ('comment', 'docstring'):
+            end += 1
         return end
     # if content type is None
     return 3
@@ -100,8 +102,8 @@ class PyRead:
     """
     def __init__(self, file, fallback_encoding='latin-1', negeer_docs=False):
         self.lines = read_input_file(file, fallback_encoding)
-        if not self.lines:
-            raise EOFError('No lines in file')
+        # if not self.lines:
+        #     raise EOFError(f'No lines in file {file}')
         self.negeer_docs = negeer_docs  # eigenlijk omkeren? hoe is dit bedoeld?
         self.itemlist = []
         self.modlevel_start = 1
@@ -115,6 +117,8 @@ class PyRead:
 
     def go(self):
         "convenience wrapper for main processing routines"
+        if not self.lines:
+            return []
         self.process_codelines()
         self.build_contexts()
         # return self.filter_comments()
