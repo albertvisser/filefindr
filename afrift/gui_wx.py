@@ -407,6 +407,8 @@ class MainFrameGui(wx.Frame):
                                                 self.master.mru_items["verv"],
                                                 initial=self.master.p.get("verv", ''))
         self.check_vervang = self.add_checkbox_row(captions['empty'], self.master.always_replace)
+        self.vraag_backup = self.add_checkbox_row(captions['backup'], self.master.maak_backups)
+        self.vraag_exit = self.add_checkbox_row(captions['exit'], self.master.exit_when_ready)
 
         if self.master.apptype == "":
             initial = str(self.master.p['filelist'][0]) if self.master.p['filelist'] else ''
@@ -446,8 +448,6 @@ class MainFrameGui(wx.Frame):
         self.vraag_context = self.add_checkbox_row(captions['context'], self.master.p['context'])
         self.vraag_negeer = self.add_checkbox_row(captions['negeer'], self.master.p['negeer'],
                                                   indent=22)
-        self.vraag_backup = self.add_checkbox_row(captions['backup'], self.master.maak_backups)
-        self.vraag_exit = self.add_checkbox_row(captions['exit'], self.master.exit_when_ready)
 
         self.row += 1
         hsizer = wx.BoxSizer(wx.HORIZONTAL)

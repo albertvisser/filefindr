@@ -359,6 +359,8 @@ class MainFrameGui(qtw.QWidget):
             self.vraag_verv.setEditText(self.master.p['verv'])
         self.vraag_verv.completer().setCaseSensitivity(core.Qt.CaseSensitive)
         self.vraag_leeg = self.add_checkbox_row(captions['empty'], self.master.always_replace)
+        self.vraag_backup = self.add_checkbox_row(captions["backup"], self.master.maak_backups)
+        self.vraag_exit = self.add_checkbox_row(captions['exit'], self.master.exit_when_ready)
 
         if self.master.apptype == "open":
             initial = str(self.master.p['filelist'][0]) if self.master.p['filelist'] else ''
@@ -404,8 +406,6 @@ class MainFrameGui(qtw.QWidget):
         self.vraag_context = self.add_checkbox_row(captions["context"], self.master.p["context"])
         self.vraag_uitsluit = self.add_checkbox_row(captions["negeer"], self.master.p["negeer"],
                                                     indent=22)
-        self.vraag_backup = self.add_checkbox_row(captions["backup"], self.master.maak_backups)
-        self.vraag_exit = self.add_checkbox_row(captions['exit'], self.master.exit_when_ready)
 
         self.row += 1
         hbox = qtw.QHBoxLayout()
