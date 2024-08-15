@@ -42,8 +42,8 @@ if __name__ == "__main__":
                         help="do not update saved search options")
     parser.add_argument("-N", "--no-gui", action='store_true',
                         help="don't show initial parameters screen")
-    parser.add_argument("-o", "--output-file", type=argparse.FileType('w'),
-                        help="save output to file")
+    parser.add_argument("-o", "--output-file", type=argparse.FileType('w'), nargs='?',
+                        const=sys.stdout, help="save output to file")
     parser.add_argument("-p", "--full-path", action='store_true',
                         help="show full paths in output")
     parser.add_argument("-c", "--as-csv", action='store_true',
