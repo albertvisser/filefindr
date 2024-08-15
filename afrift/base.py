@@ -89,6 +89,7 @@ class SelectNames:
         self.parent = parent
         self.title = self.parent.title + " - file list"
         self.iconame = iconame
+        self.names = []
         if files:
             text = "Selecteer de bestanden die je *niet* wilt verwerken"
             self.names = {str(x): x for x in self.parent.names}
@@ -156,8 +157,8 @@ class Results:
                         "at the indicated line (not in single file mode)",
                 'goto': 'Not in single file mode',
                 'noitems': 'Geen regels geselecteerd om in te vervangen',
-                'vervsel': "vervang `{}` in geselecteerde regels door:",
-                'vervall': "vervang `{}` in alle regels door:",
+                'replsel': "vervang `{}` in geselecteerde regels door:",
+                'replall': "vervang `{}` in alle regels door:",
                 'other': 'zoek in dezelfde selectie naar:'
                 }
 
@@ -733,6 +734,7 @@ class MainFrame:
             with contextlib.suppress(ValueError):
                 self.mru_items["dirs"].remove(item)
             self.mru_items["dirs"].insert(0, item)
+            self.p['filelist'] = [pathlib.Path(item)]
             self.s += f"\nin {item}"
         return mld
 

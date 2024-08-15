@@ -239,7 +239,7 @@ class TestSelectNames:
         assert testobj.parent == parent
         assert testobj.title == 'app title - file list'
         assert testobj.iconame == 'find.ico'
-        assert not hasattr(testobj, 'names')
+        assert testobj.names == []
         assert capsys.readouterr().out == (
                 f"called SelectNamesGui with args ({parent}, {testobj})\n"
                 "called SelectNamesGui.setup_screen with arg"
@@ -1383,6 +1383,7 @@ class TestMainFrame:
         testobj.p = {}
         assert testobj.checkpath('/home') == ""
         assert testobj.mru_items['dirs'] == ['/home', '']
+        assert testobj.p['filelist'] == [pathlib.Path('/home')]
         assert testobj.s == 'xx\nin /home'
 
     def test_setup_parameters(self, monkeypatch, capsys):
