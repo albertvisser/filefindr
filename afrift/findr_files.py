@@ -104,7 +104,7 @@ class PyRead:
         self.lines = read_input_file(file, fallback_encoding)
         # if not self.lines:
         #     raise EOFError(f'No lines in file {file}')
-        self.negeer_docs = negeer_docs  # eigenlijk omkeren? hoe is dit bedoeld?
+        self.negeer_docs = negeer_docs
         self.itemlist = []
         self.modlevel_start = 1
         self.constructs = []
@@ -553,9 +553,7 @@ class Finder:
     def determine_context_from_locations(self, lineno, text, locations):
         """determine which "location" to add into search result
         """
-        pos = text.upper().index(self.p['zoek'].upper()) + 1
-        # TODO: bovenstaande werkt wrschl niet bij alle zoekmanieren
-        # alleen nodig als het gaat om een regel waar een commentaar in staat
+        pos = self.determine_position_in_result(text)
         locs = []
         for loc in locations:
             lineno = int(lineno)
@@ -568,6 +566,18 @@ class Finder:
                 locs.append((linedelta, posdelta, loc))
         # print(locs)
         return self.find_smallest_context(locs)
+
+    def determine_position_in_result(self, text):
+        """find out where in the search result the argument starts
+        """
+        if self.use_complex:
+            for item in self.parse_zoekstring()[0]:
+                try:
+                    return text.upper().index(item.upper()) + 1
+                except ValueError:
+                    pass
+        else:
+            return text.upper().index(self.p['zoek'].upper()) + 1
 
     def find_smallest_context(self, locs):
         """find the narrowest context that contains the search result

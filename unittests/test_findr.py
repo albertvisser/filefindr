@@ -149,9 +149,19 @@ class TestPyRead:
             print('called read_input_file with args', args)
             return ['xxx\n']
         monkeypatch.setattr(testee, 'read_input_file', mock_read)
-        with pytest.raises(EOFError) as exc:
-            testee.PyRead('testfile')
-        assert str(exc.value) == 'No lines in file'
+        testobj = testee.PyRead('testfile')
+        assert testobj.lines == []
+        assert not testobj.negeer_docs
+        assert testobj.itemlist == []
+        assert testobj.modlevel_start == 1
+        assert testobj.constructs == []
+        assert testobj.in_construct == []
+        assert testobj.docstring == ''
+        assert testobj.docstring_start == 0
+        assert testobj.docstring_delim == ''
+        assert testobj.indentpos == 0
+        assert testobj.prev_lineno == 0
+        assert not testobj.start_of_code
         assert capsys.readouterr().out == (
                 "called read_input_file with args ('testfile', 'latin-1')\n")
 
@@ -203,6 +213,10 @@ class TestPyRead:
         testobj.process_codelines = mock_process
         testobj.build_contexts = mock_build
         testobj.filter_comments = mock_filter
+        testobj.lines = []
+        assert testobj.go() == []
+        assert capsys.readouterr().out == ""
+        testobj.lines = ['qqq']
         assert testobj.go() == ['xxx', 'yyy']
         assert capsys.readouterr().out == ("called PyRead.process_codelines\n"
                                            # "called PyRead.build_contexts\n"
@@ -1170,14 +1184,15 @@ class TestFinder:
             return locs[0][2][2]
         monkeypatch.setattr(testee, 'default_location', 'xxx')
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.p = {'zoek': 'Arg'}
         testobj.find_smallest_context = mock_find
         locations = [((0, 0), (5, -1), 'yyy'),
                      ((8, 8), (12, -1), 'comment'),
                      ((15, 4), (30, -1), 'zzz')]
+        testobj.determine_position_in_result = lambda *x: 1
         assert testobj.determine_context_from_locations(4, 'ARG', locations) == "yyy"
         assert capsys.readouterr().out == ("called Finder.find_smallest_context with arg"
                                            " [((4, 1), (1, 2), ((0, 0), (5, 3), 'yyy'))]\n")
+        testobj.determine_position_in_result = lambda *x: 10
         assert testobj.determine_context_from_locations(8, '        gargl', locations) == "comment"
         assert capsys.readouterr().out == ("called Finder.find_smallest_context with arg"
                                            " [((0, 4), (2, 3), ((8, 8), (12, 13), 'comment'))]\n")
@@ -1192,6 +1207,26 @@ class TestFinder:
         # assert capsys.readouterr().out == ""
         # assert testobj.determine_context_from_locations(16, 'oaRG', locations) == ""
         # assert capsys.readouterr().out == ""
+
+    def test_determine_position_in_result(self, monkeypatch, capsys):
+        """unittest for Finder.determine_position_in_result
+        """
+        def mock_parse():
+            "stub"
+            return ['xxx', 'ARG'], [], []
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.parse_zoekstring = mock_parse
+        testobj.p = {'zoek': 'Arg'}
+        testobj.use_complex = False
+        assert testobj.determine_position_in_result('ARG') == 1
+        assert capsys.readouterr().out == ""
+        assert testobj.determine_position_in_result('        gargl') == 10
+        assert capsys.readouterr().out == ""
+        testobj.use_complex = True
+        assert testobj.determine_position_in_result('ARG') == 1
+        assert capsys.readouterr().out == ""
+        assert testobj.determine_position_in_result('        gargl') == 10
+        assert capsys.readouterr().out == ""
 
     def test_find_smallest_context(self, monkeypatch, capsys):
         """unittest for Finder.find_smallest_context
