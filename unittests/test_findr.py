@@ -350,23 +350,55 @@ class TestPyRead:
         # tekst op zelfde regel als einde-docstring, kan eigenlijk niet (syntax error bij uitvoeren)
 
         testobj.docstring_delim = ''
-        # testobj.itemlist = []
         assert testobj.analyze_line(5, '   # this is a comment') == ''
         assert testobj.modlevel_start == 1
         assert capsys.readouterr().out == (
             "called PyRead.build_comment_context with args (5, 5, 3) {'context_type': 'comment'}\n")
 
+        assert not testobj.docstring_allowed
+        assert testobj.analyze_line(5, '    class MyClass:\n') == 'class MyClass:\n'
+        assert testobj.docstring_allowed
+        testobj.docstring_allowed = False
+        assert testobj.analyze_line(5, '        def a_function():\n') == 'def a_function():\n'
+        assert testobj.docstring_allowed
+
+        testobj.itemlist = []
         testobj.start_of_code = False
+        testobj.docstring_allowed = False
+        testobj.docstring_start = 0
+        assert testobj.analyze_line(5, '   """complete docstring"""') == '"""complete docstring"""'
+        assert testobj.docstring_delim == ''
+        assert testobj.docstring_start == 0
+        assert testobj.itemlist == [((1, 0), (9, -1), 'module level code')]
+        assert testobj.modlevel_start == 1
+        assert capsys.readouterr().out == ''
+        testobj.itemlist = []
+        testobj.start_of_code = False
+        testobj.docstring_allowed = True
         testobj.docstring_start = 0
         assert testobj.analyze_line(5, '   """complete docstring"""') == ''
         assert testobj.docstring_delim == ''
         assert testobj.docstring_start == 5
+        assert testobj.itemlist == []
         # assert testobj.itemlist == [((5, 3), (5, -1), 'docstring')]
         assert testobj.modlevel_start == 6
         assert capsys.readouterr().out == (
                 'called PyRead.build_comment_context with args (5, 5, 3) {}\n')
 
+        # testobj.itemlist = []
+        testobj.start_of_code = False
+        testobj.docstring_allowed = False
+        testobj.modlevel_start = 1
+        testobj.docstring_start = 0
+        assert testobj.analyze_line(5, '   """start of a docstring') == '"""start of a docstring'
+        assert testobj.docstring_delim == ''
+        assert testobj.docstring_start == 0
+        assert testobj.itemlist == [((1, 0), (9, -1), 'module level code')]
+        assert testobj.modlevel_start == 1
+        assert capsys.readouterr().out == ''
         testobj.itemlist = []
+        testobj.start_of_code = False
+        testobj.docstring_allowed = True
         testobj.modlevel_start = 1
         testobj.docstring_start = 0
         assert testobj.analyze_line(5, '   """start of a docstring') == ''
@@ -376,9 +408,19 @@ class TestPyRead:
         assert testobj.modlevel_start == 6
         assert capsys.readouterr().out == ''
 
+        testobj.itemlist = []
         testobj.docstring_delim = ''
         testobj.docstring_start = 0
         testobj.modlevel_start = 1
+        testobj.docstring_allowed = False
+        assert testobj.analyze_line(5, '   "complete docstring"') == '"complete docstring"'
+        assert testobj.docstring_delim == ''
+        assert testobj.docstring_start == 0
+        assert testobj.itemlist == [((1, 0), (9, -1), 'module level code')]
+        assert testobj.modlevel_start == 1
+        assert capsys.readouterr().out == ''
+        testobj.itemlist = []
+        testobj.docstring_allowed = True
         assert testobj.analyze_line(5, '   "complete docstring"') == ''
         assert testobj.docstring_delim == ''
         assert testobj.docstring_start == 0
@@ -461,17 +503,63 @@ class TestPyRead:
         """unittest for PyRead.is_single_line_docstring
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.docstring_allowed = False
         assert not testobj.is_single_line_docstring('hello')
-        assert testobj.is_single_line_docstring('"hello"')
+        assert not testobj.docstring_allowed
+        assert not testobj.is_single_line_docstring('"hello"')
+        assert not testobj.docstring_allowed
         assert not testobj.is_single_line_docstring('"hello')
+        assert not testobj.docstring_allowed
         assert not testobj.is_single_line_docstring('""hello""')
-        assert testobj.is_single_line_docstring('"""hello"""')
+        assert not testobj.docstring_allowed
+        assert not testobj.is_single_line_docstring('"""hello"""')
+        assert not testobj.docstring_allowed
         assert not testobj.is_single_line_docstring('"""hello')
-        assert testobj.is_single_line_docstring("'hello'")
+        assert not testobj.docstring_allowed
+        assert not testobj.is_single_line_docstring("'hello'")
+        assert not testobj.docstring_allowed
         assert not testobj.is_single_line_docstring("'hello")
+        assert not testobj.docstring_allowed
         assert not testobj.is_single_line_docstring("''hello''")
-        assert testobj.is_single_line_docstring("'''hello'''")
+        assert not testobj.docstring_allowed
+        assert not testobj.is_single_line_docstring("'''hello'''")
+        assert not testobj.docstring_allowed
         assert not testobj.is_single_line_docstring("'''hello")
+        assert not testobj.docstring_allowed
+        testobj.docstring_allowed = True
+        assert not testobj.is_single_line_docstring('hello')
+        assert not testobj.docstring_allowed
+        testobj.docstring_allowed = True
+        assert testobj.is_single_line_docstring('"hello"')
+        assert not testobj.docstring_allowed
+        testobj.docstring_allowed = True
+        assert not testobj.is_single_line_docstring('"hello')
+        assert not testobj.docstring_allowed
+        testobj.docstring_allowed = True
+        assert not testobj.is_single_line_docstring('""hello""')
+        assert not testobj.docstring_allowed
+        testobj.docstring_allowed = True
+        assert testobj.is_single_line_docstring('"""hello"""')
+        assert not testobj.docstring_allowed
+        testobj.docstring_allowed = True
+        assert not testobj.is_single_line_docstring('"""hello')
+        assert not testobj.docstring_allowed
+        testobj.docstring_allowed = True
+        assert testobj.is_single_line_docstring("'hello'")
+        assert not testobj.docstring_allowed
+        testobj.docstring_allowed = True
+        assert not testobj.is_single_line_docstring("'hello")
+        assert not testobj.docstring_allowed
+        testobj.docstring_allowed = True
+        assert not testobj.is_single_line_docstring("''hello''")
+        assert not testobj.docstring_allowed
+        testobj.docstring_allowed = True
+        assert testobj.is_single_line_docstring("'''hello'''")
+        assert not testobj.docstring_allowed
+        testobj.docstring_allowed = True
+        assert not testobj.is_single_line_docstring("'''hello")
+        assert not testobj.docstring_allowed
+        testobj.docstring_allowed = True
 
     def test_pop_construct(self, monkeypatch, capsys):
         """unittest for PyRead.pop_construct
@@ -1143,7 +1231,7 @@ class TestFinder:
         testobj.determine_context_from_locations = mock_context
         testobj.add_context_to_search_results()
         assert testobj.rpt == ['cannot be split', 'testfile.py r. 1 xxx',
-                               'testfile.py r. 1 (): xxx', 'testfile.py r. 2 (comment): xxx',
+                               'testfile.py r. 1 (): xxx', 'testfile.py r. 2 (): xxx',
                                'testfile.py r. 3 (docstring): xxx',
                                'testfile.py r. 5 (somewhere in the code): xxx']
         assert capsys.readouterr().out == (

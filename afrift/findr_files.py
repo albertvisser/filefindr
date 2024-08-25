@@ -127,6 +127,7 @@ class PyRead:
     def process_codelines(self):
         """this routine produces a list of constructs and if requested one of comment contexts
         """
+        self.docstring_allowed = True
         for ix, line in enumerate(self.lines):
             lineno = ix + 1
             code = self.analyze_line(lineno, line)
@@ -173,6 +174,10 @@ class PyRead:
         "build constructs from code or condense into docstring / comment indicator"
         code = line.lstrip()
         self.indentpos = line.index(code)
+        if code.startswith(("def", "class")):
+            self.docstring_allowed = True
+        elif not code.startswith(('"""', "'''", "'", '"')):
+            self.docstring_allowed = False
         if self.docstring_delim and self.docstring_delim in line:
             pos = line.index(self.docstring_delim) + len(self.docstring_delim)
             self.docstring_delim = ''
@@ -192,7 +197,8 @@ class PyRead:
             # self.add_context(((lineno, self.indentpos), (lineno, -1), 'comment'), lineno)
             self.build_comment_context(lineno, lineno, self.indentpos, context_type='comment')
             return ''
-        if code.startswith(('"""', "'''")):
+        if code.startswith(('"""', "'''")) and self.docstring_allowed:
+            self.docstring_allowed = False
             self.docstring_delim = code[:3]
             self.docstring_start = lineno
             if code[3:].rstrip().endswith(self.docstring_delim):
@@ -237,16 +243,18 @@ class PyRead:
     def is_single_line_docstring(self, inp):
         """return True if input is a valid single-line docstring (with correct delimiters)
         """
-        test = inp[0]
-        while test in ('"', "'"):
-            try:
-                ix = inp.index(test, 1)
-            except ValueError:
-                return False
-            inp = inp[ix + 1:].strip()
-            if not inp:
-                return True
+        if self.docstring_allowed:
+            self.docstring_allowed = False
             test = inp[0]
+            while test in ('"', "'"):
+                try:
+                    ix = inp.index(test, 1)
+                except ValueError:
+                    return False
+                inp = inp[ix + 1:].strip()
+                if not inp:
+                    return True
+                test = inp[0]
         return False
 
     def pop_construct(self, last_line):
