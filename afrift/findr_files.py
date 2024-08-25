@@ -547,6 +547,7 @@ class Finder:
             contains = self.determine_context_from_locations(lineno, text, locations[best])
             if self.p['negeer'] and contains.endswith(('comment', 'docstring')):
                 continue
+            contains = contains.removesuffix('comment')
             if contains != 'ignore':
                 self.rpt.append(f'{best} r. {lineno} ({contains}): {text}')
 
