@@ -24,8 +24,10 @@ def determine_split(content_type, words):
                 end = 7
         elif words[3] == 'function':
             end = 5
-        else:  # if words == 'module':
+        elif words[3:6] == ['module', 'level', 'code']:
             end = 6
+        else:
+            end = 3
         if words[end] in ('comment', 'docstring'):
             end += 1
         return end
