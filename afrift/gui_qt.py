@@ -2,9 +2,9 @@
 """
 import os
 import sys
-import PyQt5.QtWidgets as qtw
-import PyQt5.QtGui as gui
-import PyQt5.QtCore as core
+import PyQt6.QtWidgets as qtw
+import PyQt6.QtGui as gui
+import PyQt6.QtCore as core
 TXTW = 200
 
 
@@ -73,8 +73,8 @@ class SelectNamesGui(qtw.QDialog):
     def go(self):
         """show the dialog screen
         """
-        result = self.exec_()
-        return result == qtw.QDialog.Accepted
+        result = self.exec()
+        return result == qtw.QDialog.DialogCode.Accepted
 
     def select_all(self):
         """check or uncheck all boxes
@@ -134,7 +134,7 @@ class ResultsGui(qtw.QDialog):
             hbox = qtw.QHBoxLayout()
             self.lijst = qtw.QTableWidget(self)
             self.lijst.verticalHeader().setVisible(False)
-            self.lijst.setGridStyle(core.Qt.NoPen)
+            self.lijst.setGridStyle(core.Qt.PenStyle.NoPen)
             if self.master.show_context:
                 self.lijst.setColumnCount(3)
                 self.lijst.setColumnWidth(1, 200)
@@ -151,11 +151,11 @@ class ResultsGui(qtw.QDialog):
             self.populate_list()
 
             self.lijst.cellDoubleClicked[int, int].connect(self.master.goto_result)
-            act = qtw.QAction(captions['hlp'], self)
+            act = gui.QAction(captions['hlp'], self)
             act.setShortcut('F1')
             act.triggered.connect(self.master.help)
             self.addAction(act)
-            act = qtw.QAction(captions['rslt'], self)
+            act = gui.QAction(captions['rslt'], self)
             act.setShortcut('Ctrl+G')
             act.triggered.connect(self.to_result)
             self.addAction(act)
@@ -232,20 +232,20 @@ class ResultsGui(qtw.QDialog):
             col = 0
             item = qtw.QTableWidgetItem(result[0])
             item.setToolTip(result[0])
-            item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
+            item.setFlags(core.Qt.ItemFlag.ItemIsSelectable | core.Qt.ItemFlag.ItemIsEnabled)
             self.lijst.setItem(ix, col, item)
 
             if self.master.show_context:
                 col += 1
                 item = qtw.QTableWidgetItem(result[1])
                 item.setToolTip(result[1])
-                item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
+                item.setFlags(core.Qt.ItemFlag.ItemIsSelectable | core.Qt.ItemFlag.ItemIsEnabled)
                 self.lijst.setItem(ix, col, item)
 
             col += 1
             item = qtw.QTableWidgetItem(result[-1])
             item.setToolTip(result[-1])
-            item.setFlags(core.Qt.ItemIsSelectable | core.Qt.ItemIsEnabled)
+            item.setFlags(core.Qt.ItemFlag.ItemIsSelectable | core.Qt.ItemFlag.ItemIsEnabled)
             self.lijst.setItem(ix, col, item)
 
     def clear_contents(self):
@@ -255,7 +255,7 @@ class ResultsGui(qtw.QDialog):
     def go(self):
         """show the dialog screen
         """
-        self.exec_()
+        self.exec()
 
     def breekaf(self, message, done=True):
         "show reason and end dialog"
@@ -357,7 +357,7 @@ class MainFrameGui(qtw.QWidget):
                                                 self.master.mru_items["verv"])
         if self.master.p.get("verv", ''):
             self.vraag_verv.setEditText(self.master.p['verv'])
-        self.vraag_verv.completer().setCaseSensitivity(core.Qt.CaseSensitive)
+        self.vraag_verv.completer().setCaseSensitivity(core.Qt.CaseSensitivity.CaseSensitive)
         self.vraag_leeg = self.add_checkbox_row(captions['empty'], self.master.always_replace)
         self.vraag_backup = self.add_checkbox_row(captions["backup"], self.master.maak_backups)
         self.vraag_exit = self.add_checkbox_row(captions['exit'], self.master.exit_when_ready)
@@ -470,13 +470,13 @@ class MainFrameGui(qtw.QWidget):
     def meld(self, titel, message, additional=None):
         "show an informational message"
         if additional:
-            dlg = qtw.QMessageBox(qtw.QMessageBox.Information, titel, message, qtw.QMessageBox.Ok,
-                                  parent=self)
+            dlg = qtw.QMessageBox(qtw.QMessageBox.Icon.Information, titel, message,
+                                  qtw.QMessageBox.StandardButton.Ok, parent=self)
             dlg.setDetailedText('\n'.join(additional))
-            dlg.exec_()
+            dlg.exec()
             dlg.close()
         else:
-            qtw.QMessageBox.information(self, titel, message, qtw.QMessageBox.Ok)
+            qtw.QMessageBox.information(self, titel, message, qtw.QMessageBox.StandardButton.Ok)
 
     def add_item_to_searchlist(self, item):
         "add string to list of items searched for"
@@ -494,7 +494,7 @@ class MainFrameGui(qtw.QWidget):
         """switch back and forth to a "busy" cursor
         """
         if value:
-            self.app.setOverrideCursor(gui.QCursor(core.Qt.WaitCursor))
+            self.app.setOverrideCursor(gui.QCursor(core.Qt.CursorShape.WaitCursor))
         else:
             self.app.restoreOverrideCursor()
 
@@ -505,7 +505,7 @@ class MainFrameGui(qtw.QWidget):
     def go(self):
         "show screen and handle events"
         self.show()
-        sys.exit(self.app.exec_())
+        sys.exit(self.app.exec())
 
     def einde(self):
         """applicatie afsluiten"""
@@ -560,7 +560,8 @@ class MainFrameGui(qtw.QWidget):
     def check_case(self, val):
         """autocompletion voor zoektekst in overeenstemming brengen met case
         indicator"""
-        new_value = core.Qt.CaseSensitive if val == core.Qt.Checked else core.Qt.CaseInsensitive
+        new_value = (core.Qt.CaseSensitivity.CaseSensitive if val == core.Qt.Checked
+                     else core.Qt.CaseSensitivity.CaseInsensitive)
         self.vraag_zoek.setAutoCompletionCaseSensitivity(new_value)
 
     def check_loc(self, txt):
@@ -583,7 +584,7 @@ class MainFrameGui(qtw.QWidget):
 
     def keyPressEvent(self, event):
         """event handler voor toetsaanslagen"""
-        if event.key() == core.Qt.Key_Escape:
+        if event.key() == core.Qt.Key.Key_Escape:
             self.close()
 
     def zoekdir(self):
