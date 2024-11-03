@@ -465,7 +465,7 @@ class MainFrameGui(qtw.QWidget):
 
     def error(self, titel, message):
         "show an error message"
-        qtw.QMessageBox.critical(self, titel, message, qtw.QMessageBox.Ok)
+        qtw.QMessageBox.critical(self, titel, message, qtw.QMessageBox.StandardButton.Ok)
 
     def meld(self, titel, message, additional=None):
         "show an informational message"
@@ -560,7 +560,7 @@ class MainFrameGui(qtw.QWidget):
     def check_case(self, val):
         """autocompletion voor zoektekst in overeenstemming brengen met case
         indicator"""
-        new_value = (core.Qt.CaseSensitivity.CaseSensitive if val == core.Qt.Checked
+        new_value = (core.Qt.CaseSensitivity.CaseSensitive if val == core.Qt.CheckState.Checked
                      else core.Qt.CaseSensitivity.CaseInsensitive)
         self.vraag_zoek.setAutoCompletionCaseSensitivity(new_value)
 
