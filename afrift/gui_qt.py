@@ -284,7 +284,7 @@ class ResultsGui(qtw.QDialog):
         """
         if ext == '.csv':
             f_filter = 'Comma delimited files (*.csv)'
-        elif ext == '.txt':
+        else:  # if ext == '.txt':  momenteel geen andere mogelijkheid
             f_filter = 'Text files (*.txt)'
         f_filter = f"{f_filter};;All files (*.*)"
         dlg = qtw.QFileDialog.getSaveFileName(self, "Resultaat naar bestand kopieren",
@@ -377,7 +377,7 @@ class MainFrameGui(qtw.QWidget):
             box.addWidget(qtw.QLabel(str(self.master.p['filelist'][0])))
             box.addStretch()
             self.grid.addLayout(box, self.row, 1)
-        elif self.master.apptype == "multi":
+        else:  # if self.master.apptype == "multi":  - momenteel geen andere mogelijkheid
             self.row += 1
             self.grid.addWidget(qtw.QLabel(captions['in_m']), self.row, 0, 1, 2)
             self.row += 1
