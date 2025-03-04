@@ -34,6 +34,8 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--extensions", help="filter on file extension(s)")
     parser.add_argument("-P", "--python-context", action='store_true',
                         help="show context (file type specific)")
+    parser.add_argument("-Q", "--ignore-comments", action='store_true',
+                        help="don't include docstrings and comments for Python context")
     parser.add_argument("-B", "--backup-originals", action='store_true',
                         help="backup original files when replacing")
     parser.add_argument("-U", "--use-saved", action='store_true',
