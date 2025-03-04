@@ -93,6 +93,14 @@ def test_main(monkeypatch, capsys, tmp_path):
     assert testee.main({'output_file': 'zz', 'as_csv': True, 'summarize': True}) == (
             "'Output to csv' and 'summarize' is not a sensible combination")
     assert capsys.readouterr().out == ''
+    assert testee.main({'output_file': 'zz', 'as_csv': False, 'summarize': True}) == ''
+    assert capsys.readouterr().out == (
+            "called MainFrame with args () {'output_file': 'zz', 'as_csv': False,"
+            " 'summarize': True}\n")
+    assert testee.main({'output_file': 'zz', 'as_csv': True, 'summarize': False}) == ''
+    assert capsys.readouterr().out ==  (
+            "called MainFrame with args () {'output_file': 'zz', 'as_csv': True,"
+            " 'summarize': False}\n")
 
     monkeypatch.setattr(testee, 'MainFrame', mock_mainframe_2)
     assert testee.main({'appmode': 'xx', 'fname': ['yy'], 'output_file': ''}) == 'message'
@@ -728,6 +736,12 @@ class TestResults:
         assert capsys.readouterr().out == ("called ResultsGui.get_savefile with args"
                                            " ('files-containing-xyz~~~~~~~~~~~123.txt', '.txt')\n"
                                            "called ResultsGui.remember_settings\n")
+        testobj.parent.p['zoek'] = 'xyzabc123'
+        testobj.kopie()
+        assert mock_savefile.read_text() == "heading\ndata\n"
+        assert capsys.readouterr().out == ("called ResultsGui.get_savefile with args"
+                                           " ('files-containing-xyzabc123.txt', '.txt')\n"
+                                           "called ResultsGui.remember_settings\n")
 
     def test_help(self, monkeypatch, capsys):
         """unittest for Results.help
@@ -1181,12 +1195,38 @@ class TestMainFrame:
         testobj.apply_cmdline_options({})
         assert testobj.p == {'zoek': '', 'extlist': [], 'case': False, 'woord': False,
                              'subdirs': False, 'context': False, 'negeer': False}
+        assert testobj.extraopts == {'use_saved': False, 'regex': '', 'follow_symlinks': '',
+                                     'select_subdirs': '', 'select_files': '', 'dont_save': '',
+                                     'no_gui': '', 'output_file': ''}
+        assert testobj.outopts == {'full_path': False, 'as_csv': False, 'summarize': False}
+        assert not testobj.always_replace
+        assert testobj.maak_backups == ''
+        assert testobj.exit_when_ready
+
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.apply_cmdline_options({'search': 'zoek', 'replace': 'verv', 'extensions': ['x'],
+                                       'use_saved': True})
+        assert testobj.p == {'zoek': 'zoek', 'vervang': 'verv', 'extlist': ['x']}
+        assert testobj.extraopts == {'use_saved': True, 'regex': '', 'follow_symlinks': '',
+                                     'select_subdirs': '', 'select_files': '', 'dont_save': '',
+                                     'no_gui': '', 'output_file': ''}
+        assert testobj.outopts == {'full_path': False, 'as_csv': False, 'summarize': False}
+        assert not testobj.always_replace
+        assert testobj.maak_backups == ''
+        assert testobj.exit_when_ready
 
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.apply_cmdline_options({'search': 'zoek', 'replace': '', 'summarize': True})
         assert testobj.p == {'zoek': 'zoek', 'vervang': '', 'extlist': [], 'case': False,
                              'woord': False, 'subdirs': False, 'context': False, 'negeer': False}
-        assert testobj.outopts['summarize'] is True
+        # assert testobj.outopts['summarize']
+        assert testobj.extraopts == {'use_saved': False, 'regex': '', 'follow_symlinks': '',
+                                     'select_subdirs': '', 'select_files': '', 'dont_save': '',
+                                     'no_gui': '', 'output_file': ''}
+        assert testobj.outopts == {'full_path': False, 'as_csv': False, 'summarize': True}
+        assert testobj.always_replace
+        assert testobj.maak_backups == ''
+        assert testobj.exit_when_ready
 
     def test_write_to_ini(self, monkeypatch, capsys, tmp_path):
         """unittest for MainFrame.write_to_ini
@@ -1332,6 +1372,10 @@ class TestMainFrame:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.s = 'zz'
+        testobj.p = {}
+        assert testobj.checkattr(['', False, False]) == ""
+        assert testobj.s == 'zz'
+        assert testobj.p == {'regexp': '', 'case': False, 'woord': False}
         testobj.p = {}
         assert testobj.checkattr(['xx', False, False]) == ""
         assert testobj.s == 'zz (regular expression)'
@@ -1527,7 +1571,7 @@ class TestMainFrame:
 
         testobj.checkpath = mock_checkpath_2
         testobj.s = 'zz'
-        testobj.apptype = 'not single'
+        testobj.apptype = 'open'  # 'not single'
         testobj.p = {'filelist': ['xx']}
         assert testobj.setup_parameters() == ''
         assert testobj.p == {'filelist': ['xx'],
@@ -1542,6 +1586,8 @@ class TestMainFrame:
                                            "called MainWindow.checkattr with arg attr\n"
                                            "called MainGui.get_types_to_search\n"
                                            "called MainWindow.checktype with arg types\n"
+                                           "called MainGui.get_dir_to_search\n"
+                                           "called MainWindow.checkpath with arg dir\n"
                                            "called MainGui.get_subdirs_to_search\n"
                                            "called MainGui.get_backup\n"
                                            "called MainGui.get_ignore\n"
@@ -1683,6 +1729,7 @@ class TestMainFrame:
                 f"called Results.__init__ with args ({testobj}, 'common_root')\n"
                 "called Results.get_results\n")
 
+# 801->781
     def test_select_search_exclusions_if_requested(self, monkeypatch, capsys):
         """unittest for MainFrame.select_search_exclusions_if_requested
         """
@@ -1691,17 +1738,27 @@ class TestMainFrame:
             """
             def __init__(self, *args, **kwargs):
                 print('called Selectnames.__init__ with args', args, kwargs)
+                self.do_files = True if kwargs.get('files', True) else False
             def show(self):
                 print('called Selectnames.show')
                 return False, []
             def show_2(self):
                 print('called Selectnames.show')
                 return True, ['aaa', 'bbb']
+            def show_3(self):
+                nonlocal showcounter
+                print('called Selectnames.show')
+                if not self.do_files:
+                    return True, ['aaa', 'bbb']
+                showcounter += 1
+                if showcounter == 1:
+                    return False, []
+                return True, ['aaa', 'bbb']
         def mock_remove(names):
-            print(f'called MainWindow.remove_files_in_selected_directories with arg {names}')
+            print(f'called MainWindow.remove_files_in_selected_dirs with arg {names}')
         monkeypatch.setattr(testee, 'SelectNames', MockSelectNames)
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.remove_files_in_selected_directories = mock_remove
+        testobj.remove_files_in_selected_dirs = mock_remove
         testobj.zoekvervang = types.SimpleNamespace(dirnames=[], filenames=[])
         testobj.gui = types.SimpleNamespace(get_skipdirs=lambda: False,
                                             get_skipfiles=lambda: False)
@@ -1736,7 +1793,8 @@ class TestMainFrame:
         assert not testobj.select_search_exclusions_if_requested()
         assert capsys.readouterr().out == (
                 f"called Selectnames.__init__ with args ({testobj},) {{'files': False}}\n"
-                "called Selectnames.show\n")
+                "called Selectnames.show\n"
+                "called MainWindow.remove_files_in_selected_dirs with arg ['aaa', 'bbb']\n")
 
         testobj.zoekvervang.dirnames = ['xxx', 'yyy']
         testobj.zoekvervang.filenames = ['aaa', 'bbb', 'ccc', 'ddd']
@@ -1745,6 +1803,27 @@ class TestMainFrame:
         assert not testobj.select_search_exclusions_if_requested()
         assert testobj.zoekvervang.filenames == ['aaa', 'bbb']
         assert capsys.readouterr().out == (
+                f"called Selectnames.__init__ with args ({testobj},) {{}}\n"
+                "called Selectnames.show\n")
+
+        testobj.zoekvervang.dirnames = ['xxx', 'yyy']
+        testobj.zoekvervang.filenames = ['aaa', 'bbb', 'ccc', 'ddd']
+        testobj.gui = types.SimpleNamespace(get_skipdirs=lambda: True,
+                                            get_skipfiles=lambda: True)
+
+        showcounter = 0
+        monkeypatch.setattr(MockSelectNames, 'show', MockSelectNames.show_3)
+        assert not testobj.select_search_exclusions_if_requested()
+        assert testobj.zoekvervang.filenames == ['aaa', 'bbb']
+        assert capsys.readouterr().out == (
+                f"called Selectnames.__init__ with args ({testobj},) {{'files': False}}\n"
+                "called Selectnames.show\n"
+                "called MainWindow.remove_files_in_selected_dirs with arg ['aaa', 'bbb']\n"
+                f"called Selectnames.__init__ with args ({testobj},) {{}}\n"
+                "called Selectnames.show\n"
+                f"called Selectnames.__init__ with args ({testobj},) {{'files': False}}\n"
+                "called Selectnames.show\n"
+                "called MainWindow.remove_files_in_selected_dirs with arg ['aaa', 'bbb']\n"
                 f"called Selectnames.__init__ with args ({testobj},) {{}}\n"
                 "called Selectnames.show\n")
 
@@ -1873,6 +1952,21 @@ class TestMainFrame:
 
         MockFinder.setup_search = mockfinder_setup_search_3
         testobj.p['pad'] = 'xxx'
+        testobj.apptype = 'single-file'
+        testobj.extraopts['no_gui'] = False
+        testobj.doe()
+        assert capsys.readouterr().out == (
+            "called MainWindow.setup_parameters\n"
+            "called MainGui.add_item_to_searchlist with arg find_me\n"
+            f"called MainWindow.write_to_ini with arg {testee.HERE.parent}/xxx\n"
+            "called Finder.__init__ with args"
+            f" {{'zoek': 'find_me', 'vervang': None, 'filelist': [{tmp_path!r}], 'pad': 'xxx'}}\n"
+            "called Finder.setup_search\n"
+            "called MainGui.set_waitcursor with arg True\n"
+            "called Finder.go\n"
+            "called MainGui.set_waitcursor with arg False\n"
+            "called MainWindow.show_results\n"
+            "called MainGui.get_exit\n")
         testobj.apptype = 'not single-file'
         testobj.doe()
         assert capsys.readouterr().out == (
@@ -1887,7 +1981,6 @@ class TestMainFrame:
         testobj.p.pop('pad')
         testobj.extraopts['dont_save'] = True
         testobj.select_search_exclusions_if_requested = mock_select_2
-        testobj.extraopts['no_gui'] = False
         testobj.extraopts['output_file'] = 'ofile'
         testobj.doe()
         assert capsys.readouterr().out == (

@@ -385,6 +385,17 @@ class TestPyRead:
         assert testobj.modlevel_start == 6
         assert capsys.readouterr().out == (
                 'called PyRead.build_comment_context with args (5, 5, 3) {}\n')
+        testobj.itemlist = []
+        testobj.docstring_allowed = True
+        testobj.start_of_code = True
+        assert testobj.analyze_line(5, '   """complete docstring"""') == ''
+        assert testobj.docstring_delim == ''
+        assert testobj.docstring_start == 5
+        assert testobj.itemlist == []
+        # assert testobj.itemlist == [((5, 3), (5, -1), 'docstring')]
+        assert testobj.modlevel_start == 6
+        assert capsys.readouterr().out == (
+                'called PyRead.build_comment_context with args (5, 5, 3) {}\n')
 
         # testobj.itemlist = []
         testobj.start_of_code = False
@@ -989,6 +1000,14 @@ class TestFinder:
                                      tmp_path / 'testdir' / 'subdir' / 'testfile.py',
                                      tmp_path / 'testdir' / 'subdir' / 'subdir' / 'testfile.py']
 
+        testobj.p['subdirs'] = False
+        testobj.dirnames = set()
+        testobj.filenames = []
+        assert testobj.subdirs(testpath) == ""
+        assert testobj.dirnames == {f'{tmp_path}/testdir'}
+        assert testobj.filenames == [tmp_path / 'testdir' / 'testfile.py',
+                                     tmp_path / 'testdir' / 'testfile.c']
+
     def test_build_regexp_simple(self, monkeypatch, capsys):
         """unittest for Finder.build_regexp_simple
         """
@@ -1019,26 +1038,34 @@ class TestFinder:
         def mock_parse():
             print('called Finder.parse_zoekstring')
             return ['xxx', 'yyy'], ['zzz'], ['qqq']
+        def mock_parse_2():
+            print('called Finder.parse_zoekstring')
+            return ['xxx', 'yyy'], ['zzz'], []
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.p = {'zoek': 'xyz', 'case': False, 'regexp': True, 'wijzig': True}
-        testobj.use_complex = not (testobj.p['regexp'] or testobj.p['wijzig'])
+        testobj.use_complex = False   # not (testobj.p['regexp'] or testobj.p['wijzig'])
         assert testobj.build_regexes() == (
                 [testee.re.compile('xyz', testee.re.IGNORECASE | testee.re.MULTILINE)], "")
         assert capsys.readouterr().out == ""
         testobj.p = {'zoek': 'xyz', 'case': True, 'regexp': True, 'wijzig': False}
-        testobj.use_complex = not (testobj.p['regexp'] or testobj.p['wijzig'])
+        # testobj.use_complex = False   # not (testobj.p['regexp'] or testobj.p['wijzig'])
         assert testobj.build_regexes() == ([testee.re.compile('xyz', testee.re.MULTILINE)], "")
         assert capsys.readouterr().out == ""
         testobj.p = {'zoek': 'xyz', 'case': True, 'regexp': False, 'wijzig': True}
-        testobj.use_complex = not (testobj.p['regexp'] or testobj.p['wijzig'])
+        # testobj.use_complex = False  # not (testobj.p['regexp'] or testobj.p['wijzig'])
         assert testobj.build_regexes() == ([testee.re.compile('xyz', testee.re.MULTILINE)], "")
         assert capsys.readouterr().out == ""
         testobj.parse_zoekstring = mock_parse
         testobj.p = {'zoek': 'xyz', 'case': True, 'regexp': False, 'wijzig': False}
-        testobj.use_complex = not (testobj.p['regexp'] or testobj.p['wijzig'])
+        testobj.use_complex = True  # not (testobj.p['regexp'] or testobj.p['wijzig'])
         assert testobj.build_regexes() == ([testee.re.compile('xxx|yyy', testee.re.MULTILINE),
                                             testee.re.compile('zzz', testee.re.MULTILINE)],
                                            testee.re.compile('qqq', testee.re.MULTILINE))
+        assert capsys.readouterr().out == ("called Finder.parse_zoekstring\n")
+        testobj.parse_zoekstring = mock_parse_2
+        assert testobj.build_regexes() == ([testee.re.compile('xxx|yyy', testee.re.MULTILINE),
+                                            testee.re.compile('zzz', testee.re.MULTILINE)],
+                                           '')
         assert capsys.readouterr().out == ("called Finder.parse_zoekstring\n")
 
     def test_parse_zoekstring(self, monkeypatch, capsys):
@@ -1276,7 +1303,9 @@ class TestFinder:
         testobj.find_smallest_context = mock_find
         locations = [((0, 0), (5, -1), 'yyy'),
                      ((8, 8), (12, -1), 'comment'),
-                     ((15, 4), (30, -1), 'zzz')]
+                     ((12, 4), (15, 20), 'qqq'),
+                     ((15, 21), (18, -1), 'rrr'),
+                     ((25, 4), (30, -1), 'zzz')]
         testobj.determine_position_in_result = lambda *x: 1
         assert testobj.determine_context_from_locations(4, 'ARG', locations) == "yyy"
         assert capsys.readouterr().out == ("called Finder.find_smallest_context with arg"
@@ -1303,6 +1332,9 @@ class TestFinder:
         def mock_parse():
             "stub"
             return ['xxx', 'ARG'], [], []
+        def mock_parse_2():
+            "stub"
+            return ['xxx'], [], []
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.parse_zoekstring = mock_parse
         testobj.p = {'zoek': 'Arg'}
@@ -1315,6 +1347,9 @@ class TestFinder:
         assert testobj.determine_position_in_result('ARG') == 1
         assert capsys.readouterr().out == ""
         assert testobj.determine_position_in_result('        gargl') == 10
+        assert capsys.readouterr().out == ""
+        testobj.parse_zoekstring = mock_parse_2
+        assert testobj.determine_position_in_result('        gargl') is None
         assert capsys.readouterr().out == ""
 
     def test_find_smallest_context(self, monkeypatch, capsys):
@@ -1384,6 +1419,10 @@ class TestFinder:
         #         "in_line, values: 2 {0}\n"
         #         "in_line, values: 3 {0}\n"
         #         "in_line, values: 4 {0}\n")
+
+        testobj.ignore = MockRgx('ignore')
+        assert testobj.complex_search(lines, []) == []
+        assert capsys.readouterr().out == ""
 
         testobj.ignore = MockRgx('ignore')
         assert testobj.complex_search(lines, linestarts) == [4]
@@ -1481,6 +1520,10 @@ class TestFinder:
         #        "in_line, values: 3 {0, -1}\n"
         #        "in_line, values: 4 {0, 1}\n")
 
+# 666->668,
+# vind in result_list
+#  vind.start() < linestart
+#    lineno + from_line != last_in_line
     def test_old_rgx_search(self, monkeypatch, capsys):
         """unittest for Finder.old_rgx_search
         """
@@ -1512,6 +1555,11 @@ class TestFinder:
         assert capsys.readouterr().out == "called regex.finditer with arg 'testdatalines'\n"
 
         testobj.rgx = MockRegex2()
+        assert testobj.old_rgx_search(['test', 'data', 'lines'], [], 'testfile')
+        assert testobj.rpt == []
+        assert capsys.readouterr().out == "called regex.finditer with arg 'testdatalines'\n"
+
+        # breakpoint()
         assert testobj.old_rgx_search(['test', 'data', 'lines'], [0, 5, 12, 20], 'testfile')
         assert testobj.rpt == ['testfile r. 1: test', 'testfile r. 3: lines']
         assert capsys.readouterr().out == "called regex.finditer with arg 'testdatalines'\n"
@@ -1563,6 +1611,12 @@ class TestFinder:
         testobj.p = {'zoek': 'xxx', 'filelist': [str(file0)]}
         lines_to_replace = [[1], [3]]
         assert testobj.replace_selected('yyy', lines_to_replace) == len(lines_to_replace)
+        assert file0.read_text() == "aayyybb\nccc\nyyy yyy\nyyy\n"
+        assert capsys.readouterr().out == (
+                f"called Finder.backup_if_needed with arg '{file0}'\n")
+        testobj.p = {'zoek': 'xxx', 'filelist': [str(file0)]}
+        lines_to_replace = [[1], [3]]
+        assert testobj.replace_selected('xxx', lines_to_replace) == 0
         assert file0.read_text() == "aayyybb\nccc\nyyy yyy\nyyy\n"
         assert capsys.readouterr().out == (
                 f"called Finder.backup_if_needed with arg '{file0}'\n")

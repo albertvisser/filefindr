@@ -628,7 +628,11 @@ class Finder:
                     # print('itemstart ligt vóór linestart => gevonden in regel', in_line)
                     from_line = ix
                     break
-            lines_found[in_line].add(number)
+            else:
+                from_line = -1
+            # lines_found[in_line].add(number)
+            if from_line > -1:
+                lines_found[in_line].add(number)
         # print('lines_found:', lines_found)
 
         # uitfilteren welke regel niet in alle zoekacties voorkomt of juist weggelaten met worden
@@ -649,12 +653,12 @@ class Finder:
     def old_rgx_search(self, lines, linestarts, best):
         """search via regex and format results for output
         """
-        found = False
+        # found = False
         from_line = 0
         last_in_line = 0
         result_list = self.rgx.finditer("".join(lines))
         for vind in result_list:
-            found = True
+            # found = True
             for lineno, linestart in enumerate(linestarts[from_line:]):
                 if vind.start() < linestart:
                     if not self.p['wijzig']:
@@ -662,9 +666,10 @@ class Finder:
                         if in_line != last_in_line:
                             self.rpt.append(f"{best} r. {in_line}: {lines[in_line - 1].rstrip()}")
                         last_in_line = in_line
-                    from_line = lineno
+                    # from_line = lineno -- lineno is geen absolute index op linestarts
+                    from_line = linestarts.index(linestart)  # werkt alleen bij unieke waarden
                     break
-        return found
+        return bool(list(result_list))  # found
 
     def replace_and_report(self, lines, best):
         """replace via regex
