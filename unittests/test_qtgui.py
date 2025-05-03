@@ -58,6 +58,10 @@ called VBox.__init__
 called HBox.__init__
 called Label.__init__ with args ('head', {testobj})
 called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
+called HBox.addStretch
+called PushButton.__init__ with args ('Go to selected result', {testobj}) {{}}
+called Signal.connect with args ({testobj.to_result},)
+called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockPushButton'>
 called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
 """
 results_dets_1a = """\
@@ -71,20 +75,17 @@ called Table.setGridStyle with arg PenStyle.NoPen
 """
 results_dets_1b1 = """\
 called Table.setColumnCount with arg '2'
-called Table.setColumnWidth with args (1, 520)
 called Table.setHorizontalHeaderLabels with arg '('title', 'text')'
 """
 results_dets_1b2 = """\
 called Table.setColumnCount with arg '3'
-called Table.setColumnWidth with args (1, 200)
-called Table.setColumnWidth with args (2, 340)
 called Table.setHorizontalHeaderLabels with arg '('title', 'ctext', 'text')'
 """
 results_dets_1c = """\
-called Table.setColumnWidth with args (0, 50)
 called Table.horizontalHeader
 called Header.setStretchLastSection with arg True
 called ResultsGui.populate_list
+called Table.resizeColumnsToContents
 called Signal.connect with args ()
 called Action.__init__ with args ('help', {testobj})
 called Action.setShortcut with arg `F1`
@@ -155,54 +156,54 @@ called Dialog.resize with args (624, 488)
 populate_1 = """\
 called Table.insertRow with arg '0'
 called Table.setRowHeight with args (0, 18)
-called TableItem.__init__ with arg x
+called TableItem.__init__ with arg 'x'
 called TableItem.setToolTip with arg x
 called TableItem.setFlags with arg ItemFlag.ItemIsSelectable|ItemIsEnabled
-called Table.setItem with args (0, 0, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)
-called TableItem.__init__ with arg z
+called Table.setItem with args (0, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called TableItem.__init__ with arg 'z'
 called TableItem.setToolTip with arg z
 called TableItem.setFlags with arg ItemFlag.ItemIsSelectable|ItemIsEnabled
-called Table.setItem with args (0, 1, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called Table.setItem with args (0, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
 called Table.insertRow with arg '1'
 called Table.setRowHeight with args (1, 18)
-called TableItem.__init__ with arg a
+called TableItem.__init__ with arg 'a'
 called TableItem.setToolTip with arg a
 called TableItem.setFlags with arg ItemFlag.ItemIsSelectable|ItemIsEnabled
-called Table.setItem with args (1, 0, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)
-called TableItem.__init__ with arg c
+called Table.setItem with args (1, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called TableItem.__init__ with arg 'c'
 called TableItem.setToolTip with arg c
 called TableItem.setFlags with arg ItemFlag.ItemIsSelectable|ItemIsEnabled
-called Table.setItem with args (1, 1, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called Table.setItem with args (1, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
 """
 populate_2 = """\
 called Table.insertRow with arg '0'
 called Table.setRowHeight with args (0, 18)
-called TableItem.__init__ with arg x
+called TableItem.__init__ with arg 'x'
 called TableItem.setToolTip with arg x
 called TableItem.setFlags with arg ItemFlag.ItemIsSelectable|ItemIsEnabled
-called Table.setItem with args (0, 0, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)
-called TableItem.__init__ with arg y
+called Table.setItem with args (0, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called TableItem.__init__ with arg 'y'
 called TableItem.setToolTip with arg y
 called TableItem.setFlags with arg ItemFlag.ItemIsSelectable|ItemIsEnabled
-called Table.setItem with args (0, 1, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)
-called TableItem.__init__ with arg z
+called Table.setItem with args (0, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called TableItem.__init__ with arg 'z'
 called TableItem.setToolTip with arg z
 called TableItem.setFlags with arg ItemFlag.ItemIsSelectable|ItemIsEnabled
-called Table.setItem with args (0, 2, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called Table.setItem with args (0, 2, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
 called Table.insertRow with arg '1'
 called Table.setRowHeight with args (1, 18)
-called TableItem.__init__ with arg a
+called TableItem.__init__ with arg 'a'
 called TableItem.setToolTip with arg a
 called TableItem.setFlags with arg ItemFlag.ItemIsSelectable|ItemIsEnabled
-called Table.setItem with args (1, 0, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)
-called TableItem.__init__ with arg b
+called Table.setItem with args (1, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called TableItem.__init__ with arg 'b'
 called TableItem.setToolTip with arg b
 called TableItem.setFlags with arg ItemFlag.ItemIsSelectable|ItemIsEnabled
-called Table.setItem with args (1, 1, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)
-called TableItem.__init__ with arg c
+called Table.setItem with args (1, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called TableItem.__init__ with arg 'c'
 called TableItem.setToolTip with arg c
 called TableItem.setFlags with arg ItemFlag.ItemIsSelectable|ItemIsEnabled
-called Table.setItem with args (1, 2, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called Table.setItem with args (1, 2, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
 """
 main_start = """\
 called Grid.__init__
@@ -804,8 +805,18 @@ class TestResultsGui:
         """
         def mock_goto(*args):
             print("called Results.goto_result with args", args)
+        def mock_col():
+            print("called Table.currentColumn")
+            return -1
+        def mock_row():
+            print("called Table.currentRow")
+            return -1
+        def mock_meld(*args):
+            print('called Results.meld with args', args)
         testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.meld = mock_meld
         testobj.lijst = mockqtw.MockTable()
+        testobj.master.parent = types.SimpleNamespace(resulttitel='xxx')
         assert capsys.readouterr().out == ("called Table.__init__ with args ()\n"
                                            "called Header.__init__\n"
                                            "called Header.__init__\n")
@@ -814,6 +825,23 @@ class TestResultsGui:
         assert capsys.readouterr().out == ("called Table.currentRow\n"
                                            "called Table.currentColumn\n"
                                            "called Results.goto_result with args (2, 1)\n")
+        testobj.lijst.currentRow = mock_row
+        testobj.to_result()
+        assert capsys.readouterr().out == ("called Table.currentRow\n"
+                                           "called Table.currentColumn\n"
+                                           "called Results.meld with args ('xxx',"
+                                           " 'Select a result first')\n")
+        testobj.lijst = mockqtw.MockTable()
+        assert capsys.readouterr().out == ("called Table.__init__ with args ()\n"
+                                           "called Header.__init__\n"
+                                           "called Header.__init__\n")
+        testobj.lijst.currentColumn = mock_col
+        testobj.to_result()
+        assert capsys.readouterr().out == ("called Table.currentRow\n"
+                                           "called Table.currentColumn\n"
+                                           "called Results.meld with args ('xxx',"
+                                           " 'Select a result first')\n")
+
 
     def test_remember_settings(self, monkeypatch, capsys):
         """unittest for ResultsGui.remember_settings

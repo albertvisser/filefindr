@@ -128,6 +128,10 @@ class ResultsGui(qtw.QDialog):
         hbox = qtw.QHBoxLayout()
         self.txt = qtw.QLabel(captions['heading'], self)
         hbox.addWidget(self.txt)
+        hbox.addStretch()
+        btn = qtw.QPushButton('Go to selected result', self)
+        btn.clicked.connect(self.to_result)
+        hbox.addWidget(btn)
         vbox.addLayout(hbox)
 
         if self.show_result_details:
@@ -137,18 +141,19 @@ class ResultsGui(qtw.QDialog):
             self.lijst.setGridStyle(core.Qt.PenStyle.NoPen)
             if self.master.show_context:
                 self.lijst.setColumnCount(3)
-                self.lijst.setColumnWidth(1, 200)
-                self.lijst.setColumnWidth(2, 340)
+                # self.lijst.setColumnWidth(1, 200)
+                # self.lijst.setColumnWidth(2, 340)
                 self.lijst.setHorizontalHeaderLabels((self.master.titel, captions['ctxt'],
                                                       captions['txt']))
             else:
                 self.lijst.setColumnCount(2)
-                self.lijst.setColumnWidth(1, 520)
+                # self.lijst.setColumnWidth(1, 520)
                 self.lijst.setHorizontalHeaderLabels((self.master.titel, captions['txt']))
-            self.lijst.setColumnWidth(0, breedte)
+            # self.lijst.setColumnWidth(0, breedte)
             self.lijst.horizontalHeader().setStretchLastSection(True)
 
             self.populate_list()
+            self.lijst.resizeColumnsToContents()
 
             self.lijst.cellDoubleClicked[int, int].connect(self.master.goto_result)
             act = gui.QAction(captions['hlp'], self)
@@ -315,7 +320,11 @@ class ResultsGui(qtw.QDialog):
     def to_result(self):
         """show result in file
         """
-        self.master.goto_result(self.lijst.currentRow(), self.lijst.currentColumn())
+        row, column = self.lijst.currentRow(), self.lijst.currentColumn()
+        if any((row == -1, column == -1)):
+            self.meld(self.master.parent.resulttitel, 'Select a result first')
+            return
+        self.master.goto_result(row, column)
 
     def remember_settings(self):
         "save options to configuration"

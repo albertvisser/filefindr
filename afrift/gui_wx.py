@@ -116,6 +116,7 @@ class ResultsGui(wx.Dialog):
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super().__init__(parent.gui, title=master.parent.resulttitel, style=style)
         self.SetIcon(wx.Icon(master.iconame, wx.BITMAP_TYPE_ICO))
+        self.show_result_details = True  # wordt in master.__init__ op juiste waarde gezet
 
     def setup_screen(self, captions):
         "build widgets"
@@ -127,6 +128,11 @@ class ResultsGui(wx.Dialog):
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         self.txt = wx.StaticText(self, label=captions['heading'])
         hsizer.Add(self.txt, 0, wx.EXPAND | wx.ALL, 5)
+        hsizer.AddStretchSpacer()
+        btn = wx.Button(self, wx.ID_ANY, label='Go to selected result')
+        btn.Bind(wx.EVT_BUTTON, self.to_result)
+        hsizer.Add(btn, 0, wx.ALL, 5)
+
         vsizer.Add(hsizer, 0, wx.EXPAND)
 
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -165,7 +171,8 @@ class ResultsGui(wx.Dialog):
         btn = wx.Button(self, wx.ID_CANCEL, size=(-1, TXTH), label=captions['exit'])
         bsizer.Add(btn, 0, wx.ALL, 5)
 
-        if self.master.show_result_details:
+        # if self.Parent.show_result_details:
+        if self.show_result_details:
             vsizer2 = wx.BoxSizer(wx.VERTICAL)
             bsizer2 = wx.BoxSizer(wx.HORIZONTAL)
             btn = wx.Button(self, size=(-1, TXTH), label=captions['rpt'])
@@ -360,7 +367,8 @@ class ResultsGui(wx.Dialog):
         """
         row = self.lijst.GetFirstSelected()
         if row == -1:
-            row = 0
+            self.meld(self.master.parent.resulttitel, 'Select a result first')
+            return
         self.master.goto_result(row, -1)
 
     def remember_settings(self):
