@@ -226,6 +226,8 @@ class ResultsGui(qtw.QDialog):
 
         self.setLayout(vbox)
         if self.show_result_details:
+            if self.master.show_context:
+                breedte += 200
             self.resize(574 + breedte, 488)
 
     def populate_list(self):

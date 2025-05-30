@@ -153,6 +153,9 @@ called Dialog.setLayout
 results_dets_3 = """\
 called Dialog.resize with args (624, 488)
 """
+results_dets_3a = """\
+called Dialog.resize with args (824, 488)
+"""
 populate_1 = """\
 called Table.insertRow with arg '0'
 called Table.setRowHeight with args (0, 18)
@@ -297,7 +300,7 @@ def expected_output():
             'results_2': results_start + results_dets_1a + results_dets_1b1 + results_dets_1c
             + results_middle + results_dets_2 + results_end + results_dets_3,
             'results_2a': results_start + results_dets_1a + results_dets_1b2 + results_dets_1c
-            + results_middle + results_dets_2 + results_end + results_dets_3,
+            + results_middle + results_dets_2 + results_end + results_dets_3a,
             'populate': populate_1, 'populate2': populate_2,
             'base': main_start + main_open + main_dir + main_nonfile + main_end,
             'file': main_start + main_single + main_end,
