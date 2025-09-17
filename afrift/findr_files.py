@@ -357,9 +357,11 @@ class Finder:
                 self.errors.append(mld)
         if self.p['subdirs']:
             specs.append(" en evt. onderliggende directories")
+        if self.errors and len(self.p['filelist']) > 1:
+            self.rpt.insert(0, "".join(self.errors))
         self.rpt.insert(0, "".join(specs))
         self.specs = specs
-        if self.errors:
+        if self.errors and len(self.p['filelist']) == 1:
             self.rpt.append("Zoekactie niet mogelijk")
             ok = False
         return ok

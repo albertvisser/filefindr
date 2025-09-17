@@ -849,6 +849,13 @@ class TestFinder:
         def mock_subdirs_2(name):
             print(f"called Finder.subdirs with arg '{name}'")
             return '???'
+        def mock_subdirs_3(name):
+            nonlocal counter
+            print(f"called Finder.subdirs with arg '{name}'")
+            counter += 1
+            if counter == 1:
+                return []
+            return '???'
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.build_regexp_simple = mock_build_simple
         testobj.build_regexes = mock_build
@@ -916,6 +923,29 @@ class TestFinder:
                                "Zoekactie niet mogelijk"]
         assert capsys.readouterr().out == ("called Finder.build_regexes\n"
                                            "called Finder.subdirs with arg 'a directory'\n")
+        testobj.subdirs = mock_subdirs_3
+        testobj.rpt = ['---']
+        testobj.errors = []
+        testobj.use_complex = True
+        testobj.rgx = testobj.ignore = ''
+        testobj.p['zoek'] = 'findstr'
+        testobj.p['wijzig'] = False
+        testobj.p['regexp'] = False
+        testobj.p['extlist'] = ['xx', 'yy', 'zz']
+        testobj.p['filelist'] = ['a file', 'another file']
+        testobj.p['subdirs'] = True
+        counter = 0
+        assert testobj.setup_search()
+        assert testobj.use_complex
+        assert testobj.rgx == 'find_regex'
+        assert testobj.ignore == 'ignore_regex'
+        assert testobj.errors == ['???']
+        assert testobj.rpt == ["Gezocht naar 'findstr' in bestanden van type xx, yy en zz"
+                               " in opgegeven bestanden/directories en evt. onderliggende"
+                               " directories", '???', '---']
+        assert capsys.readouterr().out == ("called Finder.build_regexes\n"
+                                           "called Finder.subdirs with arg 'a file'\n"
+                                           "called Finder.subdirs with arg 'another file'\n")
 
     def test_subdirs(self, monkeypatch, capsys, tmp_path):
         """unittest for Finder.subdirs
@@ -971,8 +1001,10 @@ class TestFinder:
         assert testobj.dirnames == {f'{tmp_path}/testdir',
                                     f'{tmp_path}/testdir/subdir',
                                     f'{tmp_path}/testdir/subdir/subdir'}
-        assert testobj.filenames == [tmp_path / 'testdir' / 'testfile.py',
-                                     tmp_path / 'testdir' / 'subdir' / 'testfile.py']
+        # assert testobj.filenames == [tmp_path / 'testdir' / 'testfile.py',
+        #                              tmp_path / 'testdir' / 'subdir' / 'testfile.py']
+        assert testobj.filenames == [tmp_path / 'testdir' / 'subdir' / 'testfile.py',
+                                     tmp_path / 'testdir' / 'testfile.py']
 
         testobj.p['extlist'] = []
         testobj.p['maxdepth'] = 3
@@ -982,11 +1014,15 @@ class TestFinder:
         assert testobj.dirnames == {f'{tmp_path}/testdir',
                                     f'{tmp_path}/testdir/subdir',
                                     f'{tmp_path}/testdir/subdir/subdir'}
-        assert testobj.filenames == [tmp_path / 'testdir' / 'testfile.py',
-                                     tmp_path / 'testdir' / 'testfile.c',
-                                     # waarom niet ook testfile (als zijnde een symlink) ?
+        # assert testobj.filenames == [tmp_path / 'testdir' / 'testfile.py',
+        #                              tmp_path / 'testdir' / 'testfile.c',
+        #                              # waarom niet ook testfile (als zijnde een symlink) ?
+        #                              tmp_path / 'testdir' / 'subdir' / 'testfile.py',
+        #                              tmp_path / 'testdir' / 'subdir' / 'subdir' / 'testfile.py']
+        assert testobj.filenames == [tmp_path / 'testdir' / 'subdir' / 'subdir' / 'testfile.py',
                                      tmp_path / 'testdir' / 'subdir' / 'testfile.py',
-                                     tmp_path / 'testdir' / 'subdir' / 'subdir' / 'testfile.py']
+                                     tmp_path / 'testdir' / 'testfile.c',
+                                     tmp_path / 'testdir' / 'testfile.py']
 
         testobj.p['follow_symlinks'] = False
         testobj.dirnames = set()
@@ -995,18 +1031,24 @@ class TestFinder:
         assert testobj.dirnames == {f'{tmp_path}/testdir',
                                     f'{tmp_path}/testdir/subdir',
                                     f'{tmp_path}/testdir/subdir/subdir'}
-        assert testobj.filenames == [tmp_path / 'testdir' / 'testfile.py',
-                                     tmp_path / 'testdir' / 'testfile.c',
+        # assert testobj.filenames == [tmp_path / 'testdir' / 'testfile.py',
+        #                              tmp_path / 'testdir' / 'testfile.c',
+        #                              tmp_path / 'testdir' / 'subdir' / 'testfile.py',
+        #                              tmp_path / 'testdir' / 'subdir' / 'subdir' / 'testfile.py']
+        assert testobj.filenames == [tmp_path / 'testdir' / 'subdir' / 'subdir' / 'testfile.py',
                                      tmp_path / 'testdir' / 'subdir' / 'testfile.py',
-                                     tmp_path / 'testdir' / 'subdir' / 'subdir' / 'testfile.py']
+                                     tmp_path / 'testdir' / 'testfile.c',
+                                     tmp_path / 'testdir' / 'testfile.py']
 
         testobj.p['subdirs'] = False
         testobj.dirnames = set()
         testobj.filenames = []
         assert testobj.subdirs(testpath) == ""
         assert testobj.dirnames == {f'{tmp_path}/testdir'}
-        assert testobj.filenames == [tmp_path / 'testdir' / 'testfile.py',
-                                     tmp_path / 'testdir' / 'testfile.c']
+        # assert testobj.filenames == [tmp_path / 'testdir' / 'testfile.py',
+        #                              tmp_path / 'testdir' / 'testfile.c']
+        assert testobj.filenames == [tmp_path / 'testdir' / 'testfile.c',
+                                     tmp_path / 'testdir' / 'testfile.py']
 
     def test_build_regexp_simple(self, monkeypatch, capsys):
         """unittest for Finder.build_regexp_simple
