@@ -51,7 +51,7 @@ called HBox.addWidget with arg MockPushButton
 called HBox.addStretch
 called HBox.addLayout with arg MockHBoxLayout
 called VBox.addLayout with arg MockHBoxLayout
-called Dialog.setLayout
+called Dialog.setLayout with arg MockVBoxLayout
 """
 results_start = """\
 called VBox.__init__
@@ -148,7 +148,7 @@ called HBox.addStretch
 """
 results_end = """\
 called VBox.addLayout with arg MockHBoxLayout
-called Dialog.setLayout
+called Dialog.setLayout with arg MockVBoxLayout
 """
 results_dets_3 = """\
 called Dialog.resize with args (624, 488)
