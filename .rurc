@@ -2,13 +2,13 @@
 unittests
 
 [testscripts]
-base = test_base.py
+main = test_base.py
 findr = test_findr.py
 qtgui = test_qtgui.py
 wxgui = test_wxgui.py
 
 [testees]
-base = afrift/base.py
+main = afrift/base.py
 qtgui = afrift/gui_qt.py
 wxgui = afrift/gui_wx.py
 findr = afrift/findr_files.py
