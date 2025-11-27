@@ -3,6 +3,6 @@ so that the other modules don't need to know which one is used
 """
 from .toolkit import toolkit
 if toolkit == 'qt':
-    from .gui_qt import SelectNamesGui, ResultsGui, MainFrameGui
+    from .gui_qt import SelectNamesGui, ResultsGui, AfriftGui
 elif toolkit == 'wx':
-    from .gui_wx import SelectNamesGui, ResultsGui, MainFrameGui
+    from .gui_wx import SelectNamesGui, ResultsGui, AfriftGui
