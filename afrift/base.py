@@ -269,6 +269,7 @@ class Afrift:
                                                       self.maak_backups)
         self.vraag_exit = self.gui.add_checkbox_row("direct afsluiten na vervangen",
                                                     self.exit_when_ready)
+        # breakpoint()
         if self.apptype == "open":
             initial = str(self.p['filelist'][0]) if self.p['filelist'] else ''
             self.vraag_dir = self.gui.add_combobox_row("In directory:", self.mru_items["dirs"],
@@ -276,7 +277,7 @@ class Afrift:
                                                        button=("&Zoek", self.gui.zoekdir),
                                                        completer='off', callback=self.update_defaults)
         elif self.apptype.startswith("single"):
-            self.gui.add_label_to_grid("In file/directory:")
+            self.gui.add_label_to_grid("In file/directory:", new_row=True)
             self.gui.add_label_to_grid(str(self.p['filelist'][0]), left_align=True)
         else:  # if self.apptype == "multi":  - momenteel geen andere mogelijkheid
             self.gui.add_label_to_grid("In de volgende files/directories:", fullwidth=True)
@@ -664,8 +665,8 @@ class Results:
                 label_txt += '\n' + common_path_txt.format(self.common.rstrip(os.sep))
         line = self.gui.add_line()
         self.hdr = self.gui.add_text_to_line(line, label_txt)
-        self.gui.add_buttons_to_line(line, (('Go to selected result', self.gui.to_result, True),),
-                                     end=True)
+        self.gui.add_stretch_to_line(line)
+        self.gui.add_buttons_to_line(line, (('Go to selected result', self.gui.to_result, True),))
         self.build_list()
         if self.show_result_details:
             line = self.gui.add_line()
@@ -676,13 +677,15 @@ class Results:
             actions = (('Help', 'F1', self.help), ('&Goto Result', 'Ctrl+G', self.gui.to_result))
             self.lijst = self.gui.add_results_list(line, headers, actions, self.results)
         line = self.gui.add_line()
-        self.gui.add_buttons_to_line(line, (("&Klaar", self.gui.klaar, True),), start=True)
+        self.gui.add_text_to_line(line, 'Action:')
+        self.gui.add_buttons_to_line(line, (("&Klaar", self.gui.klaar, True),))  #  , start=True)
         if self.show_result_details:
-            enable = bool(self.parent.p['vervang'])
+            enable = bool(self.parent.p['vervang'])     # FIXME: is dit wel goed?
             self.gui.add_buttons_to_line(line, (("&Repeat Search", self.refresh, enable),
                                          ('&Zoek anders', self.zoek_anders, True),
                                          ('Vervang in &Selectie', self.vervang_in_sel, enable),
                                          ('Vervang &Alles', self.vervang_alles, enable)))
+            self.gui.add_stretch_to_line(line)
             line = self.gui.add_line()
             self.gui.add_text_to_line(line, 'Output:')
             self.gui.add_buttons_to_line(line, (("Copy to &File", self.kopie, True),
@@ -693,6 +696,7 @@ class Results:
                                                          self.parent.outopts['summarize'])
             self.cb_path = self.gui.add_checkbox_to_line(line, "toon directorypad",
                                                          self.parent.outopts['full_path'])
+            self.gui.add_stretch_to_line(line)
             if self.parent.apptype == 'single-file':
                 self.gui.disable_widget(self.cb_path)
         self.gui.finalize_display()

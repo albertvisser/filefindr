@@ -112,11 +112,12 @@ class TestAfriftGui:
         assert isinstance(result, testee.wx.ComboBox)
         assert capsys.readouterr().out == (
                 f"called StaticText.__init__ with args ({testobj.pnl},) {{'label': 'label'}}\n"
-                "called GridSizer.Add with args <item> ((1, 0),) {'flag': 8432, 'border': 4}\n"
+                "called GridSizer.Add with args"
+                " MockStaticText ((1, 0),) {'flag': 8432, 'border': 4}\n"
                 f"called ComboBox.__init__ with args ({testobj.pnl},)"
                 " {'size': (240, 24), 'style': 32, 'choices': ['choi', 'ces']}\n"
                 "called combobox.AutoComplete with args (['choi', 'ces'],)\n"
-                "called GridSizer.Add with args <item> ((1, 1),) {'flag': 2048}\n")
+                "called GridSizer.Add with args MockComboBox ((1, 1),) {'flag': 2048}\n")
         testobj.row = 0
         result = testobj.add_combobox_row('label', ['choi', 'ces'], initial='xxx',
                                           button=('btn', callback1), callback=callback2)
@@ -124,7 +125,8 @@ class TestAfriftGui:
         assert isinstance(result, testee.wx.ComboBox)
         assert capsys.readouterr().out == (
                 f"called StaticText.__init__ with args ({testobj.pnl},) {{'label': 'label'}}\n"
-                "called GridSizer.Add with args <item> ((1, 0),) {'flag': 8432, 'border': 4}\n"
+                "called GridSizer.Add with args"
+                " MockStaticText ((1, 0),) {'flag': 8432, 'border': 4}\n"
                 f"called ComboBox.__init__ with args ({testobj.pnl},)"
                 " {'size': (240, 24), 'style': 32, 'choices': ['choi', 'ces']}\n"
                 "called combobox.AutoComplete with args (['choi', 'ces'],)\n"
@@ -133,9 +135,9 @@ class TestAfriftGui:
                 " {'label': 'btn', 'size': (-1, 24)}\n"
                 f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback1}) {{}}\n"
                 "called BoxSizer.__init__ with args (4,)\n"
-                "called hori sizer.Add with args <item> (0, 8192)\n"
-                "called hori sizer.Add with args <item> (0, 8240, 4)\n"
-                "called GridSizer.Add with args <item> ((1, 1),) {'flag': 8384, 'border': 2}\n"
+                "called hori sizer.Add with args MockComboBox (0, 8192)\n"
+                "called hori sizer.Add with args MockButton (0, 8240, 4)\n"
+                "called GridSizer.Add with args MockBoxSizer ((1, 1),) {'flag': 8384, 'border': 2}\n"
                 f"called ComboBox.Bind with args ({testee.wx.EVT_TEXT}, {callback2}) {{}}\n")
 
     def test_add_checkbox_row(self, monkeypatch, capsys):
@@ -158,10 +160,10 @@ class TestAfriftGui:
                 "called BoxSizer.__init__ with args (4,)\n"
                 "called BoxSizer.__init__ with args (4,)\n"
                 f"called CheckBox.__init__ with args ({testobj.pnl},) {{'label': 'labeltext'}}\n"
-                "called hori sizer.Add with args <item> (0,)\n"
-                "called hori sizer.Add with args <item> (0, 192, 4)\n"
-                "called vert sizer.Add with args <item> (0, 8192)\n"
-                "called GridSizer.Add with args <item> ((1, 1),) {'flag': 8192}\n")
+                "called hori sizer.Add with args MockCheckBox (0,)\n"
+                "called hori sizer.Add with args MockBoxSizer (0, 192, 4)\n"
+                "called vert sizer.Add with args MockBoxSizer (0, 8192)\n"
+                "called GridSizer.Add with args MockBoxSizer ((1, 1),) {'flag': 8192}\n")
         testobj.row = 0
         assert testobj.add_checkbox_row('labeltext', value='xxx', indent=10)
         assert isinstance(result, testee.wx.CheckBox)
@@ -171,10 +173,10 @@ class TestAfriftGui:
                 "called BoxSizer.__init__ with args (4,)\n"
                 f"called CheckBox.__init__ with args ({testobj.pnl},) {{'label': 'labeltext'}}\n"
                 "called checkbox.SetValue with args ('xxx',)\n"
-                "called hori sizer.Add with args <item> (0, 16, 10)\n"
-                "called hori sizer.Add with args <item> (0, 192, 4)\n"
-                "called vert sizer.Add with args <item> (0, 8192)\n"
-                "called GridSizer.Add with args <item> ((1, 1),) {'flag': 8192}\n")
+                "called hori sizer.Add with args MockCheckBox (0, 16, 10)\n"
+                "called hori sizer.Add with args MockBoxSizer (0, 192, 4)\n"
+                "called vert sizer.Add with args MockBoxSizer (0, 8192)\n"
+                "called GridSizer.Add with args MockBoxSizer ((1, 1),) {'flag': 8192}\n")
         testobj.row = 0
         result = testobj.add_checkbox_row('labeltext', spinner=(5, 1))
         assert isinstance(result[0], testee.wx.CheckBox)
@@ -184,13 +186,13 @@ class TestAfriftGui:
                 "called BoxSizer.__init__ with args (4,)\n"
                 "called BoxSizer.__init__ with args (4,)\n"
                 f"called CheckBox.__init__ with args ({testobj.pnl},) {{'label': 'labeltext'}}\n"
-                "called hori sizer.Add with args <item> (0, 2048)\n"
+                "called hori sizer.Add with args MockCheckBox (0, 2048)\n"
                 f"called SpinCtrl.__init__ with args ({testobj.pnl}, -1)"
                 " {'min': 1, 'initial': 5, 'size': (122, 24)}\n"
-                "called hori sizer.Add with args <item> (0, 2048)\n"
-                "called hori sizer.Add with args <item> (0, 192, 4)\n"
-                "called vert sizer.Add with args <item> (0, 8192)\n"
-                "called GridSizer.Add with args <item> ((1, 1),) {'flag': 8192}\n")
+                "called hori sizer.Add with args MockSpinCtrl (0, 2048)\n"
+                "called hori sizer.Add with args MockBoxSizer (0, 192, 4)\n"
+                "called vert sizer.Add with args MockBoxSizer (0, 8192)\n"
+                "called GridSizer.Add with args MockBoxSizer ((1, 1),) {'flag': 8192}\n")
 
     def test_add_label_to_grid(self, monkeypatch, capsys):
         """unittest for AfriftGui.add_label_to_grid
@@ -202,23 +204,26 @@ class TestAfriftGui:
         assert capsys.readouterr().out == ("called GridSizer.__init__ with args () {}\n"
                                            "called Panel.__init__ with args () {}\n")
         testobj.row = 0
-        testobj.add_label_to_grid('text')
+        testobj.add_label_to_grid('text', new_row=True)
         assert testobj.row == 1
         assert capsys.readouterr().out == (
                 f"called StaticText.__init__ with args ({testobj.pnl},) {{'label': 'text'}}\n"
-                "called GridSizer.Add with args <item> ((1, 0),) {'flag': 8432, 'border': 4}\n")
+                "called GridSizer.Add with args"
+                " MockStaticText ((1, 0),) {'flag': 8432, 'border': 4}\n")
         testobj.row = 0
         testobj.add_label_to_grid('text', fullwidth=True)
         assert testobj.row == 1
         assert capsys.readouterr().out == (
-            f"called StaticText.__init__ with args ({testobj.pnl},) {{'label': 'text'}}\n"
-            "called GridSizer.Add with args <item> ((1, -1), (1, 2)) {'flag': 8272, 'border': 3}\n")
+                f"called StaticText.__init__ with args ({testobj.pnl},) {{'label': 'text'}}\n"
+                "called GridSizer.Add with args"
+                " MockStaticText ((1, 0), (1, 2)) {'flag': 8272, 'border': 3}\n")
         testobj.row = 0
         testobj.add_label_to_grid('text', left_align=True)
-        assert testobj.row == 1
+        assert testobj.row == 0
         assert capsys.readouterr().out == (
                 f"called StaticText.__init__ with args ({testobj.pnl},) {{'label': 'text'}}\n"
-                "called GridSizer.Add with args <item> ((1, -1),) {'flag': 8432, 'border': 3}\n")
+                "called GridSizer.Add with args"
+                " MockStaticText ((0, 1),) {'flag': 8432, 'border': 3}\n")
 
     def test_add_listbox_to_grid(self, monkeypatch, capsys):
         """unittest for AfriftGui.add_listbox_to_grid
@@ -236,7 +241,8 @@ class TestAfriftGui:
         assert capsys.readouterr().out == (
             f"called ListBox.__init__ with args ({testobj.pnl},)"
             " {'size': (240, 120), 'choices': ['list', 'items']}\n"
-            "called GridSizer.Add with args <item> ((1, 0), (1, 2)) {'flag': 8240, 'border': 4}\n")
+            "called GridSizer.Add with args"
+            " MockListBox ((1, 0), (1, 2)) {'flag': 8240, 'border': 4}\n")
 
     def test_add_buttons(self, monkeypatch, capsys):
         """unittest for AfriftGui.add_buttons
@@ -266,7 +272,8 @@ class TestAfriftGui:
         assert testobj.row == 1
         assert capsys.readouterr().out == (
             "called BoxSizer.__init__ with args (4,)\n"
-            "called GridSizer.Add with args <item> ((1, 0), (1, 3)) {'flag': 1280, 'border': 0}\n")
+            "called GridSizer.Add with args"
+            " MockBoxSizer ((1, 0), (1, 3)) {'flag': 1280, 'border': 0}\n")
         testobj.row = 0
         testobj.add_buttons([('btn1', callback1), ('btn2', callback2)])
         assert testobj.row == 1
@@ -275,7 +282,7 @@ class TestAfriftGui:
                 f"called Button.__init__ with args ({testobj.pnl}, -1)"
                 " {'size': (-1, 24), 'label': 'btn1'}\n"
                 f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback1}) {{}}\n"
-                "called hori sizer.Add with args <item> (0, 8432, 4)\n"
+                "called hori sizer.Add with args MockButton (0, 8432, 4)\n"
                 "called MenuItem.__init__ with args (None,) {'text': 'btn1'}\n"
                 f"called Frame.Bind with args ({testee.wx.EVT_MENU}, {callback1})\n"
                 "called menuitem.GetId\n"
@@ -284,15 +291,16 @@ class TestAfriftGui:
                 f"called Button.__init__ with args ({testobj.pnl}, -1)"
                 " {'size': (-1, 24), 'label': 'btn2'}\n"
                 f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback2}) {{}}\n"
-                "called hori sizer.Add with args <item> (0, 8432, 4)\n"
+                "called hori sizer.Add with args MockButton (0, 8432, 4)\n"
                 "called MenuItem.__init__ with args (None,) {'text': 'btn2'}\n"
                 f"called Frame.Bind with args ({testee.wx.EVT_MENU}, {callback2})\n"
                 "called menuitem.GetId\n"
                 "called AcceleratorEntry.__init__ with args () {'cmd': 'NewID'}\n"
-                "called AcceleratorEntry.FromString with args ('Escape',)\n"
+                # "called AcceleratorEntry.FromString with args ('Escape',)\n"
                 "called GridSizer.Add with args"
-                " <item> ((1, 0), (1, 3)) {'flag': 1280, 'border': 0}\n"
-                "called AcceleratorTable.__init__ with 2 AcceleratorEntries\n"
+                " MockBoxSizer ((1, 0), (1, 3)) {'flag': 1280, 'border': 0}\n"
+                # "called AcceleratorTable.__init__ with 2 AcceleratorEntries\n"
+                "called AcceleratorTable.__init__ with 1 AcceleratorEntries\n"
                 "called Frame.SetAcceleratorTable\n")
         monkeypatch.setattr(testee.wx.AcceleratorEntry, 'FromString', mock_fromstring)
         testobj.row = 0
@@ -303,7 +311,7 @@ class TestAfriftGui:
                 f"called Button.__init__ with args ({testobj.pnl}, -1)"
                 " {'size': (-1, 24), 'label': 'btn1'}\n"
                 f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback1}) {{}}\n"
-                "called hori sizer.Add with args <item> (0, 8432, 4)\n"
+                "called hori sizer.Add with args MockButton (0, 8432, 4)\n"
                 "called MenuItem.__init__ with args (None,) {'text': 'btn1'}\n"
                 f"called Frame.Bind with args ({testee.wx.EVT_MENU}, {callback1})\n"
                 "called menuitem.GetId\n"
@@ -312,14 +320,14 @@ class TestAfriftGui:
                 f"called Button.__init__ with args ({testobj.pnl}, -1)"
                 " {'size': (-1, 24), 'label': 'btn2'}\n"
                 f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback2}) {{}}\n"
-                "called hori sizer.Add with args <item> (0, 8432, 4)\n"
+                "called hori sizer.Add with args MockButton (0, 8432, 4)\n"
                 "called MenuItem.__init__ with args (None,) {'text': 'btn2'}\n"
                 f"called Frame.Bind with args ({testee.wx.EVT_MENU}, {callback2})\n"
                 "called menuitem.GetId\n"
                 "called AcceleratorEntry.__init__ with args () {'cmd': 'NewID'}\n"
-                "called AcceleratorEntry.FromString with args ('Escape',)\n"
+                # "called AcceleratorEntry.FromString with args ('Escape',)\n"
                 "called GridSizer.Add with args"
-                " <item> ((1, 0), (1, 3)) {'flag': 1280, 'border': 0}\n")
+                " MockBoxSizer ((1, 0), (1, 3)) {'flag': 1280, 'border': 0}\n")
 
     def test_set_focus_to(self, monkeypatch, capsys):
         """unittest for AfriftGui.set_focus_to
@@ -361,7 +369,7 @@ class TestAfriftGui:
         """unittest for AfriftGui.go
         """
         def mock_show(*args):
-            print('called Frame.Showi with args', args)
+            print('called Frame.Show with args', args)
         def mock_mainloop():
             print('called Frame.MainLoop')
         monkeypatch.setattr(testee.wx, 'BoxSizer', mockwx.MockBoxSizer)
@@ -373,14 +381,15 @@ class TestAfriftGui:
         assert capsys.readouterr().out == ("called GridSizer.__init__ with args () {}\n"
                                            "called Panel.__init__ with args () {}\n")
         testobj.go()
-        assert capsys.readouterr().out == ("called BoxSizer.__init__ with args (8,)\nc"
-                                           "alled vert sizer.Add with args <item> (0, 240, 4)\n"
-                                           "called Panel.SetAutoLayout with args (True,)\n"
-                                           "called Panel.SetSizer with args (vert sizer,)\n"
-                                           f"called vert sizer.Fit with args ({testobj},)\n"
-                                           "called Panel.Layout with args ()\n"
-                                           "called Frame.Showi with args (True,)\n"
-                                           "called Frame.MainLoop\n")
+        assert capsys.readouterr().out == (
+                "called BoxSizer.__init__ with args (8,)\n"
+                "called vert sizer.Add with args MockGridSizer (0, 240, 4)\n"
+                "called Panel.SetAutoLayout with args (True,)\n"
+                "called Panel.SetSizer with args (vert sizer,)\n"
+                f"called vert sizer.Fit with args ({testobj},)\n"
+                "called Panel.Layout with args ()\n"
+                "called Frame.Show with args (True,)\n"
+                "called Frame.MainLoop\n")
 
     def test_error(self, monkeypatch, capsys):
         """unittest for AfriftGui.error
@@ -560,7 +569,7 @@ class TestSelectNamesGui:
         result = testobj.add_line()
         assert isinstance(result, testee.wx.BoxSizer)
         assert capsys.readouterr().out == ("called BoxSizer.__init__ with args (4,)\n"
-                                           "called vert sizer.Add with args <item> (0,)\n")
+                                           "called vert sizer.Add with args MockBoxSizer (0,)\n")
 
     def test_add_text_to_line(self, monkeypatch, capsys):
         """unittest for SelectNamesGui.add_text_to_line
@@ -572,7 +581,7 @@ class TestSelectNamesGui:
         testobj.add_text_to_line(hbox, 'text')
         assert capsys.readouterr().out == (
                 f"called StaticText.__init__ with args ({testobj},) {{'label': 'text'}}\n"
-                "called hori sizer.Add with args <item> (0, 8432, 5)\n")
+                "called hori sizer.Add with args MockStaticText (0, 8432, 5)\n")
 
     def test_add_checkbox_to_line(self, monkeypatch, capsys):
         """unittest for SelectNamesGui.add_checkbox_to_line
@@ -589,7 +598,7 @@ class TestSelectNamesGui:
                 "called hori sizer.AddSpacer with args (10,)\n"
                 f"called CheckBox.__init__ with args ({testobj},) {{'label': 'text'}}\n"
                 f"called CheckBox.Bind with args ({testee.wx.EVT_CHECKBOX}, {callback}) {{}}\n"
-                "called hori sizer.Add with args <item> (0, 2080, 28)\n")
+                "called hori sizer.Add with args MockCheckBox (0, 2080, 28)\n")
 
     def test_add_button_to_line(self, monkeypatch, capsys):
         """unittest for SelectNamesGui.add_button_to_line
@@ -606,7 +615,7 @@ class TestSelectNamesGui:
                 "called Button.__init__ with args"
                 f" ({testobj},) {{'size': (-1, 24), 'label': 'text'}}\n"
                 f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback}) {{}}\n"
-                "called hori sizer.Add with args <item> (0, 544, 7)\n")
+                "called hori sizer.Add with args MockButton (0, 32, 7)\n")
 
     def test_add_selectionlist(self, monkeypatch, capsys):
         """unittest for SelectNamesGui.add_selectionlist
@@ -618,7 +627,7 @@ class TestSelectNamesGui:
         assert testobj.add_selectionlist(hbox, 'namelist') == ['item', 'list']
         assert capsys.readouterr().out == (
                 f"called CheckListBox.__init__ with args ({testobj}, -1) {{'choices': 'namelist'}}\n"
-                "called hori sizer.Add with args <item> (0, 48, 7)\n"
+                "called hori sizer.Add with args MockCheckListBox (0, 48, 7)\n"
                 "called CheckListBox.GetItems\n")
 
     def test_add_buttons(self, monkeypatch, capsys):
@@ -641,12 +650,17 @@ class TestSelectNamesGui:
                 f" ({testobj},) {{'size': (-1, 24), 'label': 'btn1'}}\n"
                 "called Button.GetId\n"
                 "called dialog.SetEscapeId with args ('id',)\n"
-                "called hori sizer.Add with args <item> (0,)\n"
+                "called hori sizer.Add with args MockButton (0,)\n"
                 "called Button.__init__ with args"
                 f" ({testobj},) {{'size': (-1, 24), 'label': 'btn2'}}\n"
                 f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback2}) {{}}\n"
-                "called hori sizer.Add with args <item> (0,)\n"
-                "called hori sizer.Add with args <item> (0, 256)\n")
+                "called hori sizer.Add with args MockButton (0,)\n"
+                "called hori sizer.Add with args MockBoxSizer ()\n")
+        testobj.add_buttons(hbox, [], end=True)
+        assert capsys.readouterr().out == (
+                "called BoxSizer.__init__ with args (4,)\n"
+                "called hori sizer.AddStretchSpacer\n"
+                "called hori sizer.Add with args MockBoxSizer ()\n")
 
     def test_go(self, monkeypatch, capsys):
         """unittest for SelectNamesGui.go
@@ -785,7 +799,7 @@ class TestResultsGui:
         result = testobj.add_line()
         assert isinstance(result, testee.wx.BoxSizer)
         assert capsys.readouterr().out == ("called BoxSizer.__init__ with args (4,)\n"
-                                           "called vert sizer.Add with args <item> (0, 8192)\n")
+                                           "called vert sizer.Add with args MockBoxSizer (0, 8192)\n")
 
     def test_add_text_to_line(self, monkeypatch, capsys):
         """unittest for ResultsGui.add_text_to_line
@@ -797,7 +811,7 @@ class TestResultsGui:
         testobj.add_text_to_line(hsizer, 'text')
         assert capsys.readouterr().out == (
                 f"called StaticText.__init__ with args ({testobj},) {{'label': 'text'}}\n"
-                "called hori sizer.Add with args <item> (0, 8432, 5)\n")
+                "called hori sizer.Add with args MockStaticText (0, 8432, 5)\n")
 
     def test_add_buttons_to_line(self, monkeypatch, capsys):
         """unittest for ResultsGui.add_buttons_to_line
@@ -815,17 +829,17 @@ class TestResultsGui:
                 "called Button.__init__ with args"
                 f" ({testobj},) {{'size': (-1, 24), 'label': 'btn1'}}\n"
                 f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback1}) {{}}\n"
-                "called hori sizer.Add with args <item> (0, 240, 5)\n"
+                "called hori sizer.Add with args MockButton (0, 240, 5)\n"
                 "called Button.Enable with arg True\n"
                 "called Button.__init__ with args"
                 f" ({testobj},) {{'size': (-1, 24), 'label': 'btn2'}}\n"
                 f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback2}) {{}}\n"
-                "called hori sizer.Add with args <item> (0, 240, 5)\n"
+                "called hori sizer.Add with args MockButton (0, 240, 5)\n"
                 "called Button.Enable with arg False\n")
-        testobj.add_buttons_to_line(hsizer, (), start=True)
-        assert capsys.readouterr().out == ""
-        testobj.add_buttons_to_line(hsizer, (), end=True)
-        assert capsys.readouterr().out == "called hori sizer.AddStretchSpacer\n"
+        # testobj.add_buttons_to_line(hsizer, (), start=True)
+        # assert capsys.readouterr().out == ""
+        # testobj.add_buttons_to_line(hsizer, (), end=True)
+        # assert capsys.readouterr().out == "called hori sizer.AddStretchSpacer\n"
 
     def test_add_results_list(self, monkeypatch, capsys):
         """unittest for ResultsGui.add_results_list
@@ -856,13 +870,13 @@ class TestResultsGui:
         assert testobj.accel_list == []
         assert capsys.readouterr().out == (
                 "called ListCtrl.__init__ with args"
-                f" ({testobj},) {{'size': (-1, 460), 'style': 33}}\n"
+                f" ({testobj},) {{'size': (550, -1), 'style': 32}}\n"
                 "called ListCtrl.resizeLastColumn with args (200,)\n"
                 "called MyListCtrl.populate_list with args"
                 " <class 'mockgui.mockwxwidgets.MockListCtrl'> (['item', 'list'],)\n"
                 "called ListCtrl.Bind with args"
                 f" ({testee.wx.EVT_LIST_ITEM_ACTIVATED}, {testobj.to_result})\n"
-                "called hori sizer.Add with args <item> (1, 8432, 5)\n")
+                "called hori sizer.Add with args MockListCtrl (1, 8432, 5)\n")
         testobj.add_results_list(hsizer, ['head', 'ers'], (('txt1', 'key1', callback1),
                                                            ('txt2', 'key2', callback2)),
                                  ['item', 'list'])
@@ -871,23 +885,23 @@ class TestResultsGui:
         assert isinstance(testobj.accel_list[1], testee.wx.AcceleratorEntry)
         assert capsys.readouterr().out == (
                 f"called ListCtrl.__init__ with args ({testobj},)"
-                " {'size': (-1, 460), 'style': 33}\n"
+                " {'size': (550, -1), 'style': 32}\n"
                 "called ListCtrl.InsertColumn with args (0, 'head')\n"
-                "called ListCtrl.SetColumnWidth with args (0, 200)\n"
-                "called ListCtrl.InsertColumn with args (1, 'ers')\n"
                 "called ListCtrl.SetColumnWidth with args (0, 150)\n"
+                "called ListCtrl.InsertColumn with args (1, 'ers')\n"
+                "called ListCtrl.SetColumnWidth with args (0, 200)\n"
                 "called ListCtrl.resizeLastColumn with args (200,)\n"
                 "called MyListCtrl.populate_list with args"
                 " <class 'mockgui.mockwxwidgets.MockListCtrl'> (['item', 'list'],)\n"
                 "called ListCtrl.Bind with args"
                 f" ({testee.wx.EVT_LIST_ITEM_ACTIVATED}, {testobj.to_result})\n"
-                "called hori sizer.Add with args <item> (1, 8432, 5)\n"
-                "called MenuItem.__init__ with args (None,) {'label': 'txt1'}\n"
+                "called hori sizer.Add with args MockListCtrl (1, 8432, 5)\n"
+                "called MenuItem.__init__ with args (None,) {'text': 'txt1'}\n"
                 f"called dialog.Bind with args ({testee.wx.EVT_MENU}, {callback1})\n"
                 "called menuitem.GetId\n"
                 "called AcceleratorEntry.__init__ with args () {'cmd': 'NewID'}\n"
                 "called AcceleratorEntry.FromString with args ('key1',)\n"
-                "called MenuItem.__init__ with args (None,) {'label': 'txt2'}\n"
+                "called MenuItem.__init__ with args (None,) {'text': 'txt2'}\n"
                 f"called dialog.Bind with args ({testee.wx.EVT_MENU}, {callback2})\n"
                 "called menuitem.GetId\n"
                 "called AcceleratorEntry.__init__ with args () {'cmd': 'NewID'}\n"
@@ -900,11 +914,11 @@ class TestResultsGui:
         assert testobj.accel_list == []
         assert capsys.readouterr().out == (
                 f"called ListCtrl.__init__ with args ({testobj},)"
-                " {'size': (-1, 460), 'style': 33}\n"
+                " {'size': (550, -1), 'style': 32}\n"
                 "called ListCtrl.InsertColumn with args (0, 'head')\n"
-                "called ListCtrl.SetColumnWidth with args (0, 200)\n"
-                "called ListCtrl.InsertColumn with args (1, 'er')\n"
                 "called ListCtrl.SetColumnWidth with args (0, 150)\n"
+                "called ListCtrl.InsertColumn with args (1, 'er')\n"
+                "called ListCtrl.SetColumnWidth with args (0, 200)\n"
                 "called ListCtrl.InsertColumn with args (2, 's')\n"
                 "called ListCtrl.SetColumnWidth with args (0, 200)\n"
                 "called ListCtrl.resizeLastColumn with args (200,)\n"
@@ -912,17 +926,24 @@ class TestResultsGui:
                 " <class 'mockgui.mockwxwidgets.MockListCtrl'> (['item', 'list'],)\n"
                 "called ListCtrl.Bind with args"
                 f" ({testee.wx.EVT_LIST_ITEM_ACTIVATED}, {testobj.to_result})\n"
-                "called hori sizer.Add with args <item> (1, 8432, 5)\n"
-                "called MenuItem.__init__ with args (None,) {'label': 'txt1'}\n"
+                "called hori sizer.Add with args MockListCtrl (1, 8432, 5)\n"
+                "called MenuItem.__init__ with args (None,) {'text': 'txt1'}\n"
                 f"called dialog.Bind with args ({testee.wx.EVT_MENU}, {callback1})\n"
                 "called menuitem.GetId\n"
                 "called AcceleratorEntry.__init__ with args () {'cmd': 'NewID'}\n"
                 "called AcceleratorEntry.FromString with args ('key1',)\n"
-                "called MenuItem.__init__ with args (None,) {'label': 'txt2'}\n"
+                "called MenuItem.__init__ with args (None,) {'text': 'txt2'}\n"
                 f"called dialog.Bind with args ({testee.wx.EVT_MENU}, {callback2})\n"
                 "called menuitem.GetId\n"
                 "called AcceleratorEntry.__init__ with args () {'cmd': 'NewID'}\n"
                 "called AcceleratorEntry.FromString with args ('key2',)\n")
+
+    def test_add_stretch_to_line(self, monkeypatch, capsys):
+        hsizer = mockwx.MockBoxSizer(testee.wx.HORIZONTAL)
+        assert capsys.readouterr().out == "called BoxSizer.__init__ with args (4,)\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.add_stretch_to_line(hsizer)
+        assert capsys.readouterr().out == "called hori sizer.AddStretchSpacer\n"
 
     def test_add_checkbox_to_line(self, monkeypatch, capsys):
         """unittest for ResultsGui.add_checkbox_to_line
@@ -946,7 +967,7 @@ class TestResultsGui:
                 "called AcceleratorEntry.__init__ with args () {'cmd': 'id'}\n"
                 "called AcceleratorEntry.FromString with args ('Alt+O',)\n"
                 "called checkbox.SetValue with args ('checkvalue',)\n"
-                "called hori sizer.Add with args <item> ()\n")
+                "called hori sizer.Add with args MockCheckBox ()\n")
         testobj.accel_list = []
         monkeypatch.setattr(testee.wx.AcceleratorEntry, 'FromString', mock_fromstring)
         result = testobj.add_checkbox_to_line(hsizer, 'text', 'checkvalue')
@@ -957,7 +978,7 @@ class TestResultsGui:
                 "called AcceleratorEntry.__init__ with args () {'cmd': 'id'}\n"
                 "called AcceleratorEntry.FromString with args ('Alt+O',)\n"
                 "called checkbox.SetValue with args ('checkvalue',)\n"
-                "called hori sizer.Add with args <item> ()\n")
+                "called hori sizer.Add with args MockCheckBox ()\n")
 
     def test_disable_widget(self, monkeypatch, capsys):
         """unittest for ResultsGui.disabe_widget
@@ -1119,15 +1140,17 @@ class TestResultsGui:
         testobj.lijst = mockwx.MockListCtrl()
         assert capsys.readouterr().out == "called ListCtrl.__init__ with args () {}\n"
         assert testobj.get_selection() == []
-        assert capsys.readouterr().out == ("called ListCtrl.getFirstSelected\n")
+        assert capsys.readouterr().out == ("called ListCtrl.GetFirstSelected\n")
         monkeypatch.setattr(mockwx.MockListCtrl, 'GetFirstSelected',
                             mockwx.MockListCtrl.GetFirstSelected_2)
-        assert testobj.get_selection() == ['first item', 'next item']
-        assert capsys.readouterr().out == ("called ListCtrl.getFirstSelected\n"
-                                           "called ListCtrl.GetItem with args (first item,)\n"
-                                           "called ListCtrl.getNextSelected\n"
-                                           "called ListCtrl.GetItem with args (next item,)\n"
-                                           "called ListCtrl.getNextSelected\n")
+        assert testobj.get_selection() == ['item 0', 'item 1']
+        assert capsys.readouterr().out == ("called ListCtrl.GetFirstSelected\n"
+                                           "called ListCtrl.GetItem with args (0,)\n"
+                                           "called ListCtrl.GetNextSelected\n"
+                                           "called ListCtrl.GetItem with args (1,)\n"
+                                           "called ListCtrl.GetNextSelected\n"
+                                           "called item.GetText\n"
+                                           "called item.GetText\n")
 
     def test_copy_to_clipboard(self, monkeypatch, capsys):
         """unittest for ResultsGui.copy_to_clipboard
@@ -1169,18 +1192,18 @@ class TestResultsGui:
                                                goto_result=mock_goto)
         testobj.to_result('event')
         assert capsys.readouterr().out == (
-                "called ListCtrl.getFirstSelected\n"
+                "called ListCtrl.GetFirstSelected\n"
                 "called Results.meld with args ('xxx', 'Select a result first')\n")
         monkeypatch.setattr(mockwx.MockListCtrl, 'GetFirstSelected',
                             mockwx.MockListCtrl.GetFirstSelected_2)
         testobj.to_result('event')
-        assert capsys.readouterr().out == ("called ListCtrl.getFirstSelected\n"
-                                           "called Afrift.goto_result with args (first item, -1)\n")
+        assert capsys.readouterr().out == ("called ListCtrl.GetFirstSelected\n"
+                                           "called Afrift.goto_result with args (0, -1)\n")
 
     def test_klaar(self, monkeypatch, capsys):
         """unittest for ResultsGui.klaar
         """
         monkeypatch.setattr(testee.wx.Dialog, 'EndModal', mockwx.MockDialog.EndModal)
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.klaar()
+        testobj.klaar('event')
         assert capsys.readouterr().out == ("called Dialog.EndModal with arg 0\n")

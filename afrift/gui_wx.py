@@ -77,14 +77,15 @@ class AfriftGui(wx.Frame):
             return cb, sb
         return cb
 
-    def add_label_to_grid(self, text, fullwidth=False, left_align=False):
+    def add_label_to_grid(self, text, fullwidth=False, new_row=False, left_align=False):
         "place a label"
-        self.row += 1
+        if new_row or fullwidth:
+            self.row += 1
         if fullwidth:
-            self.grid.Add(wx.StaticText(self.pnl, label=text), (self.row, -1), (1, 2),
+            self.grid.Add(wx.StaticText(self.pnl, label=text), (self.row, 0), (1, 2),
                           flag=wx.EXPAND | wx.LEFT | wx.TOP, border=3)
         elif left_align:
-            self.grid.Add(wx.StaticText(self.pnl, label=text), (self.row, -1),
+            self.grid.Add(wx.StaticText(self.pnl, label=text), (self.row, 1),
                           flag=wx.EXPAND | wx.ALL, border=3)
         else:
             self.grid.Add(wx.StaticText(self.pnl, label=text), (self.row, 0),
@@ -111,7 +112,7 @@ class AfriftGui(wx.Frame):
             menuitem = wx.MenuItem(None, text=text)
             self.Bind(wx.EVT_MENU, callback, menuitem)
             accel = wx.AcceleratorEntry(cmd=menuitem.GetId())
-            ok = accel.FromString('Return' if ix == 0 else 'Escape')
+            ok = accel.FromString('Return' if ix == 0 else 'Ctrl+Q') # 'Escape')
             if ok:
                 accel_list.append(accel)
         self.grid.Add(hsizer, (self.row, 0), (1, 3),
@@ -238,7 +239,7 @@ class SelectNamesGui(wx.Dialog):
         button = wx.Button(self, size=(-1, TXTH), label=text)
         button.Bind(wx.EVT_BUTTON, callback)
         # hbox.addStretch()
-        hbox.Add(button, 0, wx.ALIGN_RIGHT | wx.RIGHT, 7)
+        hbox.Add(button, 0, wx.RIGHT, 7)
         # hbox.AddSpacer(20)
         return button
 
@@ -248,7 +249,7 @@ class SelectNamesGui(wx.Dialog):
         hbox.Add(self.frm, 0, wx.LEFT | wx.RIGHT, 7)
         return self.frm.GetItems()
 
-    def add_buttons(self, hbox, buttondefs):
+    def add_buttons(self, hbox, buttondefs, end=False):
         "add a button strip"
         box = wx.BoxSizer(wx.HORIZONTAL)
         for ix, bdef in enumerate(buttondefs):
@@ -260,7 +261,10 @@ class SelectNamesGui(wx.Dialog):
                 button.Bind(wx.EVT_BUTTON, callback)
                 # self.SetAffirmativeId(b_ok.GetId())
             box.Add(button, 0)
-        hbox.Add(box, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        if end:
+            hbox.AddStretchSpacer()
+        hbox.Add(box)  # , 0, wx.ALIGN_CENTER_HORIZONTAL)
+        # hbox.AddStretchSpacer()
 
     def go(self):
         """show the dialog screen
@@ -331,12 +335,8 @@ class ResultsGui(wx.Dialog):
         hsizer.Add(txt, 0, wx.EXPAND | wx.ALL, 5)
         return txt
 
-    def add_buttons_to_line(self, hsizer, buttondefs, start=False, end=False):
+    def add_buttons_to_line(self, hsizer, buttondefs):
         "add one or more buttons to a screen line"
-        if start:
-            pass
-        if end:
-            hsizer.AddStretchSpacer()
         for caption, callback, enable in buttondefs:
             btn = wx.Button(self, size=(-1, TXTH), label=caption)
             btn.Bind(wx.EVT_BUTTON, callback)
@@ -346,16 +346,16 @@ class ResultsGui(wx.Dialog):
     def add_results_list(self, hsizer, headers, actiondefs, listitems):
         "add the list with results to a the display and return a reference to it"
         breedte = 50 if self.master.parent.apptype.startswith("single") else 150
-        lijst = MyListCtrl(self, size=(-1, 460), style=wx.LC_REPORT | wx.LC_VRULES)
+        lijst = MyListCtrl(self, size=(breedte + 400, -1), style=wx.LC_REPORT)  #  | wx.LC_VRULES)
         for ix, caption in enumerate(headers):
             lijst.InsertColumn(ix, caption)
-            lijst.SetColumnWidth(0, breedte if ix == 1 else 200)
+            lijst.SetColumnWidth(0, breedte if ix == 0 else 200)
         lijst.resizeLastColumn(200)
         self.populate_list(lijst, listitems)
         lijst.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.to_result)
         hsizer.Add(lijst, 1, wx.EXPAND | wx.ALL, 5)
         for caption, keydef, callback in actiondefs:
-            menuitem = wx.MenuItem(None, label=caption)
+            menuitem = wx.MenuItem(None, text=caption)
             self.Bind(wx.EVT_MENU, callback, menuitem)
             accel = wx.AcceleratorEntry(cmd=menuitem.GetId())
             ok = accel.FromString(keydef)
@@ -374,6 +374,10 @@ class ResultsGui(wx.Dialog):
         hsizer.Add(cb)
         return cb
 
+    def add_stretch_to_line(self, hsizer):
+        "make the widgets align to the opposite side"
+        hsizer.AddStretchSpacer()
+
     def disable_widget(self, widget):
         """make a widget inaccessible
         """
@@ -386,7 +390,7 @@ class ResultsGui(wx.Dialog):
         self.SetAutoLayout(True)
         self.SetSizer(self.vsizer)
         self.vsizer.Fit(self)
-        ## vsizer.SetSizeHints(self)
+        # self.vsizer.SetSizeHints(self)
         self.Layout()
         self.Show()
         self.SetFocus()
@@ -486,7 +490,7 @@ class ResultsGui(wx.Dialog):
             return
         self.master.goto_result(row, -1)
 
-    def klaar(self):
+    def klaar(self, event):
         """finish dialog
         """
         self.EndModal(0)

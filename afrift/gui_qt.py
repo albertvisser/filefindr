@@ -90,9 +90,10 @@ class AfriftGui(qtw.QWidget):
             return cb, sb
         return cb
 
-    def add_label_to_grid(self, text, fullwidth=False, left_align=False):
+    def add_label_to_grid(self, text, fullwidth=False, new_row=False, left_align=False):
         "place a label"
-        self.row += 1
+        if new_row or fullwidth:
+            self.row += 1
         if fullwidth:
             self.grid.addWidget(qtw.QLabel(text), self.row, 0, 1, 2)
         elif left_align:
@@ -115,12 +116,12 @@ class AfriftGui(qtw.QWidget):
         "add the button strip at the bottom"
         self.row += 1
         hbox = qtw.QHBoxLayout()
-        hbox.addStretch(1)
+        hbox.addStretch()
         for text, callback in buttondefs:
             btn = qtw.QPushButton(text, self)
             btn.clicked.connect(callback)
             hbox.addWidget(btn)
-        hbox.addStretch(1)
+        hbox.addStretch()
         self.grid.addLayout(hbox, self.row, 0, 1, 2)
 
     def set_focus_to(self, widget):
@@ -178,9 +179,13 @@ class AfriftGui(qtw.QWidget):
     def check_casing(self, val):
         """autocompletion voor zoektekst in overeenstemming brengen met case indicator
         """
+        # self.master.vraag_zoek.setAutoCompletionCaseSensitivity(new_value)
+        completer = self.master.vraag_zoek.completer()
         new_value = (core.Qt.CaseSensitivity.CaseSensitive if val == core.Qt.CheckState.Checked
                      else core.Qt.CaseSensitivity.CaseInsensitive)
-        self.vraag_zoek.setAutoCompletionCaseSensitivity(new_value)
+        completer.setCaseSensitivity(new_value)
+        self.master.vraag_zoek.setCompleter(completer)
+
 
     def get_sender_value(self, *args):
         "return the text value from the callback"
@@ -195,9 +200,11 @@ class AfriftGui(qtw.QWidget):
         "set a checkbox's state"
         cb.setChecked(state)
 
+    # beter implementeren met accelerators
     def keyPressEvent(self, event):
         """event handler voor toetsaanslagen"""
-        if event.key() == core.Qt.Key.Key_Escape:
+        # if event.key() == core.Qt.Key.Key_Escape:
+        if event.key() == core.Qt.Key.Key_Q and event.modifiers() == core.Qt.Modifiers.AltModifier:
             self.close()
 
     def zoekdir(self):
@@ -342,12 +349,12 @@ class ResultsGui(qtw.QDialog):
         hbox.addWidget(txt)
         return txt
 
-    def add_buttons_to_line(self, hbox, buttondefs, start=False, end=False):
+    def add_buttons_to_line(self, hbox, buttondefs):  # , start=False, end=False):
         "add one or more buttons to a screen line"
-        if start:
-            hbox.addStretch(1)
-        if end:
-            hbox.addStretch()
+        # if start:
+        #     hbox.addStretch(1)
+        # if end:
+        #     hbox.addStretch()
         for caption, callback, enable in buttondefs:
             btn = qtw.QPushButton(caption, self)
             btn.clicked.connect(callback)
@@ -379,6 +386,10 @@ class ResultsGui(qtw.QDialog):
         cb.setChecked(checkvalue)
         hbox.addWidget(cb)
         return cb
+
+    def add_stretch_to_line(self, hbox):
+        "make the widgets align to the opposite side"
+        hbox.addStretch()
 
     def disable_widget(self, widget):
         """make a widget inaccessible

@@ -225,19 +225,19 @@ class TestAfriftGui:
         testobj.row = 0
         testobj.grid = mockqtw.MockGridLayout()
         assert capsys.readouterr().out == "called Grid.__init__\n"
-        testobj.add_label_to_grid('text')
+        testobj.add_label_to_grid('text', new_row=True)
         assert testobj.row == 1
         assert capsys.readouterr().out == ("called Label.__init__ with args ('text',)\n"
                                            "called Grid.addWidget with arg MockLabel at (1, 0)\n")
         testobj.row = 0
         testobj.add_label_to_grid('text', left_align=True)
-        assert testobj.row == 1
+        assert testobj.row == 0
         assert capsys.readouterr().out == (
                 "called HBox.__init__\n"
                 "called Label.__init__ with args ('text',)\n"
                 "called HBox.addWidget with arg MockLabel\n"
                 "called HBox.addStretch\n"
-                "called Grid.addLayout with arg MockHBoxLayout at (1, 1)\n")
+                "called Grid.addLayout with arg MockHBoxLayout at (0, 1)\n")
         testobj.row = 0
         testobj.add_label_to_grid('text', fullwidth=True)
         assert testobj.row == 1
@@ -273,15 +273,21 @@ class TestAfriftGui:
         testobj.grid = mockqtw.MockGridLayout()
         assert capsys.readouterr().out == "called Grid.__init__\n"
         testobj.add_buttons((('xxx', callback1), ('yyy', callback2)))
+        assert testobj.row == 1
         assert capsys.readouterr().out == (
                 "called HBox.__init__\n"
-                "called HBox.addStretch\n"
                 f"called PushButton.__init__ with args ('xxx', {testobj}) {{}}\n"
                 f"called Signal.connect with args ({callback1},)\n"
                 "called HBox.addWidget with arg MockPushButton\n"
                 f"called PushButton.__init__ with args ('yyy', {testobj}) {{}}\n"
                 f"called Signal.connect with args ({callback2},)\n"
                 "called HBox.addWidget with arg MockPushButton\n"
+                "called Grid.addLayout with arg MockHBoxLayout at (1, 0, 1, 2)\n")
+        testobj.row = 0
+        testobj.add_buttons((), end=True)
+        assert testobj.row == 1
+        assert capsys.readouterr().out == (
+                "called HBox.__init__\n"
                 "called HBox.addStretch\n"
                 "called Grid.addLayout with arg MockHBoxLayout at (1, 0, 1, 2)\n")
 
@@ -398,14 +404,20 @@ class TestAfriftGui:
         """unittest for AfriftGui.check_case
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.vraag_zoek = mockqtw.MockComboBox()
+        testobj.master.vraag_zoek = mockqtw.MockComboBox()
         assert capsys.readouterr().out == "called ComboBox.__init__\n"
         testobj.check_casing(testee.core.Qt.CheckState.Unchecked)
-        assert capsys.readouterr().out == ("called ComboBox.setAutoCompletionCaseSensitivity"
-                                           " with arg CaseSensitivity.CaseInsensitive\n")
+        assert capsys.readouterr().out == (
+                "called ComboBox.completer\n"
+                "called Completer.setCaseSensitivity with arg CaseSensitivity.CaseInsensitive\n"
+                f"called ComboBox.setCompleter with arg {testobj.master.vraag_zoek.completer()}\n")
+        assert capsys.readouterr().out == "called ComboBox.completer\n"
         testobj.check_casing(testee.core.Qt.CheckState.Checked)
-        assert capsys.readouterr().out == ("called ComboBox.setAutoCompletionCaseSensitivity"
-                                           " with arg CaseSensitivity.CaseSensitive\n")
+        assert capsys.readouterr().out == (
+                "called ComboBox.completer\n"
+                "called Completer.setCaseSensitivity with arg CaseSensitivity.CaseSensitive\n"
+                f"called ComboBox.setCompleter with arg {testobj.master.vraag_zoek.completer()}\n")
+        assert capsys.readouterr().out == "called ComboBox.completer\n"
 
     def test_get_sender_value(self, monkeypatch, capsys):
         """unittest for AfriftGui.get_sender_value
