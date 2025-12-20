@@ -300,7 +300,8 @@ class Afrift:
             "context tonen (waar mogelijk, anders overslaan)", self.p["context"])
         self.vraag_uitsluit = self.gui.add_checkbox_row("commentaren en docstrings negeren",
                                                         self.p["negeer"], indent=22)
-        self.gui.add_buttons((('&Uitvoeren', self.doe), ('&Afsluiten', self.gui.einde)))
+        self.gui.add_buttons((('&Uitvoeren', self.doe, 'Ctrl+Enter'),
+                              ('&Afsluiten', self.gui.einde, 'Ctrl+Q')))
         self.gui.set_focus_to(self.vraag_zoek)
 
     def update_defaults(self, *args):
@@ -678,7 +679,7 @@ class Results:
             self.lijst = self.gui.add_results_list(line, headers, actions, self.results)
         line = self.gui.add_line()
         self.gui.add_text_to_line(line, 'Action:')
-        self.gui.add_buttons_to_line(line, (("&Klaar", self.gui.klaar, True),))  #  , start=True)
+        self.gui.add_buttons_to_line(line, (("&Klaar", self.gui.klaar, True),))
         if self.show_result_details:
             enable = bool(self.parent.p['vervang'])     # FIXME: is dit wel goed?
             self.gui.add_buttons_to_line(line, (("&Repeat Search", self.refresh, enable),

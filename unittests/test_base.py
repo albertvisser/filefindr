@@ -26,6 +26,8 @@ class MockResultsGui:
     def add_text_to_line(self, *args):
         print('called ResultsGui.add_text_to_line with args', args)
         return 'textfield'
+    def add_stretch_to_line(self, *args):
+        print('called ResultsGui.add_stretch_to_line with args', args)
     def add_buttons_to_line(self, *args, **kwargs):
         print('called ResultsGui.add_buttons_to_line with args', args, kwargs)
     def add_results_list(self, *args):
@@ -679,7 +681,8 @@ class TestAfrift:
                 "called AfriftGui.add_checkbox_row with args"
                 " ('commentaren en docstrings negeren', 'ign') {'indent': 22}\n"
                 "called AfriftGui.add_buttons with arg"
-                f" (('&Uitvoeren', {testobj.doe}), ('&Afsluiten', {testobj.gui.einde}))\n"
+                f" (('&Uitvoeren', {testobj.doe}, 'Ctrl+Enter'),"
+                f" ('&Afsluiten', {testobj.gui.einde}, 'Ctrl+Q'))\n"
                 "called AfriftGui.set_focus_to with arg combobox\n")
         testobj.p['filelist'] = [testee.pathlib.Path('file')]
         testobj.setup_screen()
@@ -737,7 +740,8 @@ class TestAfrift:
                 "called AfriftGui.add_checkbox_row with args"
                 " ('commentaren en docstrings negeren', 'ign') {'indent': 22}\n"
                 "called AfriftGui.add_buttons with arg"
-                f" (('&Uitvoeren', {testobj.doe}), ('&Afsluiten', {testobj.gui.einde}))\n"
+                f" (('&Uitvoeren', {testobj.doe}, 'Ctrl+Enter'),"
+                f" ('&Afsluiten', {testobj.gui.einde}, 'Ctrl+Q'))\n"
                 "called AfriftGui.set_focus_to with arg combobox\n")
         testobj.apptype = 'single-file'
         testobj.setup_screen()
@@ -776,7 +780,8 @@ class TestAfrift:
                 "called AfriftGui.add_checkbox_row with args"
                 " ('commentaren en docstrings negeren', 'ign') {'indent': 22}\n"
                 "called AfriftGui.add_buttons with arg"
-                f" (('&Uitvoeren', {testobj.doe}), ('&Afsluiten', {testobj.gui.einde}))\n"
+                f" (('&Uitvoeren', {testobj.doe}, 'Ctrl+Enter'),"
+                f" ('&Afsluiten', {testobj.gui.einde}, 'Ctrl+Q'))\n"
                 "called AfriftGui.set_focus_to with arg combobox\n")
         testobj.p = {'woord': 'wrd', 'case': 'cs', 'verv': 'vrv',
                      'filelist': ['file', pathlib.Path('list')],
@@ -835,7 +840,8 @@ class TestAfrift:
                 "called AfriftGui.add_checkbox_row with args"
                 " ('commentaren en docstrings negeren', 'ign') {'indent': 22}\n"
                 "called AfriftGui.add_buttons with arg"
-                f" (('&Uitvoeren', {testobj.doe}), ('&Afsluiten', {testobj.gui.einde}))\n"
+                f" (('&Uitvoeren', {testobj.doe}, 'Ctrl+Enter'),"
+                f" ('&Afsluiten', {testobj.gui.einde}, 'Ctrl+Q'))\n"
                 "called AfriftGui.set_focus_to with arg combobox\n")
         testobj.apptype = 'multi'
         testobj.setup_screen()
@@ -892,7 +898,8 @@ class TestAfrift:
                 "called AfriftGui.add_checkbox_row with args"
                 " ('commentaren en docstrings negeren', 'ign') {'indent': 22}\n"
                 "called AfriftGui.add_buttons with arg"
-                f" (('&Uitvoeren', {testobj.doe}), ('&Afsluiten', {testobj.gui.einde}))\n"
+                f" (('&Uitvoeren', {testobj.doe}, 'Ctrl+Enter'),"
+                f" ('&Afsluiten', {testobj.gui.einde}, 'Ctrl+Q'))\n"
                 "called AfriftGui.set_focus_to with arg combobox\n")
 
     def test_update_defaults(self, monkeypatch, capsys, tmp_path):
@@ -2130,10 +2137,12 @@ class TestResults:
                 "called ResultsGui.add_line\n"
                 "called ResultsGui.add_text_to_line with args"
                 " ('line', 'gezocht en/of 2 vervangen')\n"
+                "called ResultsGui.add_stretch_to_line with args ('line',)\n"
                 "called ResultsGui.add_buttons_to_line with args ('line',"
-                f" (('Go to selected result', {testobj.gui.to_result}, True),)) {{'end': True}}\n"
+                f" (('Go to selected result', {testobj.gui.to_result}, True),)) {{}}\n"
                 "called TestResults.build_list\n"
                 "called ResultsGui.add_line\n"
+                "called ResultsGui.add_text_to_line with args ('line', 'Action:')\n"
                 "called ResultsGui.add_buttons_to_line with args"
                 f" ('line', (('&Klaar', {testobj.gui.klaar}, True),)) {{}}\n"
                 "called ResultsGui.finalize_display\n")
@@ -2150,14 +2159,16 @@ class TestResults:
             "called ResultsGui.add_line\n"
             "called ResultsGui.add_text_to_line with args"
             " ('line', 'gezocht en/of vervangen (1 items)')\n"
+            "called ResultsGui.add_stretch_to_line with args ('line',)\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
-            f" (('Go to selected result', {testobj.gui.to_result}, True),)) {{'end': True}}\n"
+            f" (('Go to selected result', {testobj.gui.to_result}, True),)) {{}}\n"
             "called TestResults.build_list\n"
             "called ResultsGui.add_line\n"
             "called ResultsGui.add_results_list with args"
             f" ('line', ('Regel', 'Context', 'Tekst'), (('Help', 'F1', {testobj.help})"
             f", ('&Goto Result', 'Ctrl+G', {testobj.gui.to_result})), [])\n"
             "called ResultsGui.add_line\n"
+            "called ResultsGui.add_text_to_line with args ('line', 'Action:')\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
             f" (('&Klaar', {testobj.gui.klaar}, True),)) {{}}\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
@@ -2165,6 +2176,7 @@ class TestResults:
             f" ('&Zoek anders', {testobj.zoek_anders}, True),"
             f" ('Vervang in &Selectie', {testobj.vervang_in_sel}, False),"
             f" ('Vervang &Alles', {testobj.vervang_alles}, False))) {{}}\n"
+            "called ResultsGui.add_stretch_to_line with args ('line',)\n"
             "called ResultsGui.add_line\n"
             "called ResultsGui.add_text_to_line with args ('line', 'Output:')\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
@@ -2173,6 +2185,7 @@ class TestResults:
             "called ResultsGui.add_checkbox_to_line with args ('line', 'comma-delimited', 'csv')\n"
             "called ResultsGui.add_checkbox_to_line with args ('line', 'summarized', 'sum')\n"
             "called ResultsGui.add_checkbox_to_line with args ('line', 'toon directorypad', 'pth')\n"
+            "called ResultsGui.add_stretch_to_line with args ('line',)\n"
             "called ResultsGui.disable_widget with arg checkbox\n"
             "called ResultsGui.finalize_display\n")
         parent.p['vervang'] = 'xx'
@@ -2184,14 +2197,16 @@ class TestResults:
             "called ResultsGui.add_line\n"
             "called ResultsGui.add_text_to_line with args"
             " ('line', 'gezocht en/of vervangen (1 items)')\n"
+            "called ResultsGui.add_stretch_to_line with args ('line',)\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
-            f" (('Go to selected result', {testobj.gui.to_result}, True),)) {{'end': True}}\n"
+            f" (('Go to selected result', {testobj.gui.to_result}, True),)) {{}}\n"
             "called TestResults.build_list\n"
             "called ResultsGui.add_line\n"
             "called ResultsGui.add_results_list with args"
             f" ('line', ('File/Regel', 'Context', 'Tekst'), (('Help', 'F1', {testobj.help})"
             f", ('&Goto Result', 'Ctrl+G', {testobj.gui.to_result})), [])\n"
             "called ResultsGui.add_line\n"
+            "called ResultsGui.add_text_to_line with args ('line', 'Action:')\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
             f" (('&Klaar', {testobj.gui.klaar}, True),)) {{}}\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
@@ -2199,6 +2214,7 @@ class TestResults:
             f" ('&Zoek anders', {testobj.zoek_anders}, True),"
             f" ('Vervang in &Selectie', {testobj.vervang_in_sel}, True),"
             f" ('Vervang &Alles', {testobj.vervang_alles}, True))) {{}}\n"
+            "called ResultsGui.add_stretch_to_line with args ('line',)\n"
             "called ResultsGui.add_line\n"
             "called ResultsGui.add_text_to_line with args ('line', 'Output:')\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
@@ -2207,6 +2223,7 @@ class TestResults:
             "called ResultsGui.add_checkbox_to_line with args ('line', 'comma-delimited', 'csv')\n"
             "called ResultsGui.add_checkbox_to_line with args ('line', 'summarized', 'sum')\n"
             "called ResultsGui.add_checkbox_to_line with args ('line', 'toon directorypad', 'pth')\n"
+            "called ResultsGui.add_stretch_to_line with args ('line',)\n"
             "called ResultsGui.finalize_display\n")
 
         parent.apptype = 'multi'
@@ -2219,14 +2236,16 @@ class TestResults:
             "called ResultsGui.add_text_to_line with args"
             " ('line', 'gezocht en/of vervangen (1 items)\\n"
             'De bestanden staan allemaal in of onder de directory "path"\')\n'
+            "called ResultsGui.add_stretch_to_line with args ('line',)\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
-            f" (('Go to selected result', {testobj.gui.to_result}, True),)) {{'end': True}}\n"
+            f" (('Go to selected result', {testobj.gui.to_result}, True),)) {{}}\n"
             "called TestResults.build_list\n"
             "called ResultsGui.add_line\n"
             "called ResultsGui.add_results_list with args"
             f" ('line', ('File/Regel', 'Tekst'), (('Help', 'F1', {testobj.help})"
             f", ('&Goto Result', 'Ctrl+G', {testobj.gui.to_result})), [])\n"
             "called ResultsGui.add_line\n"
+            "called ResultsGui.add_text_to_line with args ('line', 'Action:')\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
             f" (('&Klaar', {testobj.gui.klaar}, True),)) {{}}\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
@@ -2234,6 +2253,7 @@ class TestResults:
             f" ('&Zoek anders', {testobj.zoek_anders}, True),"
             f" ('Vervang in &Selectie', {testobj.vervang_in_sel}, True),"
             f" ('Vervang &Alles', {testobj.vervang_alles}, True))) {{}}\n"
+            "called ResultsGui.add_stretch_to_line with args ('line',)\n"
             "called ResultsGui.add_line\n"
             "called ResultsGui.add_text_to_line with args ('line', 'Output:')\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
@@ -2242,6 +2262,7 @@ class TestResults:
             "called ResultsGui.add_checkbox_to_line with args ('line', 'comma-delimited', 'csv')\n"
             "called ResultsGui.add_checkbox_to_line with args ('line', 'summarized', 'sum')\n"
             "called ResultsGui.add_checkbox_to_line with args ('line', 'toon directorypad', 'pth')\n"
+            "called ResultsGui.add_stretch_to_line with args ('line',)\n"
             "called ResultsGui.finalize_display\n")
 
     def test_build_list(self, monkeypatch, capsys):

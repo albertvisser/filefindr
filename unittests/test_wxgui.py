@@ -275,7 +275,7 @@ class TestAfriftGui:
             "called GridSizer.Add with args"
             " MockBoxSizer ((1, 0), (1, 3)) {'flag': 1280, 'border': 0}\n")
         testobj.row = 0
-        testobj.add_buttons([('btn1', callback1), ('btn2', callback2)])
+        testobj.add_buttons([('btn1', callback1, 'aaa'), ('btn2', callback2, 'bbb')])
         assert testobj.row == 1
         assert capsys.readouterr().out == (
                 "called BoxSizer.__init__ with args (4,)\n"
@@ -287,7 +287,7 @@ class TestAfriftGui:
                 f"called Frame.Bind with args ({testee.wx.EVT_MENU}, {callback1})\n"
                 "called menuitem.GetId\n"
                 "called AcceleratorEntry.__init__ with args () {'cmd': 'NewID'}\n"
-                "called AcceleratorEntry.FromString with args ('Return',)\n"
+                "called AcceleratorEntry.FromString with args ('aaa',)\n"
                 f"called Button.__init__ with args ({testobj.pnl}, -1)"
                 " {'size': (-1, 24), 'label': 'btn2'}\n"
                 f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback2}) {{}}\n"
@@ -296,15 +296,14 @@ class TestAfriftGui:
                 f"called Frame.Bind with args ({testee.wx.EVT_MENU}, {callback2})\n"
                 "called menuitem.GetId\n"
                 "called AcceleratorEntry.__init__ with args () {'cmd': 'NewID'}\n"
-                # "called AcceleratorEntry.FromString with args ('Escape',)\n"
+                "called AcceleratorEntry.FromString with args ('bbb',)\n"
                 "called GridSizer.Add with args"
                 " MockBoxSizer ((1, 0), (1, 3)) {'flag': 1280, 'border': 0}\n"
-                # "called AcceleratorTable.__init__ with 2 AcceleratorEntries\n"
-                "called AcceleratorTable.__init__ with 1 AcceleratorEntries\n"
+                "called AcceleratorTable.__init__ with 2 AcceleratorEntries\n"
                 "called Frame.SetAcceleratorTable\n")
         monkeypatch.setattr(testee.wx.AcceleratorEntry, 'FromString', mock_fromstring)
         testobj.row = 0
-        testobj.add_buttons([('btn1', callback1), ('btn2', callback2)])
+        testobj.add_buttons([('btn1', callback1, 'aaa'), ('btn2', callback2, 'bbb')])
         assert testobj.row == 1
         assert capsys.readouterr().out == (
                 "called BoxSizer.__init__ with args (4,)\n"
@@ -316,7 +315,7 @@ class TestAfriftGui:
                 f"called Frame.Bind with args ({testee.wx.EVT_MENU}, {callback1})\n"
                 "called menuitem.GetId\n"
                 "called AcceleratorEntry.__init__ with args () {'cmd': 'NewID'}\n"
-                "called AcceleratorEntry.FromString with args ('Return',)\n"
+                "called AcceleratorEntry.FromString with args ('aaa',)\n"
                 f"called Button.__init__ with args ({testobj.pnl}, -1)"
                 " {'size': (-1, 24), 'label': 'btn2'}\n"
                 f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback2}) {{}}\n"
@@ -325,7 +324,7 @@ class TestAfriftGui:
                 f"called Frame.Bind with args ({testee.wx.EVT_MENU}, {callback2})\n"
                 "called menuitem.GetId\n"
                 "called AcceleratorEntry.__init__ with args () {'cmd': 'NewID'}\n"
-                # "called AcceleratorEntry.FromString with args ('Escape',)\n"
+                "called AcceleratorEntry.FromString with args ('bbb',)\n"
                 "called GridSizer.Add with args"
                 " MockBoxSizer ((1, 0), (1, 3)) {'flag': 1280, 'border': 0}\n")
 

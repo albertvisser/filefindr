@@ -268,28 +268,40 @@ class TestAfriftGui:
             "dummy callback for reference"
         monkeypatch.setattr(testee.qtw, 'QHBoxLayout', mockqtw.MockHBoxLayout)
         monkeypatch.setattr(testee.qtw, 'QPushButton', mockqtw.MockPushButton)
+        monkeypatch.setattr(testee.gui, 'QAction', mockqtw.MockAction)
+        monkeypatch.setattr(testee.qtw.QWidget, 'addAction', mockqtw.MockWidget.addAction)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.row = 0
         testobj.grid = mockqtw.MockGridLayout()
         assert capsys.readouterr().out == "called Grid.__init__\n"
-        testobj.add_buttons((('xxx', callback1), ('yyy', callback2)))
-        assert testobj.row == 1
-        assert capsys.readouterr().out == (
-                "called HBox.__init__\n"
-                f"called PushButton.__init__ with args ('xxx', {testobj}) {{}}\n"
-                f"called Signal.connect with args ({callback1},)\n"
-                "called HBox.addWidget with arg MockPushButton\n"
-                f"called PushButton.__init__ with args ('yyy', {testobj}) {{}}\n"
-                f"called Signal.connect with args ({callback2},)\n"
-                "called HBox.addWidget with arg MockPushButton\n"
-                "called Grid.addLayout with arg MockHBoxLayout at (1, 0, 1, 2)\n")
-        testobj.row = 0
-        testobj.add_buttons((), end=True)
+        testobj.add_buttons((('xxx', callback1, 'aaa'), ('yyy', callback2, 'bbb')))
         assert testobj.row == 1
         assert capsys.readouterr().out == (
                 "called HBox.__init__\n"
                 "called HBox.addStretch\n"
+                f"called PushButton.__init__ with args ('xxx', {testobj}) {{}}\n"
+                f"called Signal.connect with args ({callback1},)\n"
+                "called HBox.addWidget with arg MockPushButton\n"
+                f"called Action.__init__ with args ('xxx', {testobj})\n"
+                "called Widget.addAction\n"
+                f"called Signal.connect with args ({callback1},)\n"
+                "called Action.setShortcut with arg `aaa`\n"
+                f"called PushButton.__init__ with args ('yyy', {testobj}) {{}}\n"
+                f"called Signal.connect with args ({callback2},)\n"
+                "called HBox.addWidget with arg MockPushButton\n"
+                f"called Action.__init__ with args ('yyy', {testobj})\n"
+                "called Widget.addAction\n"
+                f"called Signal.connect with args ({callback2},)\n"
+                "called Action.setShortcut with arg `bbb`\n"
+                "called HBox.addStretch\n"
                 "called Grid.addLayout with arg MockHBoxLayout at (1, 0, 1, 2)\n")
+        # testobj.row = 0
+        # testobj.add_buttons((), end=True)
+        # assert testobj.row == 1
+        # assert capsys.readouterr().out == (
+        #         "called HBox.__init__\n"
+        #         "called HBox.addStretch\n"
+        #         "called Grid.addLayout with arg MockHBoxLayout at (1, 0, 1, 2)\n")
 
     def test_set_focus_to(self, monkeypatch, capsys):
         """unittest for AfriftGui.set_focus_to
@@ -444,20 +456,6 @@ class TestAfriftGui:
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.set_checkbox_value(cb, True)
         assert capsys.readouterr().out == "called CheckBox.setChecked with arg True\n"
-
-    def test_keyPressEvent(self, monkeypatch, capsys):
-        """unittest for AfriftGui.keyPressEvent
-        """
-        def mock_close():
-            print('called AfriftGui.close')
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.close = mock_close
-        event = mockqtw.MockEvent(key=None)
-        testobj.keyPressEvent(event)
-        assert capsys.readouterr().out == ""
-        event = mockqtw.MockEvent(key=testee.core.Qt.Key.Key_Escape)
-        testobj.keyPressEvent(event)
-        assert capsys.readouterr().out == "called AfriftGui.close\n"
 
     def test_zoekdir(self, monkeypatch, capsys):
         """unittest for AfriftGui.zoekdir
@@ -850,9 +848,9 @@ class TestResultsGui:
         testobj = self.setup_testobj(monkeypatch, capsys)
         hbox = mockqtw.MockHBoxLayout()
         assert capsys.readouterr().out == "called HBox.__init__\n"
-        testobj.add_buttons_to_line(hbox, (), start=True, end=True)
-        assert capsys.readouterr().out == ("called HBox.addStretch\n"
-                                           "called HBox.addStretch\n")
+        # testobj.add_buttons_to_line(hbox, (), start=True, end=True)
+        # assert capsys.readouterr().out == ("called HBox.addStretch\n"
+        #                                    "called HBox.addStretch\n")
         testobj.add_buttons_to_line(hbox, (('text1', callback1, True), ('text2', callback2, False)))
         assert capsys.readouterr().out == (
                 f"called PushButton.__init__ with args ('text1', {testobj}) {{}}\n"
@@ -939,6 +937,15 @@ class TestResultsGui:
         assert capsys.readouterr().out == (f"called CheckBox.__init__ with args ('text', {testobj})\n"
                                            "called CheckBox.setChecked with arg value\n"
                                            "called HBox.addWidget with arg MockCheckBox\n")
+
+    def test_add_stretch_to_line(self, monkeypatch, capsys):
+        """unittest for Results.add_checkbox_to_line
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        hbox = mockqtw.MockHBoxLayout()
+        assert capsys.readouterr().out == "called HBox.__init__\n"
+        result = testobj.add_stretch_to_line(hbox)
+        assert capsys.readouterr().out == "called HBox.addStretch\n"
 
     def test_disable_widget(self, monkeypatch, capsys):
         """unittest for ResultsGui.disabe_widget

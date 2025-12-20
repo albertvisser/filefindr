@@ -117,10 +117,14 @@ class AfriftGui(qtw.QWidget):
         self.row += 1
         hbox = qtw.QHBoxLayout()
         hbox.addStretch()
-        for text, callback in buttondefs:
+        for text, callback, shortcut in buttondefs:
             btn = qtw.QPushButton(text, self)
             btn.clicked.connect(callback)
             hbox.addWidget(btn)
+            act = gui.QAction(text, self)
+            self.addAction(act)
+            act.triggered.connect(callback)
+            act.setShortcut(shortcut)
         hbox.addStretch()
         self.grid.addLayout(hbox, self.row, 0, 1, 2)
 
@@ -186,7 +190,6 @@ class AfriftGui(qtw.QWidget):
         completer.setCaseSensitivity(new_value)
         self.master.vraag_zoek.setCompleter(completer)
 
-
     def get_sender_value(self, *args):
         "return the text value from the callback"
         return args[0]
@@ -199,13 +202,6 @@ class AfriftGui(qtw.QWidget):
     def set_checkbox_value(self, cb, state):
         "set a checkbox's state"
         cb.setChecked(state)
-
-    # beter implementeren met accelerators
-    def keyPressEvent(self, event):
-        """event handler voor toetsaanslagen"""
-        # if event.key() == core.Qt.Key.Key_Escape:
-        if event.key() == core.Qt.Key.Key_Q and event.modifiers() == core.Qt.Modifiers.AltModifier:
-            self.close()
 
     def zoekdir(self):
         """event handler voor 'zoek in directory'"""

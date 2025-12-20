@@ -104,7 +104,7 @@ class AfriftGui(wx.Frame):
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         accel_list = []
         for ix, bdef in enumerate(buttondefs):
-            text, callback = bdef
+            text, callback, shortcut = bdef
             btn = wx.Button(self.pnl, -1, size=(-1, TXTH), label=text)
             btn.Bind(wx.EVT_BUTTON, callback)
             hsizer.Add(btn, 0, wx.EXPAND | wx.ALL, 4)
@@ -112,7 +112,7 @@ class AfriftGui(wx.Frame):
             menuitem = wx.MenuItem(None, text=text)
             self.Bind(wx.EVT_MENU, callback, menuitem)
             accel = wx.AcceleratorEntry(cmd=menuitem.GetId())
-            ok = accel.FromString('Return' if ix == 0 else 'Ctrl+Q') # 'Escape')
+            ok = accel.FromString(shortcut)
             if ok:
                 accel_list.append(accel)
         self.grid.Add(hsizer, (self.row, 0), (1, 3),
@@ -346,7 +346,7 @@ class ResultsGui(wx.Dialog):
     def add_results_list(self, hsizer, headers, actiondefs, listitems):
         "add the list with results to a the display and return a reference to it"
         breedte = 50 if self.master.parent.apptype.startswith("single") else 150
-        lijst = MyListCtrl(self, size=(breedte + 400, -1), style=wx.LC_REPORT)  #  | wx.LC_VRULES)
+        lijst = MyListCtrl(self, size=(breedte + 400, -1), style=wx.LC_REPORT)  # | wx.LC_VRULES)
         for ix, caption in enumerate(headers):
             lijst.InsertColumn(ix, caption)
             lijst.SetColumnWidth(0, breedte if ix == 0 else 200)
