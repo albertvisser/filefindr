@@ -397,7 +397,7 @@ class TestAfriftGui:
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.error('titel', 'message')
         assert capsys.readouterr().out == (
-                f"called wx.MessageBox with args ('message', 'titel', 516, {testobj})\n")
+                f"called wx.MessageBox with args ('message', 'titel', 516, {testobj}) {{}}\n")
 
     def test_meld(self, monkeypatch, capsys):
         """unittest for AfriftGui.meld
@@ -407,7 +407,7 @@ class TestAfriftGui:
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.meld('titel', 'message')
         assert capsys.readouterr().out == (
-                f"called wx.MessageBox with args ('message', 'titel', 2052, {testobj})\n")
+                f"called wx.MessageBox with args ('message', 'titel', 2052, {testobj}) {{}}\n")
         testobj.meld('titel', 'message', additional=['addit', 'ional'])
         assert capsys.readouterr().out == (
                 "called MessageDialog.__init__ with args"
@@ -1117,7 +1117,7 @@ class TestResultsGui:
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.meld('titel', 'message')
         assert capsys.readouterr().out == (
-                f"called wx.MessageBox with args ('message', 'titel', 2052, {testobj})\n")
+                f"called wx.MessageBox with args ('message', 'titel', 2052, {testobj}) {{}}\n")
 
     def test_get_text_from_user(self, monkeypatch, capsys):
         """unittest for ResultsGui.get_text_from_user
@@ -1174,7 +1174,7 @@ class TestResultsGui:
                 "called TextDataObject.__init__\n"
                 "called TextDataObject.SetText with arg 'text'\n"
                 "called Clipboard.Get\ncalled ClipBoard.Open\n"
-                "called wx.MessageBox with args ('Unable to open the clipboard', 'Error')\n")
+                "called wx.MessageBox with args ('Unable to open the clipboard', 'Error') {}\n")
 
     def test_to_result(self, monkeypatch, capsys):
         """unittest for ResultsGui.to_result
