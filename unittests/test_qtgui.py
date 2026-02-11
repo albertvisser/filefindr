@@ -752,8 +752,10 @@ class TestSelectNamesGui:
         testobj.confirm()
         assert testobj.master.names == ['x', 'w']
         assert capsys.readouterr().out == ("called CheckBox.isChecked\n"
+                                           "called CheckBox.text\n"
                                            "called CheckBox.isChecked\n"
                                            "called CheckBox.isChecked\n"
+                                           "called CheckBox.text\n"
                                            "called Dialog.accept\n")
         testobj.master.do_files = True
         testobj.master.names = {'x': 'xxx', 'w': 'www', 'y': 'yyy'}
@@ -762,6 +764,7 @@ class TestSelectNamesGui:
         testobj.confirm()
         assert testobj.master.names == ['www', 'yyy']
         assert capsys.readouterr().out == ("called CheckBox.isChecked\n"
+                                           "called CheckBox.text\n"
                                            "called CheckBox.isChecked\n"
                                            "called CheckBox.isChecked\n"
                                            "called Dialog.accept\n")
