@@ -1058,7 +1058,7 @@ class TestResultsGui:
         testobj.lijst = mockwx.MockListCtrl()
         assert capsys.readouterr().out == "called ListCtrl.__init__ with args () {}\n"
         testobj.clear_contents()
-        assert capsys.readouterr().out == "called ListCtrl.DeleteAllItems with args ()\n"
+        assert capsys.readouterr().out == "called ListCtrl.DeleteAllItems\n"
 
     def test_go(self, monkeypatch, capsys):
         """unittest for ResultsGui.go
