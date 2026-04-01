@@ -279,18 +279,26 @@ class SelectNamesGui(wx.Dialog):
             return True
         return False
 
-    def select_all(self, event):
-        """check or uncheck all boxes
-        """
-        state = self.sel_all.IsChecked()
-        for itemindex in range(len(self.checklist)):
-            self.frm.Check(itemindex, state)
+    def get_checkbox_value(self, cb):
+        "return the state of a checkbox"
+        return cb.IsChecked()
 
-    def invert_selection(self, event):
-        """check unchecked and uncheck checked boxes
-        """
-        for itemindex in range(len(self.checklist)):
-            self.frm.Check(itemindex, not self.frm.IsChecked(itemindex))
+    def set_checkbox_value(self, cb, value):
+        "set the state of a checkboc"
+        cb.SetValue(value)
+
+    # def select_all(self, event):
+    #     """check or uncheck all boxes
+    #     """
+    #     state = self.sel_all.IsChecked()
+    #     for itemindex in range(len(self.checklist)):
+    #         self.frm.Check(itemindex, state)
+
+    # def invert_selection(self, event):
+    #     """check unchecked and uncheck checked boxes
+    #     """
+    #     for itemindex in range(len(self.checklist)):
+    #         self.frm.Check(itemindex, not self.frm.IsChecked(itemindex))
 
     def cancel(self):
         "dialoog afbreken"

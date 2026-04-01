@@ -690,33 +690,23 @@ class TestSelectNamesGui:
                 "called dialog.Layout with args ()\n"
                 "called Dialog.ShowModal\n")
 
-    def test_select_all(self, monkeypatch, capsys):
-        """unittest for SelectNamesGui.select_all
+    def test_get_checkbox_value(self, monkeypatch, capsys):
+        """unittest for SelectnamesGui.get_checkbox_value
         """
+        cb = mockwx.MockCheckBox()
+        assert capsys.readouterr().out == "called CheckBox.__init__ with args () {}\n"
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.sel_all = mockwx.MockCheckBox()
-        testobj.frm = mockwx.MockCheckListBox()
-        testobj.checklist = ['x', 'y']
-        testobj.select_all('event')
-        assert capsys.readouterr().out == (
-                "called CheckBox.__init__ with args () {}\n"
-                "called CheckListBox.__init__ with args () {}\n"
-                "called checkbox.IsChecked\n"
-                "called CheckListBox.Check with args (0, 'value from checkbox')\n"
-                "called CheckListBox.Check with args (1, 'value from checkbox')\n")
+        assert testobj.get_checkbox_value(cb) == 'value from checkbox'
+        assert capsys.readouterr().out == "called checkbox.IsChecked\n"
 
-    def test_invert_selection(self, monkeypatch, capsys):
-        """unittest for SelectNamesGui.invert_selection
+    def test_set_checkbox_value(self, monkeypatch, capsys):
+        """unittest for SelectnamesGui.set_checkbox_value
         """
+        cb = mockwx.MockCheckBox()
+        assert capsys.readouterr().out == "called CheckBox.__init__ with args () {}\n"
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.frm = mockwx.MockCheckListBox()
-        testobj.checklist = ['x', 'y']
-        testobj.invert_selection('event')
-        assert capsys.readouterr().out == ("called CheckListBox.__init__ with args () {}\n"
-                                           "called CheckListBox.IsChecked with arg 0\n"
-                                           "called CheckListBox.Check with args (0, False)\n"
-                                           "called CheckListBox.IsChecked with arg 1\n"
-                                           "called CheckListBox.Check with args (1, False)\n")
+        testobj.set_checkbox_value(cb, 'value')
+        assert capsys.readouterr().out == "called checkbox.SetValue with args ('value',)\n"
 
     def test_cancel(self, monkeypatch, capsys):
         """unittest for SelectNamesGui.cancel

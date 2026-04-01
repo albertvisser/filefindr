@@ -677,53 +677,23 @@ class TestSelectNamesGui:
         assert testobj.go()
         assert capsys.readouterr().out == "called Dialog.exec\n"
 
-    def test_select_all(self, monkeypatch, capsys):
-        """unittest for SelectNamesGui.select_all
+    def test_get_checkbox_value(self, monkeypatch, capsys):
+        """unittest for SelectnamesGui.get_checkbox_value
         """
+        cb = mockqtw.MockCheckBox()
+        assert capsys.readouterr().out == "called CheckBox.__init__\n"
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.sel_all = mockqtw.MockCheckBox()
-        testobj.checklist = [mockqtw.MockCheckBox(), mockqtw.MockCheckBox()]
-        assert capsys.readouterr().out == ("called CheckBox.__init__\ncalled CheckBox.__init__\n"
-                                           "called CheckBox.__init__\n")
-        testobj.select_all()
-        assert capsys.readouterr().out == ("called CheckBox.isChecked\n"
-                                           "called CheckBox.setChecked with arg False\n"
-                                           "called CheckBox.setChecked with arg False\n")
-        for item in testobj.checklist:
-            assert not item.isChecked()
+        assert not testobj.get_checkbox_value(cb)
+        assert capsys.readouterr().out == "called CheckBox.isChecked\n"
 
-    def test_select_all_2(self, monkeypatch, capsys):
-        """unittest for SelectNamesGui.select_all
+    def test_set_checkbox_value(self, monkeypatch, capsys):
+        """unittest for SelectnamesGui.set_checkbox_value
         """
+        cb = mockqtw.MockCheckBox()
+        assert capsys.readouterr().out == "called CheckBox.__init__\n"
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.sel_all = mockqtw.MockCheckBox()
-        testobj.checklist = [mockqtw.MockCheckBox(), mockqtw.MockCheckBox()]
-        testobj.sel_all.setChecked(True)
-        assert capsys.readouterr().out == ("called CheckBox.__init__\ncalled CheckBox.__init__\n"
-                                           "called CheckBox.__init__\n"
-                                           "called CheckBox.setChecked with arg True\n")
-        testobj.select_all()
-        assert capsys.readouterr().out == ("called CheckBox.isChecked\n"
-                                           "called CheckBox.setChecked with arg True\n"
-                                           "called CheckBox.setChecked with arg True\n")
-        for item in testobj.checklist:
-            assert item.isChecked()
-
-    def test_invert_selection(self, monkeypatch, capsys):
-        """unittest for SelectNamesGui.invert_selection
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.checklist = [mockqtw.MockCheckBox(), mockqtw.MockCheckBox()]
-        testobj.checklist[0].setChecked(True)
-        assert capsys.readouterr().out == ("called CheckBox.__init__\ncalled CheckBox.__init__\n"
-                                           "called CheckBox.setChecked with arg True\n")
-        testobj.invert_selection()
-        assert capsys.readouterr().out == ("called CheckBox.isChecked\n"
-                                           "called CheckBox.setChecked with arg False\n"
-                                           "called CheckBox.isChecked\n"
-                                           "called CheckBox.setChecked with arg True\n")
-        assert not testobj.checklist[0].isChecked()
-        assert testobj.checklist[1].isChecked()
+        testobj.set_checkbox_value(cb, 'value')
+        assert capsys.readouterr().out == "called CheckBox.setChecked with arg value\n"
 
     def test_cancel(self, monkeypatch, capsys):
         """unittest for SelectNamesGui.cancel
@@ -890,7 +860,7 @@ class TestResultsGui:
                 "called Header.__init__\n"
                 "called Header.__init__\n"
                 "called Table.verticalHeader\n"
-                "called Header.setVisible with args 'False'\n"
+                "called Header.setVisible with arg False\n"
                 "called Table.setGridStyle with arg PenStyle.NoPen\n"
                 "called Table.setColumnCount with arg '2'\n"
                 "called Table.setHorizontalHeaderLabels with arg '['xxx', 'yyy']'\n"
@@ -908,7 +878,7 @@ class TestResultsGui:
                 "called Header.__init__\n"
                 "called Header.__init__\n"
                 "called Table.verticalHeader\n"
-                "called Header.setVisible with args 'False'\n"
+                "called Header.setVisible with arg False\n"
                 "called Table.setGridStyle with arg PenStyle.NoPen\n"
                 "called Table.setColumnCount with arg '0'\n"
                 "called Table.setHorizontalHeaderLabels with arg '[]'\n"

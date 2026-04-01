@@ -1927,9 +1927,9 @@ class TestSelectNames:
                 " ('line', 'Selecteer de bestanden die je *niet* wilt verwerken')\n"
                 "called SelectNamesGui.add_line\n"
                 "called SelectNamesGui.add_checkbox_to_line with args"
-                f" ('line', 'Select/Unselect All', {testobj.gui.select_all})\n"
+                f" ('line', 'Select/Unselect All', {testobj.select_all})\n"
                 "called SelectNamesGui.add_button_to_line with args"
-                f" ('line', 'Invert selection', {testobj.gui.invert_selection})\n"
+                f" ('line', 'Invert selection', {testobj.invert_selection})\n"
                 "called SelectNamesGui.add_line\n"
                 "called SelectNamesGui.add_selectionlist with args ('line', ['xx', 'yy'])\n"
                 "called SelectNamesGui.add_line\n"
@@ -1950,14 +1950,52 @@ class TestSelectNames:
                 " ('line', 'Selecteer de directories die je *niet* wilt verwerken')\n"
                 "called SelectNamesGui.add_line\n"
                 "called SelectNamesGui.add_checkbox_to_line with args"
-                f" ('line', 'Select/Unselect All', {testobj.gui.select_all})\n"
+                f" ('line', 'Select/Unselect All', {testobj.select_all})\n"
                 "called SelectNamesGui.add_button_to_line with args"
-                f" ('line', 'Invert selection', {testobj.gui.invert_selection})\n"
+                f" ('line', 'Invert selection', {testobj.invert_selection})\n"
                 "called SelectNamesGui.add_line\n"
                 "called SelectNamesGui.add_selectionlist with args ('line', ['xx', 'yy'])\n"
                 "called SelectNamesGui.add_line\n"
                 "called SelectNamesGui.add_buttons with args ('line',"
                 f" [('&Terug', {testobj.gui.cancel}), ('&Klaar', {testobj.gui.confirm})])\n")
+
+    def test_select_all(self, monkeypatch, capsys):
+        """unittest for SelectNames.select_all
+        """
+        def mock_get(cb):
+            print(f'called SelectNamesGui.get_checkbox_value with arg {cb}')
+            return 'value'
+        def mock_set(*args):
+            print('called SelectNamesGui.set_checkbox_value with args', args)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.get_checkbox_value = mock_get
+        testobj.gui.set_checkbox_value = mock_set
+        testobj.sel_all = 'sel_all'
+        testobj.checklist = ['cb1', 'cb2']
+        testobj.select_all()
+        assert capsys.readouterr().out == (
+            "called SelectNamesGui.get_checkbox_value with arg sel_all\n"
+            "called SelectNamesGui.set_checkbox_value with args ('cb1', 'value')\n"
+            "called SelectNamesGui.set_checkbox_value with args ('cb2', 'value')\n")
+
+    def test_invert_selection(self, monkeypatch, capsys):
+        """unittest for SelectNamesGui.invert_selection
+        """
+        def mock_get(cb):
+            print(f'called SelectNamesGui.get_checkbox_value with arg {cb}')
+            return True
+        def mock_set(*args):
+            print('called SelectNamesGui.set_checkbox_value with args', args)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.get_checkbox_value = mock_get
+        testobj.gui.set_checkbox_value = mock_set
+        testobj.checklist = ['cb1', 'cb2']
+        testobj.invert_selection()
+        assert capsys.readouterr().out == (
+            "called SelectNamesGui.get_checkbox_value with arg cb1\n"
+            "called SelectNamesGui.set_checkbox_value with args ('cb1', False)\n"
+            "called SelectNamesGui.get_checkbox_value with arg cb2\n"
+            "called SelectNamesGui.set_checkbox_value with args ('cb2', False)\n")
 
     def test_show(self, monkeypatch, capsys):
         """unittest for SelectNames.show

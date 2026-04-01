@@ -589,14 +589,25 @@ class SelectNames:
         line = self.gui.add_line()
         self.gui.add_text_to_line(line, headingtext)
         line = self.gui.add_line()
-        self.sel_all = self.gui.add_checkbox_to_line(line, 'Select/Unselect All',
-                                                     self.gui.select_all)
-        self.flip_sel = self.gui.add_button_to_line(line, 'Invert selection',
-                                                    self.gui.invert_selection)
+        self.sel_all = self.gui.add_checkbox_to_line(line, 'Select/Unselect All', self.select_all)
+        self.flip_sel = self.gui.add_button_to_line(line, 'Invert selection', self.invert_selection)
         line = self.gui.add_line()
         self.checklist = self.gui.add_selectionlist(line, [str(x) for x in self.parent.names])
         line = self.gui.add_line()
         self.gui.add_buttons(line, [("&Terug", self.gui.cancel), ("&Klaar", self.gui.confirm)])
+
+    def select_all(self):
+        """check or uncheck all boxes
+        """
+        state = self.gui.get_checkbox_value(self.sel_all)
+        for cb in self.checklist:
+            self.gui.set_checkbox_value(cb, state)
+
+    def invert_selection(self):
+        """check unchecked and uncheck checked boxes
+        """
+        for cb in self.checklist:
+            self.gui.set_checkbox_value(cb, not self.gui.get_checkbox_value(cb))
 
     def show(self):
         """show the dialog screen
@@ -708,6 +719,7 @@ class Results:
             if ix == 0:
                 kop = line
             elif line != "":
+                # print(line)
                 where, what = line.split(": ", 1)
                 if self.parent.apptype == "single-file":
                     where = where.split("r. ", 1)[1] if "r. " in where else ""

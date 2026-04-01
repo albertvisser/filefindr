@@ -287,18 +287,13 @@ class SelectNamesGui(qtw.QDialog):
         result = self.exec()
         return result == qtw.QDialog.DialogCode.Accepted
 
-    def select_all(self):
-        """check or uncheck all boxes
-        """
-        state = self.sel_all.isChecked()
-        for cb in self.checklist:
-            cb.setChecked(state)
+    def get_checkbox_value(self, cb):
+        "return the state of a checkbox"
+        return cb.isChecked()
 
-    def invert_selection(self):
-        """check unchecked and uncheck checked boxes
-        """
-        for cb in self.checklist:
-            cb.setChecked(not cb.isChecked())
+    def set_checkbox_value(self, cb, value):
+        "set the state of a checkboc"
+        cb.setChecked(value)
 
     def cancel(self):
         "dialoog afbreken"
