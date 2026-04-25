@@ -667,9 +667,8 @@ class Finder:
                         in_line = lineno + from_line
                         if in_line != last_in_line:
                             self.rpt.append(f"{best} r. {in_line}: {lines[in_line - 1].rstrip()}")
-                        last_in_line = in_line
-                    # from_line = lineno -- lineno is geen absolute index op linestarts
-                    from_line = linestarts.index(linestart)  # werkt alleen bij unieke waarden
+                            last_in_line = in_line
+                    from_line = linestarts.index(linestart)
                     break
         return bool(list(result_list))  # found
 

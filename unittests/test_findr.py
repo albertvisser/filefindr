@@ -1562,10 +1562,6 @@ class TestFinder:
         #        "in_line, values: 3 {0, -1}\n"
         #        "in_line, values: 4 {0, 1}\n")
 
-# 666->668,
-# vind in result_list
-#  vind.start() < linestart
-#    lineno + from_line != last_in_line
     def test_old_rgx_search(self, monkeypatch, capsys):
         """unittest for Finder.old_rgx_search
         """
@@ -1588,6 +1584,12 @@ class TestFinder:
             def finditer(self, arg):
                 print(f"called regex.finditer with arg '{arg}'")
                 return [MockMatch(4), MockMatch(18)]
+        class MockRegex3:
+            """stub for re.compile result
+            """
+            def finditer(self, arg):
+                print(f"called regex.finditer with arg '{arg}'")
+                return [MockMatch(6), MockMatch(10), MockMatch(18)]
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.rpt = []
         testobj.p = {'wijzig': False}
@@ -1601,11 +1603,17 @@ class TestFinder:
         assert testobj.rpt == []
         assert capsys.readouterr().out == "called regex.finditer with arg 'testdatalines'\n"
 
-        # breakpoint()
         assert testobj.old_rgx_search(['test', 'data', 'lines'], [0, 5, 12, 20], 'testfile')
         assert testobj.rpt == ['testfile r. 1: test', 'testfile r. 3: lines']
         assert capsys.readouterr().out == "called regex.finditer with arg 'testdatalines'\n"
 
+        testobj.rgx = MockRegex3()
+        testobj.rpt = []
+        assert testobj.old_rgx_search(['test', 'data', 'lines'], [0, 5, 12, 20], 'testfile')
+        assert testobj.rpt == ['testfile r. 2: data', 'testfile r. 3: lines']
+        assert capsys.readouterr().out == "called regex.finditer with arg 'testdatalines'\n"
+
+        testobj.rgx = MockRegex2()
         testobj.rpt = []
         testobj.p = {'wijzig': True}
         assert testobj.old_rgx_search(['test', 'data', 'lines'], [0, 5, 12, 20], 'testfile')
