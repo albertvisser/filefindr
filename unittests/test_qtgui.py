@@ -62,7 +62,7 @@ class TestAfriftGui:
         master = MockAfrift()
         master.title = 'title'
         master.iconame = 'icon'
-        testobj = testee.AfriftGui(master)
+        _testobj = testee.AfriftGui(master)
         assert capsys.readouterr().out == ("called Afrift.__init__\n"
                                            "called AfriftGui.__init__\n"
                                            "called Application.__init__\n"
@@ -519,7 +519,7 @@ class TestSelectNamesGui:
         master = MockSelect()
         master.title = 'title'
         master.iconame = 'ico'
-        testobj = testee.SelectNamesGui(parent, master)
+        _testobj = testee.SelectNamesGui(parent, master)
         assert capsys.readouterr().out == ("called Afrift.__init__\n"
                                            "called AfriftGui.__init__\n"
                                            "called Selectnames.__init__\n"
@@ -917,7 +917,7 @@ class TestResultsGui:
         testobj = self.setup_testobj(monkeypatch, capsys)
         hbox = mockqtw.MockHBoxLayout()
         assert capsys.readouterr().out == "called HBox.__init__\n"
-        result = testobj.add_stretch_to_line(hbox)
+        _result = testobj.add_stretch_to_line(hbox)
         assert capsys.readouterr().out == "called HBox.addStretch\n"
 
     def test_disable_widget(self, monkeypatch, capsys):

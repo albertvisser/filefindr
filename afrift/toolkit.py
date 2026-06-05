@@ -1,2 +1,5 @@
-# voor nu: qt of wx
+"""specify which gui toolkit to use
+
+voor nu: qt of wx
+"""
 toolkit = 'qt'

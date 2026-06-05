@@ -103,7 +103,7 @@ class AfriftGui(wx.Frame):
         self.row += 1
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         accel_list = []
-        for ix, bdef in enumerate(buttondefs):
+        for bdef in buttondefs:
             text, callback, shortcut = bdef
             btn = wx.Button(self.pnl, -1, size=(-1, TXTH), label=text)
             btn.Bind(wx.EVT_BUTTON, callback)

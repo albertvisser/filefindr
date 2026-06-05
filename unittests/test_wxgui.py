@@ -36,7 +36,7 @@ class TestMyListCtrl:
                 "called ListCtrl.__init__ with args"
                 " ('parent',) {'pos': wx.Point(-1, -1), 'size': wx.Size(-1, -1), 'style': 0}\n"
                 "called ListCtrlAutoWidthMixin.__init__ with args () {}\n")
-        testobj = testee.MyListCtrl(parent, pos="pos", size="size", style="style")
+        _testobj = testee.MyListCtrl(parent, pos="pos", size="size", style="style")
         assert capsys.readouterr().out == (
                 "called ListCtrl.__init__ with args"
                 " ('parent',) {'pos': 'pos', 'size': 'size', 'style': 'style'}\n"
@@ -543,7 +543,7 @@ class TestSelectNamesGui:
         monkeypatch.setattr(testee.wx, 'Icon', mockwx.MockIcon)
         parent = types.SimpleNamespace(gui='AfriftGui')
         master = types.SimpleNamespace(title='title', iconame="icon")
-        testobj = testee.SelectNamesGui(parent, master)
+        _testobj = testee.SelectNamesGui(parent, master)
         assert capsys.readouterr().out == (
                 "called Dialog.__init__ with args () {'title': 'title', 'style': 536877120}\n"
                 "called Icon.__init__ with args ('icon', 3)\n"
