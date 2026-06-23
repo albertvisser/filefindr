@@ -692,7 +692,7 @@ class Results:
         self.gui.add_text_to_line(line, 'Action:')
         self.gui.add_buttons_to_line(line, (("&Klaar", self.gui.klaar, True),))
         if self.show_result_details:
-            enable = bool(self.parent.p['vervang'])     # FIXME: is dit wel goed?
+            enable = not bool(self.parent.p['vervang'])
             self.gui.add_buttons_to_line(line, (("&Repeat Search", self.refresh, enable),
                                          ('&Zoek anders', self.zoek_anders, True),
                                          ('Vervang in &Selectie', self.vervang_in_sel, enable),
