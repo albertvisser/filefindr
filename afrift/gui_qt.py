@@ -421,9 +421,9 @@ class ResultsGui(qtw.QDialog):
             item.setFlags(core.Qt.ItemFlag.ItemIsSelectable | core.Qt.ItemFlag.ItemIsEnabled)
             lijst.setItem(ix, col, item)
 
-    def clear_contents(self):
+    def clear_contents(self, lijst):
         "remove all entries from list"
-        self.lijst.clearContents()
+        lijst.clearContents()
 
     def go(self):
         """show the dialog screen
@@ -458,11 +458,11 @@ class ResultsGui(qtw.QDialog):
         "pop up a dialog to get user input"
         return qtw.QInputDialog.getText(self, title, prompt)
 
-    def get_selection(self):
+    def get_selection(self, lijst):
         "get the selected items"
         # selected_rows = set([x.row() for x in self.lijst.selectedItems()])
-        selected_rows = {x.row() for x in self.lijst.selectedItems()}
-        selected_lines = [self.lijst.item(x, 0).text() for x in selected_rows]
+        selected_rows = {x.row() for x in lijst.selectedItems()}
+        selected_lines = [lijst.item(x, 0).text() for x in selected_rows]
         return selected_lines
 
     def copy_to_clipboard(self, text):

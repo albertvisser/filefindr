@@ -44,8 +44,8 @@ class MockResultsGui:
         print('called ResultsGui.finalize_display')
     def populate_list(self, *args):
         print('called ResultsGui.populate_list with args', args)
-    def clear_contents(self):
-        print('called ResultsGui.clear_contents')
+    def clear_contents(self, *args):
+        print('called ResultsGui.clear_contents with args', args)
     def go(self):
         print('called ResultsGui.go')
     # def set_header(self, text):
@@ -586,6 +586,7 @@ class TestAfrift:
         """unittest for Afrift.setup_screen
         """
         class MockGui:
+            "teststub for AfriftGui object"
             def init_screen(self):
                 print('called AfriftGui.init_screen')
             def add_combobox_row(self, *args, **kwargs):
@@ -906,6 +907,7 @@ class TestAfrift:
         """unittest for AfriftGui.update_defaults
         """
         class MockGui:
+            "teststub for AfriftGui object"
             def get_sender_value(self):
                 print('called AfriftGui.get_sender_value')
                 return sender_value
@@ -2468,25 +2470,37 @@ class TestResults:
     def test_refresh(self, monkeypatch, capsys):
         """unittest for Results.refresh
         """
-        class MockFindr:
+        class MockFinder:
             """stub"""
+            def setup_search(self):
+                print('called Finder.setup_search')
             def go(self):
-                print('called Findr.go')
+                print('called Finder.go')
                 self.rpt = ['just a header']
+            def replace_selected(self, *args):
+                print('called Finder.replace_selected with args', args)
+                self.rpt = ['a header']
+                return 2
         def mock_setcursor(value):
             print(f'called AfriftGui.set_waitcursor with arg {value}')
         def mock_go_2(self):
-            print('called Findr.go')
+            print('called Finder.go')
             self.rpt = ['header', 'number: replace message']
         def mock_go_3(self):
-            print('called Findr.go')
+            print('called Finder.go')
             self.rpt = ['header', 'line 1', 'line 2']
+        # def mock_replace(self, *args):
+        #     print('called Finder.replace_selected with args', args)
+        #     self.rpt = ['a header', 'a message']
+        # def mock_replace_2(self, *args):
+        #     print('called Finder.replace_selected with args', args)
+        #     self.rpt = ['a header', 'a line', 'another line']
         def mock_build():
             print('called TestResults.build_list')
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.messages = {'nope': 'nope'}
         testobj.parent.gui.set_waitcursor = mock_setcursor
-        testobj.parent.zoekvervang = MockFindr()
+        testobj.parent.zoekvervang = MockFinder()
         testobj.parent.zoekvervang.specs = ['aa', 'bb']
         testobj.parent.zoekvervang.p = {'zoek': 'a needle', 'wijzig': False, }
         testobj.parent.resulttitel = 'xxx'
@@ -2499,40 +2513,54 @@ class TestResults:
 
         testobj.refresh()
         assert capsys.readouterr().out == (
-                "called ResultsGui.clear_contents\n"
+                "called ResultsGui.clear_contents with args ('results_list',)\n"
                 "called AfriftGui.set_waitcursor with arg True\n"
-                "called Findr.go\n"
+                "called Finder.go\n"
                 "called AfriftGui.set_waitcursor with arg False\n"
                 "called ResultsGui.meld with args ('xxx', 'just a header\\nNiks gevonden')\n")
 
-        monkeypatch.setattr(MockFindr, 'go', mock_go_2)
+        monkeypatch.setattr(MockFinder, 'go', mock_go_2)
         testobj.refresh()
         assert capsys.readouterr().out == (
-                "called ResultsGui.clear_contents\n"
+                "called ResultsGui.clear_contents with args ('results_list',)\n"
                 "called AfriftGui.set_waitcursor with arg True\n"
-                "called Findr.go\n"
+                "called Finder.go\n"
                 "called AfriftGui.set_waitcursor with arg False\n"
                 "called ResultsGui.set_header with args ('textfield', 'header (1 items)')\n"
                 "called TestResults.build_list\n"
                 "called ResultsGui.populate_list with args ('results_list', [])\n")
 
-        testobj.parent.zoekvervang.p['wijzig'] = True
-        testobj.refresh()
+        testobj.refresh(replace_text='rtext')  # replace all
         assert capsys.readouterr().out == (
-                "called ResultsGui.clear_contents\n"
+                "called ResultsGui.clear_contents with args ('results_list',)\n"
+                "called Finder.setup_search\n"
                 "called AfriftGui.set_waitcursor with arg True\n"
-                "called Findr.go\n"
+                "called Finder.go\n"
                 "called AfriftGui.set_waitcursor with arg False\n"
                 "called ResultsGui.set_header with args ('textfield', 'header (replace message)')\n"
                 "called TestResults.build_list\n"
-                "called ResultsGui.populate_list with args ('results_list', [])\n")
+                "called ResultsGui.populate_list with args ('results_list', [])\n"
+                "called Finder.setup_search\n")
 
-        monkeypatch.setattr(MockFindr, 'go', mock_go_3)
+        testobj.refresh(replace_text='rtext', replace_locs='rlocs')  # replace selected
+        assert capsys.readouterr().out == (
+                "called ResultsGui.clear_contents with args ('results_list',)\n"
+                "called Finder.setup_search\n"
+                "called AfriftGui.set_waitcursor with arg True\n"
+                "called Finder.replace_selected with args ('rtext', 'rlocs')\n"
+                "called AfriftGui.set_waitcursor with arg False\n"
+                "called ResultsGui.set_header with args"
+                " ('textfield', 'a header (2 regels)')\n"
+                "called TestResults.build_list\n"
+                "called ResultsGui.populate_list with args ('results_list', [])\n"
+                "called Finder.setup_search\n")
+
+        monkeypatch.setattr(MockFinder, 'go', mock_go_3)
         testobj.refresh()
         assert capsys.readouterr().out == (
-                "called ResultsGui.clear_contents\n"
+                "called ResultsGui.clear_contents with args ('results_list',)\n"
                 "called AfriftGui.set_waitcursor with arg True\n"
-                "called Findr.go\n"
+                "called Finder.go\n"
                 "called AfriftGui.set_waitcursor with arg False\n"
                 "called ResultsGui.set_header with args ('textfield', 'header (2 items)')\n"
                 "called TestResults.build_list\n"
@@ -2541,9 +2569,9 @@ class TestResults:
         testobj.parent.apptype = 'multi'
         testobj.refresh()
         assert capsys.readouterr().out == (
-                "called ResultsGui.clear_contents\n"
+                "called ResultsGui.clear_contents with args ('results_list',)\n"
                 "called AfriftGui.set_waitcursor with arg True\n"
-                "called Findr.go\n"
+                "called Finder.go\n"
                 "called AfriftGui.set_waitcursor with arg False\n"
                 "called ResultsGui.set_header with args ('textfield', 'header (2 items)\\n"
                 'De bestanden staan allemaal in of onder de directory "root"\')\n'
@@ -2553,14 +2581,17 @@ class TestResults:
         testobj.parent.apptype = 'single'
         testobj.refresh(replace_count=10, replace_text='a pointy stick')
         assert capsys.readouterr().out == (
-                "called ResultsGui.clear_contents\n"
+                "called ResultsGui.clear_contents with args ('results_list',)\n"
+                "called Finder.setup_search\n"
                 "called AfriftGui.set_waitcursor with arg True\n"
-                "called Findr.go\n"
+                "called Finder.go\n"
                 "called AfriftGui.set_waitcursor with arg False\n"
-                "called ResultsGui.set_header with args ('textfield',"
-                " '`a needle` with `a pointy stick` replaced 10 in lines\\nheader (2 items)')\n"
+                # "called ResultsGui.set_header with args ('textfield',"
+                # " '`a needle` with `a pointy stick` replaced 10 in lines\\nheader (2 items)')\n"
+                "called ResultsGui.set_header with args ('textfield', 'header (2 items)')\n"
                 "called TestResults.build_list\n"
-                "called ResultsGui.populate_list with args ('results_list', [])\n")
+                "called ResultsGui.populate_list with args ('results_list', [])\n"  # )
+                "called Finder.setup_search\n")
 
     def test_check_option_combinations_ok(self, monkeypatch, capsys):
         """unittest for Results.check_option_combinations_ok
@@ -2744,11 +2775,11 @@ class TestResults:
     def test_vervang_in_sel(self, monkeypatch, capsys):
         """unittest for Results.vervang_in_sel
         """
-        def mock_get_sel():
-            print('called ResultsGui.get_selection')
+        def mock_get_sel(*args):
+            print('called ResultsGui.get_selection with args', args)
             return []
-        def mock_get_sel_2():
-            print('called ResultsGui.get_selection')
+        def mock_get_sel_2(*args):
+            print('called ResultsGui.get_selection with args', args)
             return ['file r. x']
         def mock_get_text(*args):
             print('called ResultsGui.get_text_from_user with args', args)
@@ -2757,37 +2788,39 @@ class TestResults:
             print('called ResultsGui.get_text_from_user with args', args)
             return 'yyy', True
         def mock_replace(*args):
-            print('called Findr.replace_selected with args', args)
+            print('called Finder.replace_selected with args', args)
             return 5
         def mock_refresh(**kwargs):
             print('called Results.refresh with args', kwargs)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.messages = {'replsel': 'findr {} in sel', 'noitems': 'No items'}
+        testobj.lijst = 'lijst'
         testobj.parent.p = {'zoek': 'xxx'}
         testobj.parent.resulttitel = 'Results'
         testobj.parent.zoekvervang.replace_selected = mock_replace
+        testobj.parent.zoekvervang.p = {'zoek': 'xxxx'}
         testobj.gui.get_selection = mock_get_sel
         testobj.gui.get_text_from_user = mock_get_text
         testobj.refresh = mock_refresh
         testobj.vervang_in_sel()
         assert capsys.readouterr().out == (
-                "called ResultsGui.get_selection\n"
+                "called ResultsGui.get_selection with args ('lijst',)\n"
                 "called ResultsGui.meld with args"
                 " ('Results', 'Geen regels geselecteerd om in te vervangen')\n")
         testobj.gui.get_selection = mock_get_sel_2
         testobj.vervang_in_sel()
         assert capsys.readouterr().out == (
-                "called ResultsGui.get_selection\n"
+                "called ResultsGui.get_selection with args ('lijst',)\n"
                 "called ResultsGui.get_text_from_user with args"
                 " ('Results', 'vervang `xxx` in geselecteerde regels door:')\n")
         testobj.gui.get_text_from_user = mock_get_text_2
         testobj.vervang_in_sel()
         assert capsys.readouterr().out == (
-                "called ResultsGui.get_selection\n"
+                "called ResultsGui.get_selection with args ('lijst',)\n"
                 "called ResultsGui.get_text_from_user with args"
                 " ('Results', 'vervang `xxx` in geselecteerde regels door:')\n"
-                "called Findr.replace_selected with args ('yyy', [['file', 'x']])\n"
-                "called Results.refresh with args {'replace_text': 'yyy', 'replace_count': 5}\n")
+                "called Results.refresh with args"
+                " {'replace_text': 'yyy', 'replace_locs': [['file', 'x']]}\n")
 
     def test_vervang_alles(self, monkeypatch, capsys):
         """unittest for Results.vervang_alles
@@ -2799,7 +2832,7 @@ class TestResults:
             print('called ResultsGui.get_text_from_user with args', args)
             return 'xxx', True
         def mock_setup():
-            print('called Findr.setup_search')
+            print('called Finder.setup_search')
         def mock_refresh(**kwargs):
             print('called Results.refresh with args', kwargs)
         testobj = self.setup_testobj(monkeypatch, capsys)
@@ -2819,8 +2852,7 @@ class TestResults:
         assert capsys.readouterr().out == (
                 "called ResultsGui.get_text_from_user with args"
                 " ('Results', 'vervang `xxx` in alle regels door:')\n"
-                "called Findr.setup_search\n"
-                "called Results.refresh with args {}\n")
+                "called Results.refresh with args {'replace_text': 'xxx'}\n")
 
     def test_zoek_anders(self, monkeypatch, capsys):
         """unittest for Results.zoek_anders
@@ -2833,17 +2865,17 @@ class TestResults:
             return 'yyy', True
         def mock_refresh(**kwargs):
             print('called Results.refresh with args', kwargs)
-        class MockFindr:
+        class MockFinder:
             "stub for findr.Finder"
             p = {}
             def setup_search(self):
-                print('called Findr.setup_search')
-                print("Findr.p['zoek'] =", self.p['zoek'])
+                print('called Finder.setup_search')
+                print("Finder.p['zoek'] =", self.p['zoek'])
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.messages = {'other': 'new search'}
         testobj.parent.p = {'zoek': 'xxx'}
         testobj.parent.resulttitel = 'Results'
-        testobj.parent.zoekvervang = MockFindr()
+        testobj.parent.zoekvervang = MockFinder()
         testobj.parent.zoekvervang.p = testobj.parent.p
         testobj.refresh = mock_refresh
         testobj.gui.get_text_from_user = mock_get_text
@@ -2856,8 +2888,8 @@ class TestResults:
         assert capsys.readouterr().out == (
                 "called ResultsGui.get_text_from_user with args"
                 " ('Results', 'zoek in dezelfde selectie naar:')\n"
-                "called Findr.setup_search\n"
-                "Findr.p['zoek'] = yyy\n"
+                "called Finder.setup_search\n"
+                "Finder.p['zoek'] = yyy\n"
                 "called Results.refresh with args {}\n"
-                "called Findr.setup_search\n"
-                "Findr.p['zoek'] = xxx\n")
+                "called Finder.setup_search\n"
+                "Finder.p['zoek'] = xxx\n")

@@ -977,11 +977,11 @@ class TestResultsGui:
         """unittest for ResultsGui.clear_contents
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.lijst = mockqtw.MockTable()
+        lijst = mockqtw.MockTable()
         assert capsys.readouterr().out == ("called Table.__init__ with args ()\n"
                                            "called Header.__init__\n"
                                            "called Header.__init__\n")
-        testobj.clear_contents()
+        testobj.clear_contents(lijst)
         assert capsys.readouterr().out == "called Table.clearContents\n"
 
     def test_go(self, monkeypatch, capsys):
@@ -1056,15 +1056,15 @@ class TestResultsGui:
                 return types.SimpleNamespace(text=lambda: 'yyy')
             return types.SimpleNamespace(text='zzz')
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.lijst = mockqtw.MockTable()
+        lijst = mockqtw.MockTable()
         assert capsys.readouterr().out == ("called Table.__init__ with args ()\n"
                                            "called Header.__init__\n"
                                            "called Header.__init__\n")
-        testobj.lijst.item = mock_item
-        assert testobj.get_selection() == []
+        lijst.item = mock_item
+        assert testobj.get_selection(lijst) == []
         assert capsys.readouterr().out == ("called Table.selectedItems\n")
-        testobj.lijst.selectedItems = mock_selected
-        assert testobj.get_selection() == ['xxx', 'yyy']
+        lijst.selectedItems = mock_selected
+        assert testobj.get_selection(lijst) == ['xxx', 'yyy']
         assert capsys.readouterr().out == ("called Table.selectedItems\n"
                                            "called Table.item with args (1, 0)\n"
                                            "called Table.item with args (2, 0)\n")

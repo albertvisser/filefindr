@@ -425,7 +425,7 @@ class Finder:
         flags = re.MULTILINE
         if not self.p['case']:
             flags |= re.IGNORECASE
-        return re.compile(str(zoek), flags)
+        return [re.compile(str(zoek), flags)]
 
     def build_regexes(self):
         """build the search regexp(s)
@@ -655,12 +655,12 @@ class Finder:
     def old_rgx_search(self, lines, linestarts, best):
         """search via regex and format results for output
         """
-        # found = False
         from_line = 0
         last_in_line = 0
-        result_list = self.rgx.finditer("".join(lines))
+        # dit gaat ervan uit dat er maar één regex is, volgens mij kan dat
+        result_list = list(self.rgx[0].finditer("".join(lines)))
+        found = bool(result_list)
         for vind in result_list:
-            # found = True
             for lineno, linestart in enumerate(linestarts[from_line:]):
                 if vind.start() < linestart:
                     if not self.p['wijzig']:
@@ -670,12 +670,13 @@ class Finder:
                             last_in_line = in_line
                     from_line = linestarts.index(linestart)
                     break
-        return bool(list(result_list))  # found
+        return found
 
     def replace_and_report(self, lines, best):
         """replace via regex
         """
-        ndata, aant = self.rgx.subn(self.p["vervang"], "".join(lines))
+        # dit gaat ervan uit dat er maar één regex is, volgens mij kan dat
+        ndata, aant = self.rgx[0].subn(self.p["vervang"], "".join(lines))
         best_s = str(best)
         self.rpt.append(f"{best_s}: {aant} keer")
         self.backup_if_needed(best_s)

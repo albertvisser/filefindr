@@ -719,7 +719,6 @@ class Results:
             if ix == 0:
                 kop = line
             elif line != "":
-                # print(line)
                 where, what = line.split(": ", 1)
                 if self.parent.apptype == "single-file":
                     where = where.split("r. ", 1)[1] if "r. " in where else ""
@@ -780,13 +779,24 @@ class Results:
         """repeat search and show new results
         """
         self.results = []
-        self.gui.clear_contents()
+        self.gui.clear_contents(self.lijst)
         self.parent.zoekvervang.rpt = ["".join(self.parent.zoekvervang.specs)]
+        self.parent.zoekvervang.p['vervang'] = None
+        self.parent.zoekvervang.p['wijzig'] = False
+        if 'replace_text' in kwargs:
+            self.parent.zoekvervang.rpt = []
+            self.parent.zoekvervang.p['vervang'] = kwargs['replace_text']
+            self.parent.zoekvervang.p['wijzig'] = True
+            self.parent.zoekvervang.setup_search()
         self.parent.gui.set_waitcursor(True)
-        self.parent.zoekvervang.go()
+        if kwargs.get('replace_locs', ''):
+            replaced = self.parent.zoekvervang.replace_selected(kwargs['replace_text'],
+                                                                kwargs['replace_locs'])
+        else:
+            self.parent.zoekvervang.go()
         self.parent.gui.set_waitcursor(False)
-        if len(self.parent.zoekvervang.rpt) == len(['melding']):
-            # self.gui.breekaf(self.messages['nope'], done=False)
+        if (len(self.parent.zoekvervang.rpt) == len(['melding'])  # :
+                and not self.parent.zoekvervang.p['wijzig']):
             message = f"{self.parent.zoekvervang.rpt[0]}\nNiks gevonden"
             self.gui.meld(self.parent.resulttitel, message)
             return
@@ -797,11 +807,13 @@ class Results:
             count_txt = f'{len(self.parent.zoekvervang.rpt) - 1} items'
 
         label_txt = ''
-        replcount = kwargs.get('replace_count', '')
-        if replcount:
-            srch = self.parent.zoekvervang.p['zoek']
-            repl = kwargs.get('replace_text', '')
-            label_txt = f'`{srch}` with `{repl}` replaced {replcount} in lines\n'
+        # replcount = replaced if 'replace_locs' in kwargs else 0
+        # if replcount:
+        #     srch = self.parent.zoekvervang.p['zoek']
+        #     repl = kwargs.get('replace_text', '')
+        #     label_txt = f'`{srch}` with `{repl}` replaced {replcount} in lines\n'
+        if 'replace_locs' in kwargs:
+            count_txt = f'{replaced} regels'
         label_txt += f"{self.parent.zoekvervang.rpt[0]} ({count_txt})"
         if self.parent.apptype == "multi":
             label_txt += '\n' + common_path_txt.format(self.common)
@@ -809,6 +821,12 @@ class Results:
         self.gui.set_header(self.hdr, label_txt)
         self.build_list()
         self.gui.populate_list(self.lijst, self.results)
+        # vervang gegevens terugzetten
+        if 'replace_text' in kwargs:
+            self.parent.zoekvervang.rpt = []
+            self.parent.zoekvervang.p['vervang'] = None
+            self.parent.zoekvervang.p['wijzig'] = False
+            self.parent.zoekvervang.setup_search()
 
     def check_option_combinations_ok(self):
         """onzinnige combinatie(s) uitsluiten
@@ -877,7 +895,7 @@ class Results:
     def vervang_in_sel(self, *args):
         "achteraf vervangen in geselecteerde regels"
         # bepaal geselecteerde regels
-        items = self.gui.get_selection()
+        items = self.gui.get_selection(self.lijst)
         if not items:
             self.gui.meld(self.parent.resulttitel, 'Geen regels geselecteerd om in te vervangen')
             return
@@ -885,19 +903,21 @@ class Results:
         prompt = f"vervang `{self.parent.p['zoek']}` in geselecteerde regels door:"
         text, ok = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
         if ok:
-            replaced = self.parent.zoekvervang.replace_selected(text, lines_to_replace)
-            # self.parent.zoekvervang.setup_search() -- is dit nodig als het niet wijzigt?
-            self.refresh(replace_text=text, replace_count=replaced)
+            # replaced = self.parent.zoekvervang.replace_selected(text, lines_to_replace)
+            # # self.parent.zoekvervang.setup_search() -- is dit nodig als het niet wijzigt?
+            # self.refresh(replace_text=text, replace_count=replaced)
+            self.refresh(replace_text=text, replace_locs=lines_to_replace)
 
     def vervang_alles(self, *args):
         "achteraf vervangen in alle regels"
         prompt = f"vervang `{self.parent.p['zoek']}` in alle regels door:"
         text, ok = self.gui.get_text_from_user(self.parent.resulttitel, prompt)
         if ok:
-            self.parent.zoekvervang.p['vervang'] = text
-            self.parent.zoekvervang.p['wijzig'] = True
-            self.parent.zoekvervang.setup_search()
-            self.refresh()
+            # self.parent.zoekvervang.p['vervang'] = text
+            # self.parent.zoekvervang.p['wijzig'] = True
+            # self.parent.zoekvervang.setup_search()
+            # self.refresh()
+            self.refresh(replace_text=text)
 
     def zoek_anders(self, *args):
         "zoek naar iets anders in dezelfde selectie"
