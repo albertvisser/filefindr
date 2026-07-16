@@ -725,8 +725,11 @@ class Results:
                 if self.common and self.common != '/':
                     where = where.replace(str(self.common), "")
                 if self.show_context:
-                    where, rest = where.rsplit(' (', 1)
-                    context = rest.split(')')[0]
+                    if not ' (' in where:
+                        context = ''
+                    else:
+                        where, rest = where.rsplit(' (', 1)
+                        context = rest.split(')')[0]
                     self.results.append((where, context, what))
                 else:
                     self.results.append((where, what))
