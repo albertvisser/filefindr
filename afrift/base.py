@@ -65,9 +65,6 @@ class Afrift:
         """
         log(f'in Afrift.init: cwd is {pathlib.Path.cwd()}')
         log(f'  kwargs is {kwargs}')
-        # self.apptype = kwargs.pop('apptype', '')
-        # fnaam = kwargs.pop('fnaam', '')
-        # flist = kwargs.pop('flist', None)
         fnames = kwargs.pop('fnames', [])
         list_file = kwargs.pop('list_file', '')
         self.title = "Albert's find-replace in files tool"
@@ -204,7 +201,8 @@ class Afrift:
 
         self.always_replace = False
         self.maak_backups = True
-        self.exit_when_ready = False
+        # self.exit_when_ready = False
+        self.exit_when_ready = True
 
     def read_from_ini(self, path=None):
         """lees ini file (met eerder gebruikte zoekinstellingen)
@@ -235,20 +233,20 @@ class Afrift:
         if not self.p["extlist"]:
             self.p["extlist"] = []
 
-        # saved_options alleen toepassen als use-saved is opgegeven?
         self.extraopts['use_saved'] = cmdline_options.pop('use_saved', False)
         if not self.extraopts['use_saved']:
             for key, argname in self.save_options_keys:
                 self.p[key] = cmdline_options.pop(argname, self.p.get(key, False))
 
-        for arg in ('regex', 'follow_symlinks', 'select_subdirs', 'select_files',
-                    'dont_save', 'no_gui', 'output_file', 'full_path', 'as_csv', 'summarize'):
+        # for arg in ('regex', 'follow_symlinks', 'select_subdirs', 'select_files',
+        #             'dont_save', 'no_gui', 'output_file', 'full_path', 'as_csv', 'summarize'):
+        for arg in self.screen_choices:
             if arg in self.outopts:
                 self.outopts[arg] = cmdline_options.pop(arg, '') or self.outopts[arg]
-            else:
-                self.extraopts[arg] = cmdline_options.pop(arg, '')
-        self.maak_backups = cmdline_options.pop('backup_originals', '')
-        self.exit_when_ready = True   # altijd aan?
+            # else:
+            elif arg not in [x[0] for x in self.save_options_keys]:
+                self.extraopts[arg] = cmdline_options.pop(arg, False)
+        self.maak_backups = cmdline_options.pop('backup_originals', False)
 
     def setup_screen(self):
         "set up display"

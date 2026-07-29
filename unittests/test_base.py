@@ -474,7 +474,7 @@ class TestAfrift:
         assert testobj.editor_option == [['SciTE'], '-open:{}', '-goto:{}']
         assert not testobj.always_replace
         assert testobj.maak_backups
-        assert not testobj.exit_when_ready
+        assert testobj.exit_when_ready
         assert capsys.readouterr().out == ('called read_from_ini with args ()\n')
 
         (mockbase / 'open_result').write_text(
@@ -486,7 +486,7 @@ class TestAfrift:
                                           '--', 'vim'], '{}', '+{}']
         assert not testobj.always_replace
         assert testobj.maak_backups
-        assert not testobj.exit_when_ready
+        assert testobj.exit_when_ready
         assert capsys.readouterr().out == ('called read_from_ini with args ()\n')
 
         testobj.p = {'filelist': [pathlib.Path.home() / 'x']}
@@ -546,41 +546,68 @@ class TestAfrift:
         """unittest for Afrift.apply_cmdline_options
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.screen_choices = {'regex': False, 'case': False, 'woord': False, 'subdirs': False,
+                                  'follow_symlinks': False, 'select_subdirs': False,
+                                  'select_files': False, 'context': False, 'negeer': False,
+                                  'dont_save': False, 'no_gui': False,
+                                  'output_file': False, 'full_path': False, 'as_csv': False,
+                                  'summarize': False}
+        testobj.save_options_keys = (("case", 'case_sensitive'), ("woord", 'whole_words'),
+                                     ("subdirs", 'recursive'), ("context", 'python_context'),
+                                     ("negeer", 'ignore_comments'))
+        testobj.outopts = {'full_path': None, 'as_csv': None, 'summarize': None}
         testobj.apply_cmdline_options({})
         assert testobj.p == {'zoek': '', 'extlist': [], 'case': False, 'woord': False,
                              'subdirs': False, 'context': False, 'negeer': False}
-        assert testobj.extraopts == {'use_saved': False, 'regex': '', 'follow_symlinks': '',
-                                     'select_subdirs': '', 'select_files': '', 'dont_save': '',
-                                     'no_gui': '', 'output_file': ''}
-        assert testobj.outopts == {'full_path': False, 'as_csv': False, 'summarize': False}
+        assert testobj.extraopts == {'use_saved': False, 'regex': False, 'follow_symlinks': False,
+                                     'select_subdirs': False, 'select_files': False,
+                                     'dont_save': False, 'no_gui': False, 'output_file': False}
+        assert testobj.outopts == {'full_path': None, 'as_csv': None, 'summarize': None}
         assert not testobj.always_replace
-        assert testobj.maak_backups == ''
-        assert testobj.exit_when_ready
+        assert not testobj.maak_backups
 
         testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.screen_choices = {'regex': False, 'case': False, 'woord': False, 'subdirs': False,
+                                  'follow_symlinks': False, 'select_subdirs': False,
+                                  'select_files': False, 'context': False, 'negeer': False,
+                                  'dont_save': False, 'no_gui': False,
+                                  'output_file': False, 'full_path': False, 'as_csv': False,
+                                  'summarize': False}
+        testobj.save_options_keys = (("case", 'case_sensitive'), ("woord", 'whole_words'),
+                                     ("subdirs", 'recursive'), ("context", 'python_context'),
+                                     ("negeer", 'ignore_comments'))
+        testobj.outopts = {'full_path': None, 'as_csv': None, 'summarize': None}
         testobj.apply_cmdline_options({'search': 'zoek', 'replace': 'verv', 'extensions': ['x'],
                                        'use_saved': True})
         assert testobj.p == {'zoek': 'zoek', 'vervang': 'verv', 'extlist': ['x']}
-        assert testobj.extraopts == {'use_saved': True, 'regex': '', 'follow_symlinks': '',
-                                     'select_subdirs': '', 'select_files': '', 'dont_save': '',
-                                     'no_gui': '', 'output_file': ''}
-        assert testobj.outopts == {'full_path': False, 'as_csv': False, 'summarize': False}
+        assert testobj.extraopts == {'use_saved': True, 'regex': False, 'follow_symlinks': False,
+                                     'select_subdirs': False, 'select_files': False,
+                                     'dont_save': False, 'no_gui': False, 'output_file': False}
+        assert testobj.outopts == {'full_path': None, 'as_csv': None, 'summarize': None}
         assert not testobj.always_replace
-        assert testobj.maak_backups == ''
-        assert testobj.exit_when_ready
+        assert not testobj.maak_backups
 
         testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.screen_choices = {'regex': False, 'case': False, 'woord': False, 'subdirs': False,
+                                  'follow_symlinks': False, 'select_subdirs': False,
+                                  'select_files': False, 'context': False, 'negeer': False,
+                                  'dont_save': False, 'no_gui': False,
+                                  'output_file': False, 'full_path': False, 'as_csv': False,
+                                  'summarize': False}
+        testobj.save_options_keys = (("case", 'case_sensitive'), ("woord", 'whole_words'),
+                                     ("subdirs", 'recursive'), ("context", 'python_context'),
+                                     ("negeer", 'ignore_comments'))
+        testobj.outopts = {'full_path': None, 'as_csv': None, 'summarize': None}
         testobj.apply_cmdline_options({'search': 'zoek', 'replace': '', 'summarize': True})
         assert testobj.p == {'zoek': 'zoek', 'vervang': '', 'extlist': [], 'case': False,
                              'woord': False, 'subdirs': False, 'context': False, 'negeer': False}
         # assert testobj.outopts['summarize']
-        assert testobj.extraopts == {'use_saved': False, 'regex': '', 'follow_symlinks': '',
-                                     'select_subdirs': '', 'select_files': '', 'dont_save': '',
-                                     'no_gui': '', 'output_file': ''}
-        assert testobj.outopts == {'full_path': False, 'as_csv': False, 'summarize': True}
+        assert testobj.extraopts == {'use_saved': False, 'regex': False, 'follow_symlinks': False,
+                                     'select_subdirs': False, 'select_files': False,
+                                     'dont_save': False, 'no_gui': False, 'output_file': False}
+        assert testobj.outopts == {'full_path': None, 'as_csv': None, 'summarize': True}
         assert testobj.always_replace
-        assert testobj.maak_backups == ''
-        assert testobj.exit_when_ready
+        assert not testobj.maak_backups
 
     def test_setup_screen(self, monkeypatch, capsys):
         """unittest for Afrift.setup_screen
@@ -2344,6 +2371,11 @@ class TestResults:
         testobj.show_context = True
         testobj.build_list()
         assert testobj.results == ['xxx', ('path_to/file r. j', 'in method', 'text')]
+
+        testobj.parent.zoekvervang.rpt = ['xxx', '', "path_to/file r. j: text"]
+        testobj.results = []
+        testobj.build_list()
+        assert testobj.results == ['xxx', ('path_to/file r. j', '', 'text')]
 
     def test_show(self, monkeypatch, capsys):
         """unittest for Results.show
