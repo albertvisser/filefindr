@@ -471,14 +471,13 @@ class ResultsGui(qtw.QDialog):
         clp = qtw.QApplication.clipboard()
         clp.setText(text)
 
-    def to_result(self):
+    def to_result(self, lijst):
         """show result in file
         """
-        row, column = self.lijst.currentRow(), self.lijst.currentColumn()
+        row, column = lijst.currentRow(), lijst.currentColumn()
         if any((row == -1, column == -1)):
-            self.meld(self.master.parent.resulttitel, 'Select a result first')
-            return
-        self.master.goto_result(row, column)
+            return False
+        return row, column
 
     def klaar(self):
         """finish dialog

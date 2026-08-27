@@ -1082,8 +1082,8 @@ class TestResultsGui:
     def test_to_result(self, monkeypatch, capsys):
         """unittest for ResultsGui.to_result
         """
-        def mock_goto(*args):
-            print("called Results.goto_result with args", args)
+        # def mock_goto(*args):
+        #     print("called Results.goto_result with args", args)
         def mock_col():
             print("called Table.currentColumn")
             return -1
@@ -1099,27 +1099,22 @@ class TestResultsGui:
         assert capsys.readouterr().out == ("called Table.__init__ with args ()\n"
                                            "called Header.__init__\n"
                                            "called Header.__init__\n")
-        testobj.master.goto_result = mock_goto
-        testobj.to_result()
+        # testobj.master.goto_result = mock_goto
+        assert testobj.to_result(testobj.lijst)
         assert capsys.readouterr().out == ("called Table.currentRow\n"
-                                           "called Table.currentColumn\n"
-                                           "called Results.goto_result with args (2, 1)\n")
+                                           "called Table.currentColumn\n")
         testobj.lijst.currentRow = mock_row
-        testobj.to_result()
+        assert not testobj.to_result(testobj.lijst)
         assert capsys.readouterr().out == ("called Table.currentRow\n"
-                                           "called Table.currentColumn\n"
-                                           "called Results.meld with args ('xxx',"
-                                           " 'Select a result first')\n")
+                                           "called Table.currentColumn\n")
         testobj.lijst = mockqtw.MockTable()
         assert capsys.readouterr().out == ("called Table.__init__ with args ()\n"
                                            "called Header.__init__\n"
                                            "called Header.__init__\n")
         testobj.lijst.currentColumn = mock_col
-        testobj.to_result()
+        assert not testobj.to_result(testobj.lijst)
         assert capsys.readouterr().out == ("called Table.currentRow\n"
-                                           "called Table.currentColumn\n"
-                                           "called Results.meld with args ('xxx',"
-                                           " 'Select a result first')\n")
+                                           "called Table.currentColumn\n")
 
     def _test_remember_settings(self, monkeypatch, capsys):
         """unittest for ResultsGui.remember_settings

@@ -68,8 +68,8 @@ class MockResultsGui:
         return []
     def copy_to_clipboard(self, arg):
         print(f"called ResultsGui.copy_to_clipboard with arg '{arg}'")
-    def to_result(self):
-        print('called ResultsGui.to_result')
+    def to_result(self, *args):
+        print('called ResultsGui.to_result with args', args)
     def klaar(self, *args, **kwargs):
         print('called ResultsGui.klaar with args', args, kwargs)
 
@@ -1089,7 +1089,7 @@ class TestAfrift:
         MockFinder.setup_search = mockfinder_setup_search_2
         testobj.extraopts['dont_save'] = False
         testobj.p['filelist'] = [tmp_path]
-        # breakpoint()
+
         testobj.doe()
         assert capsys.readouterr().out == (
                 "called Afrift.setup_parameters\n"
@@ -2206,7 +2206,7 @@ class TestResults:
                 " ('line', 'gezocht en/of 2 vervangen')\n"
                 "called ResultsGui.add_stretch_to_line with args ('line',)\n"
                 "called ResultsGui.add_buttons_to_line with args ('line',"
-                f" (('Go to selected result', {testobj.gui.to_result}, True),)) {{}}\n"
+                f" (('Go to selected result', {testobj.to_result}, True),)) {{}}\n"
                 "called TestResults.build_list\n"
                 "called ResultsGui.add_line\n"
                 "called ResultsGui.add_text_to_line with args ('line', 'Action:')\n"
@@ -2228,12 +2228,12 @@ class TestResults:
             " ('line', 'gezocht en/of vervangen (1 items)')\n"
             "called ResultsGui.add_stretch_to_line with args ('line',)\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
-            f" (('Go to selected result', {testobj.gui.to_result}, True),)) {{}}\n"
+            f" (('Go to selected result', {testobj.to_result}, True),)) {{}}\n"
             "called TestResults.build_list\n"
             "called ResultsGui.add_line\n"
             "called ResultsGui.add_results_list with args"
             f" ('line', ('Regel', 'Context', 'Tekst'), (('Help', 'F1', {testobj.help})"
-            f", ('&Goto Result', 'Ctrl+G', {testobj.gui.to_result})), [])\n"
+            f", ('&Goto Result', 'Ctrl+G', {testobj.to_result})), [])\n"
             "called ResultsGui.add_line\n"
             "called ResultsGui.add_text_to_line with args ('line', 'Action:')\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
@@ -2266,12 +2266,12 @@ class TestResults:
             " ('line', 'gezocht en/of vervangen (1 items)')\n"
             "called ResultsGui.add_stretch_to_line with args ('line',)\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
-            f" (('Go to selected result', {testobj.gui.to_result}, True),)) {{}}\n"
+            f" (('Go to selected result', {testobj.to_result}, True),)) {{}}\n"
             "called TestResults.build_list\n"
             "called ResultsGui.add_line\n"
             "called ResultsGui.add_results_list with args"
             f" ('line', ('File/Regel', 'Context', 'Tekst'), (('Help', 'F1', {testobj.help})"
-            f", ('&Goto Result', 'Ctrl+G', {testobj.gui.to_result})), [])\n"
+            f", ('&Goto Result', 'Ctrl+G', {testobj.to_result})), [])\n"
             "called ResultsGui.add_line\n"
             "called ResultsGui.add_text_to_line with args ('line', 'Action:')\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
@@ -2305,12 +2305,12 @@ class TestResults:
             'De bestanden staan allemaal in of onder de directory "path"\')\n'
             "called ResultsGui.add_stretch_to_line with args ('line',)\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
-            f" (('Go to selected result', {testobj.gui.to_result}, True),)) {{}}\n"
+            f" (('Go to selected result', {testobj.to_result}, True),)) {{}}\n"
             "called TestResults.build_list\n"
             "called ResultsGui.add_line\n"
             "called ResultsGui.add_results_list with args"
             f" ('line', ('File/Regel', 'Tekst'), (('Help', 'F1', {testobj.help})"
-            f", ('&Goto Result', 'Ctrl+G', {testobj.gui.to_result})), [])\n"
+            f", ('&Goto Result', 'Ctrl+G', {testobj.to_result})), [])\n"
             "called ResultsGui.add_line\n"
             "called ResultsGui.add_text_to_line with args ('line', 'Action:')\n"
             "called ResultsGui.add_buttons_to_line with args ('line',"
@@ -2657,6 +2657,29 @@ class TestResults:
                 "called ResultsGui.get_checkbox_value with args ('cb_smrz',)\n"
                 "called ResultsGui.meld with args ('ahem',"
                 " 'Summarize to comma delimited is not a sensible option, request denied')\n""")
+
+    def test_to_result(self, monkeypatch, capsys):
+        """unittest for Results.to_result
+        (niet te verwarren met Results.goto_result die hierin wordt aangeroepen)
+        """
+        def mock_to_result(*args):
+            print('called ResultsGui.to_result with args', args)
+            return 'row', 'column'
+        def mock_goto(*args):
+            print('called Results.goto_result with args', args)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.parent = types.SimpleNamespace(resulttitel='xxx')
+        testobj.goto_result = mock_goto
+        testobj.lijst = 'lijst'
+        testobj.to_result()
+        assert capsys.readouterr().out == (
+                "called ResultsGui.to_result with args ('lijst',)\n"
+                "called ResultsGui.meld with args ('xxx', 'Select a result first')\n")
+        testobj.gui.to_result = mock_to_result
+        testobj.to_result()
+        assert capsys.readouterr().out == (
+                "called ResultsGui.to_result with args ('lijst',)\n"
+                "called Results.goto_result with args ('row', 'column')\n")
 
     def test_kopie(self, monkeypatch, capsys, tmp_path):
         """unittest for Results.kopie

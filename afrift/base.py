@@ -676,7 +676,7 @@ class Results:
         line = self.gui.add_line()
         self.hdr = self.gui.add_text_to_line(line, label_txt)
         self.gui.add_stretch_to_line(line)
-        self.gui.add_buttons_to_line(line, (('Go to selected result', self.gui.to_result, True),))
+        self.gui.add_buttons_to_line(line, (('Go to selected result', self.to_result, True),))
         self.build_list()
         if self.show_result_details:
             line = self.gui.add_line()
@@ -684,7 +684,7 @@ class Results:
                 headers = (self.titel, 'Context', 'Tekst')
             else:
                 headers = ((self.titel, 'Tekst'))
-            actions = (('Help', 'F1', self.help), ('&Goto Result', 'Ctrl+G', self.gui.to_result))
+            actions = (('Help', 'F1', self.help), ('&Goto Result', 'Ctrl+G', self.to_result))
             self.lijst = self.gui.add_results_list(line, headers, actions, self.results)
         line = self.gui.add_line()
         self.gui.add_text_to_line(line, 'Action:')
@@ -838,6 +838,15 @@ class Results:
                           "Summarize to comma delimited is not a sensible option, request denied")
             return False
         return True
+
+    def to_result(self, *args):
+        """show result in file
+        """
+        rowcolumn = self.gui.to_result(self.lijst)
+        if rowcolumn:
+            self.goto_result(*rowcolumn)
+        else:
+            self.gui.meld(self.parent.resulttitel, 'Select a result first')
 
     def kopie(self, *args):
         """callback for button 'Copy to file'

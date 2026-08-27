@@ -489,14 +489,13 @@ class ResultsGui(wx.Dialog):
         else:
             wx.MessageBox("Unable to open the clipboard", "Error")
 
-    def to_result(self, event):
+    def to_result(self, lijst):
         """show result in file
         """
-        row = self.lijst.GetFirstSelected()
+        row = lijst.GetFirstSelected()
         if row == -1:
-            self.meld(self.master.parent.resulttitel, 'Select a result first')
-            return
-        self.master.goto_result(row, -1)
+            return False
+        return row, -1
 
     def klaar(self, event):
         """finish dialog

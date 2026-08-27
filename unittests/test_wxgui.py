@@ -1179,15 +1179,12 @@ class TestResultsGui:
         testobj.meld = mock_meld
         testobj.master = types.SimpleNamespace(parent=types.SimpleNamespace(resulttitel='xxx'),
                                                goto_result=mock_goto)
-        testobj.to_result('event')
-        assert capsys.readouterr().out == (
-                "called ListCtrl.GetFirstSelected\n"
-                "called Results.meld with args ('xxx', 'Select a result first')\n")
+        assert not testobj.to_result(testobj.lijst)
+        assert capsys.readouterr().out == "called ListCtrl.GetFirstSelected\n"
         monkeypatch.setattr(mockwx.MockListCtrl, 'GetFirstSelected',
                             mockwx.MockListCtrl.GetFirstSelected_2)
-        testobj.to_result('event')
-        assert capsys.readouterr().out == ("called ListCtrl.GetFirstSelected\n"
-                                           "called Afrift.goto_result with args (0, -1)\n")
+        assert testobj.to_result(testobj.lijst) == (0, -1)
+        assert capsys.readouterr().out == "called ListCtrl.GetFirstSelected\n"
 
     def test_klaar(self, monkeypatch, capsys):
         """unittest for ResultsGui.klaar
