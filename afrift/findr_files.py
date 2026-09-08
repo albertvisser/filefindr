@@ -147,7 +147,7 @@ class PyRead:
                 self.build_comment_context(lineno, lineno, pos, context_type='comment')
             self.prev_lineno = lineno
         self.indentpos = 0
-        self.pop_construct(self.prev_lineno - 1)
+        self.pop_construct(self.prev_lineno)  #  - 1)
 
     def build_contexts(self):
         "turn constructs into contexts"
@@ -262,6 +262,8 @@ class PyRead:
     def pop_construct(self, last_line):
         """if needed, add construct(s) to list
         """
+        # if last_line == len(self.lines) - 1:   # correctie voor de allerlaatste regel
+        #     last_line = len(self.lines)
         while self.in_construct and self.indentpos <= self.in_construct[-1][0]:
             construct = list(self.in_construct.pop())
             construct.append(last_line)

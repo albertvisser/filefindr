@@ -243,12 +243,12 @@ class TestPyRead:
         testobj.in_construct = []
         testobj.process_codelines()
         assert testobj.indentpos == 0
-        assert capsys.readouterr().out == "called PyRead.pop_construct with arg 0\n"
+        assert capsys.readouterr().out == "called PyRead.pop_construct with arg 1\n"
         testobj.lines = ['']
         testobj.process_codelines()
         assert testobj.indentpos == 0
         assert capsys.readouterr().out == ("called PyRead.analyze_line with args (1, '')\n"
-                                           "called PyRead.pop_construct with arg 0\n")
+                                           "called PyRead.pop_construct with arg 1\n")
         testobj.lines = ['   xxxx', 'yyyy # zzz']
         # testobj.itemlist = []
         testobj.process_codelines()
@@ -260,7 +260,7 @@ class TestPyRead:
             "called PyRead.analyze_line with args (2, 'yyyy # zzz')\n"
             "called PyRead.pop_construct with arg 1\n"
             "called PyRead.build_comment_context with args (2, 2, 5) {'context_type': 'comment'}\n"
-            "called PyRead.pop_construct with arg 1\n")
+            "called PyRead.pop_construct with arg 2\n")
         # testobj.itemlist = []
         testobj.in_construct = []
         testobj.lines = ['def myfunction(arg1, arg2):', 'class MyClass: # a class']
@@ -273,7 +273,7 @@ class TestPyRead:
             "called PyRead.analyze_line with args (2, 'class MyClass: # a class')\n"
             "called PyRead.pop_construct with arg 1\n"
             "called PyRead.build_comment_context with args (2, 2, 15) {'context_type': 'comment'}\n"
-            "called PyRead.pop_construct with arg 1\n")
+            "called PyRead.pop_construct with arg 2\n")
 
     def test_build_contexts(self, monkeypatch, capsys):
         """unittest for PyRead.build_contexts
